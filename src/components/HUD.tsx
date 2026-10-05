@@ -181,9 +181,10 @@ export const HUD: React.FC<HUDProps> = ({
         </div>
       )}
 
-      {/* Mission Timer / Objective */}
+      {/* Mission Timer / Objective — sits below the minimap + street badge
+          column (~200px tall) so it never overlaps or clips off-screen. */}
       {state.missionTitle && !state.activeJob && (
-        <div className="absolute top-28 left-3 hud-glass-teal p-3 rounded-2xl border border-teal-500/40 shadow-2xl max-w-[260px] pointer-events-auto">
+        <div className="absolute top-[212px] left-3 hud-glass-teal p-3 rounded-2xl border border-teal-500/40 shadow-2xl max-w-[min(260px,calc(100vw-24px))] pointer-events-auto break-words">
           <div className="flex items-center justify-between text-xs text-teal-400 font-bold mb-1">
             <span>{hindiLabels ? 'मिशन' : 'MISSION'}</span>
             {state.missionTimeLeft !== undefined && (
