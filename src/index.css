@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+@layer base {
+  html, body, #root {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: #090a0f;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+}
+
+.font-display {
+  font-family: 'Chakra Petch', sans-serif;
+}
+
+.font-gauge {
+  font-family: 'Teko', sans-serif;
+}
+
+.font-hindi {
+  font-family: 'Rozha One', serif;
+}
+
+/* Glassmorphism helpers for HUD */
+.hud-glass {
+  background: rgba(13, 17, 23, 0.78);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.hud-glass-saffron {
+  background: rgba(22, 14, 8, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.hud-glass-teal {
+  background: rgba(8, 22, 24, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(20, 184, 166, 0.35);
+}
+
+/* Hide scrollbars for slick game UI */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(245, 158, 11, 0.4);
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(245, 158, 11, 0.8);
+}

@@ -1,0 +1,6 @@
+{
+  "name": "NCR Drive – Taxi & Driving Sim",
+  "description": "3D open-world Delhi-Gurgaon-Haryana taxi and driving simulator with realistic RHD vehicle physics, Indian traffic, career jobs, and missions.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
