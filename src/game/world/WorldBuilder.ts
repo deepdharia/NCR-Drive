@@ -1001,7 +1001,7 @@ export class WorldBuilder {
       worldGroup.add(field2);
     }
 
-    // 10. Streetlights with Double-Arm Curved Brackets
+    // 10. Streetlights with Double-Arm Curved Brackets — instanced (3 draw calls, was 342)
     const poleMat = new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.85, roughness: 0.25 });
     const bulbMat = new THREE.MeshStandardMaterial({
       color: 0xffffff,
@@ -1009,47 +1009,76 @@ export class WorldBuilder {
       emissiveIntensity: 2.8,
     });
 
+    const poleGeo = new THREE.CylinderGeometry(0.14, 0.2, 10, 8);
+    const headGeo = new THREE.BoxGeometry(1.5, 0.24, 0.5);
+    const bulbGeo = new THREE.BoxGeometry(1.0, 0.12, 0.38);
+
+    // Placement list first so the InstancedMesh counts are exact.
+    const lampXforms: { x: number; headX: number; z: number }[] = [];
     for (let sz = -1200; sz <= 1900; sz += 55) {
       for (const side of [-1, 1]) {
-        const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.2, 10, 8), poleMat);
         const sx = side * 15.5;
-        pole.position.set(sx, 5.0, sz);
-        worldGroup.add(pole);
-
-        const head = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.24, 0.5), poleMat);
-        head.position.set(sx - side * 0.7, 10, sz);
-        worldGroup.add(head);
-
-        const bulb = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.12, 0.38), bulbMat);
-        bulb.position.set(sx - side * 0.7, 9.85, sz);
-        worldGroup.add(bulb);
+        lampXforms.push({ x: sx, headX: sx - side * 0.7, z: sz });
       }
     }
 
-    // 11. Roadside Neem & Gulmohar Trees
-    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x451a03, roughness: 0.9 });
-    const foliageGreen = new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.85 });
-    const foliageGulmohar = new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.85 }); // Red Gulmohar flowers
+    const tmpM = new THREE.Matrix4();
+    const poleMesh = new THREE.InstancedMesh(poleGeo, poleMat, lampXforms.length);
+    const headMesh = new THREE.InstancedMesh(headGeo, poleMat, lampXforms.length);
+    const bulbMesh = new THREE.InstancedMesh(bulbGeo, bulbMat, lampXforms.length);
+    // Instances span 3km; the per-geometry bounds don't cover them.
+    poleMesh.frustumCulled = false;
+    headMesh.frustumCulled = false;
+    bulbMesh.frustumCulled = false;
 
+    lampXforms.forEach((l, i) => {
+      tmpM.makeTranslation(l.x, 5.0, l.z);
+      poleMesh.setMatrixAt(i, tmpM);
+      tmpM.makeTranslation(l.headX, 10, l.z);
+      headMesh.setMatrixAt(i, tmpM);
+      tmpM.makeTranslation(l.headX, 9.85, l.z);
+      bulbMesh.setMatrixAt(i, tmpM);
+    });
+    poleMesh.instanceMatrix.needsUpdate = true;
+    headMesh.instanceMatrix.needsUpdate = true;
+    bulbMesh.instanceMatrix.needsUpdate = true;
+    worldGroup.add(poleMesh, headMesh, bulbMesh);
+
+    // 11. Roadside Neem & Gulmohar Trees — instanced (2 draw calls, was 188)
+    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x451a03, roughness: 0.9 });
+    // Base color white; per-instance tint via setColorAt reproduces the two greens exactly.
+    const foliageMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.85 });
+
+    const trunkGeo = new THREE.CylinderGeometry(0.3, 0.45, 5, 8);
+    const foliageGeo = new THREE.DodecahedronGeometry(2.8, 1);
+    const FOLIAGE_GREEN = new THREE.Color(0x15803d);
+    const FOLIAGE_GULMOHAR = new THREE.Color(0xb91c1c);
+
+    const treeXforms: { x: number; z: number; gulmohar: boolean }[] = [];
     for (let tz = -1150; tz <= 1850; tz += 32) {
       const isRight = (tz % 64 === 0);
       const tx = (isRight ? 1 : -1) * (19 + Math.abs((tz * 17) % 7));
-      const tree = new THREE.Group();
-      tree.position.set(tx, 0, tz);
-
-      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.45, 5, 8), trunkMat);
-      trunk.position.y = 2.5;
-      trunk.castShadow = true;
-      tree.add(trunk);
-
-      const foliageMat = (tz % 96 === 0) ? foliageGulmohar : foliageGreen;
-      const foliage = new THREE.Mesh(new THREE.DodecahedronGeometry(2.8, 1), foliageMat);
-      foliage.position.y = 5.8;
-      foliage.castShadow = true;
-      tree.add(foliage);
-
-      worldGroup.add(tree);
+      treeXforms.push({ x: tx, z: tz, gulmohar: tz % 96 === 0 });
     }
+
+    const trunkMesh = new THREE.InstancedMesh(trunkGeo, trunkMat, treeXforms.length);
+    const foliageMesh = new THREE.InstancedMesh(foliageGeo, foliageMat, treeXforms.length);
+    trunkMesh.frustumCulled = false;
+    foliageMesh.frustumCulled = false;
+    trunkMesh.castShadow = true;   // matches the original per-mesh flags
+    foliageMesh.castShadow = true;
+
+    treeXforms.forEach((t, i) => {
+      tmpM.makeTranslation(t.x, 2.5, t.z);
+      trunkMesh.setMatrixAt(i, tmpM);
+      tmpM.makeTranslation(t.x, 5.8, t.z);
+      foliageMesh.setMatrixAt(i, tmpM);
+      foliageMesh.setColorAt(i, t.gulmohar ? FOLIAGE_GULMOHAR : FOLIAGE_GREEN);
+    });
+    trunkMesh.instanceMatrix.needsUpdate = true;
+    foliageMesh.instanceMatrix.needsUpdate = true;
+    if (foliageMesh.instanceColor) foliageMesh.instanceColor.needsUpdate = true;
+    worldGroup.add(trunkMesh, foliageMesh);
 
     // Metro Train Animation loop
     let metroZ = -950;

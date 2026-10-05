@@ -27,11 +27,16 @@ export interface TrafficVehicle {
   wasColliding: boolean; // edge-trigger for player collision events
   lightbarMats?: [THREE.MeshStandardMaterial, THREE.MeshStandardMaterial]; // police van roof beacons
   lightbarTimer?: number; // police van flash phase clock
+  // --- P4-C runtime perf fields ---
+  shadowMeshes: THREE.Mesh[]; // meshes allowed to cast shadows (toggled by proximity)
+  pairBlocked: boolean; // last staggered pair-check result (20 Hz)
+  pairBlockerDist: number; // blocker distance from last pair check
+  brakeVisualOn: boolean; // last applied brake-light visual state (change detection)
 }
 
 // ---------------------------------------------------------------------------
 // Module-scope shared geometries & materials.
-// Traffic vehicles are pooled (up to 68); allocating a full geometry/material
+// Traffic vehicles are pooled (up to 65); allocating a full geometry/material
 // set per vehicle wastes GPU memory and state changes, so everything identical
 // across vehicles of a type is created once here.
 // (brakeLightMat stays per-vehicle: its emissive is mutated per frame.)
@@ -233,6 +238,9 @@ export class TrafficSystem {
   private vehiclePoolSize: number = 42;
   private idCounter: number = 0;
   private audioEngine?: AudioEngine;
+  // --- P4-C runtime perf state ---
+  private frameCount: number = 0;
+  private shadowTimer: number = 1; // start >= interval so the first update() selects casters
 
   constructor(density: 'low' | 'medium' | 'high' = 'medium') {
     this.trafficGroup.name = 'traffic_system';
@@ -246,10 +254,37 @@ export class TrafficSystem {
     this.audioEngine = engine;
   }
 
+  /**
+   * P4-C: only the 8 nearest vehicles cast shadows. Runs ~2x/sec — cheap
+   * insertion into a top-8 list, no full sort of the pool.
+   */
+  private refreshShadowCasters(playerPos: THREE.Vector3): void {
+    const top: { d: number; v: TrafficVehicle }[] = [];
+    for (const v of this.vehicles) {
+      const dx = v.position.x - playerPos.x;
+      const dz = v.position.z - playerPos.z;
+      const d = dx * dx + dz * dz;
+      if (top.length < 8) {
+        top.push({ d, v });
+        if (top.length === 8) top.sort((a, b) => a.d - b.d);
+      } else if (d < top[7].d) {
+        top[7] = { d, v };
+        top.sort((a, b) => a.d - b.d);
+      }
+    }
+    const chosen = new Set<TrafficVehicle>();
+    for (const t of top) chosen.add(t.v);
+    for (const v of this.vehicles) {
+      const on = chosen.has(v);
+      for (const m of v.shadowMeshes) m.castShadow = on;
+    }
+  }
+
   public setDensity(density: 'low' | 'medium' | 'high') {
-    if (density === 'low') this.vehiclePoolSize = 24;
-    else if (density === 'medium') this.vehiclePoolSize = 44;
-    else this.vehiclePoolSize = 68;
+    // Pool sizes mirror GAME_CONFIG.QUALITY_SETTINGS.*.trafficCount (22/42/65).
+    if (density === 'low') this.vehiclePoolSize = 22;
+    else if (density === 'medium') this.vehiclePoolSize = 42;
+    else this.vehiclePoolSize = 65;
   }
 
   private createVehicleMesh(type: TrafficVehicleType): {
@@ -259,6 +294,7 @@ export class TrafficSystem {
     mass: number;
     brakeLightMat?: THREE.MeshStandardMaterial;
     lightbarMats?: [THREE.MeshStandardMaterial, THREE.MeshStandardMaterial];
+    shadowMeshes: THREE.Mesh[];
   } {
     const group = new THREE.Group();
     let length = 4.3;
@@ -578,7 +614,14 @@ export class TrafficSystem {
       group.add(bl);
     }
 
-    return { mesh: group, length, width, mass, brakeLightMat, lightbarMats };
+    // P4-C: collect every mesh the builders flagged as a shadow caster so the
+    // proximity pass can toggle them cheaply without touching the builders.
+    const shadowMeshes: THREE.Mesh[] = [];
+    group.traverse((o) => {
+      if ((o as THREE.Mesh).isMesh && o.castShadow) shadowMeshes.push(o as THREE.Mesh);
+    });
+
+    return { mesh: group, length, width, mass, brakeLightMat, lightbarMats, shadowMeshes };
   }
 
   /** Weighted spawn mix: e-rickshaws ~10% in city zones, police vans rare (~3%). */
@@ -593,7 +636,7 @@ export class TrafficSystem {
   private initPool() {
     for (let i = 0; i < this.vehiclePoolSize; i++) {
       const type = this.pickSpawnType();
-      const { mesh, length, width, mass, brakeLightMat, lightbarMats } = this.createVehicleMesh(type);
+      const { mesh, length, width, mass, brakeLightMat, lightbarMats, shadowMeshes } = this.createVehicleMesh(type);
 
       const direction: 1 | -1 = Math.random() > 0.5 ? 1 : -1;
       // Cows stay on rural Haryana roads (z > 1300) — never on the expressway.
@@ -620,6 +663,10 @@ export class TrafficSystem {
         brakeLightMat,
         lightbarMats,
         lightbarTimer: 0,
+        shadowMeshes,
+        pairBlocked: false,
+        pairBlockerDist: Infinity,
+        brakeVisualOn: false,
         position: mesh.position.clone(), // physics truth; mesh.position is visual (may carry wobble)
         velocity: new THREE.Vector3(0, 0, direction * targetSpeed),
         speed: targetSpeed * (0.85 + Math.random() * 0.3),
@@ -639,6 +686,12 @@ export class TrafficSystem {
       this.vehicles.push(tv);
       this.trafficGroup.add(mesh);
     }
+
+    // P4-C: start with shadows off everywhere; the proximity pass in update()
+    // enables the 8 nearest on its first tick.
+    for (const v of this.vehicles) {
+      for (const m of v.shadowMeshes) m.castShadow = false;
+    }
   }
 
   public update(dt: number, playerPos: THREE.Vector3, playerVelocity: THREE.Vector3): {
@@ -651,8 +704,20 @@ export class TrafficSystem {
     let hitSpeed = 0;
 
     const activeRange = 280;
+    this.frameCount++;
+    const nowMs = performance.now(); // hoisted: was evaluated per e-rickshaw
 
+    // P4-C: shadow caster selection ~2x/sec.
+    this.shadowTimer += dt;
+    if (this.shadowTimer >= 0.5) {
+      this.shadowTimer = 0;
+      this.refreshShadowCasters(playerPos);
+    }
+
+    let vi = 0;
     for (const v of this.vehicles) {
+      const idx = vi++;
+
       // Recycle out of range
       const dz = v.position.z - playerPos.z;
       if (Math.abs(dz) > activeRange) {
@@ -675,29 +740,47 @@ export class TrafficSystem {
         v.wasColliding = false;
         v.brakeHoldTime = 0;
         v.honkCooldown = 0;
+        v.pairBlocked = false;
+        v.pairBlockerDist = Infinity;
         v.mesh.position.copy(v.position);
       }
 
-      // Check obstacles ahead
+      // P4-C: dormant vehicles (>400m, past the fog) advance logically but skip
+      // every visual/per-frame cost. |dz| dominates: the world is a Z corridor.
+      const dormant = Math.abs(v.position.z - playerPos.z) > 400;
+
+      // Player obstacle check — every frame (cheap).
       let shouldBrake = false;
       let blockerDist = Infinity;
-      const distToPlayerZ = (playerPos.z - v.position.z) * v.direction;
-      const distToPlayerX = Math.abs(playerPos.x - v.position.x);
-
-      if (distToPlayerZ > 0 && distToPlayerZ < 20 && distToPlayerX < 2.6) {
-        shouldBrake = true;
-        blockerDist = distToPlayerZ;
+      if (!dormant) {
+        const distToPlayerZ = (playerPos.z - v.position.z) * v.direction;
+        const distToPlayerX = Math.abs(playerPos.x - v.position.x);
+        if (distToPlayerZ > 0 && distToPlayerZ < 20 && distToPlayerX < 2.6) {
+          shouldBrake = true;
+          blockerDist = distToPlayerZ;
+        }
       }
 
-      for (const other of this.vehicles) {
-        if (other === v || other.direction !== v.direction) continue;
-        const diffZ = (other.position.z - v.position.z) * v.direction;
-        const diffX = Math.abs(other.position.x - v.position.x);
-        if (diffZ > 0 && diffZ < (v.length + 9) && diffX < 2.2) {
-          shouldBrake = true;
-          blockerDist = Math.min(blockerDist, diffZ);
-          break;
+      // P4-C: pair check staggered — each vehicle re-checks every 3rd frame
+      // (~20 Hz). The result persists between checks so braking stays smooth.
+      // Dormant vehicles skip it entirely (invisible; recycle resets state).
+      if (!dormant && (this.frameCount + idx) % 3 === 0) {
+        v.pairBlocked = false;
+        v.pairBlockerDist = Infinity;
+        for (const other of this.vehicles) {
+          if (other === v || other.direction !== v.direction) continue;
+          const diffZ = (other.position.z - v.position.z) * v.direction;
+          const diffX = Math.abs(other.position.x - v.position.x);
+          if (diffZ > 0 && diffZ < (v.length + 9) && diffX < 2.2) {
+            v.pairBlocked = true;
+            v.pairBlockerDist = diffZ;
+            break;
+          }
         }
+      }
+      if (!dormant && v.pairBlocked) {
+        shouldBrake = true;
+        blockerDist = Math.min(blockerDist, v.pairBlockerDist);
       }
 
       if (shouldBrake) {
@@ -715,6 +798,7 @@ export class TrafficSystem {
       // Cows never honk. Cooldown + proximity guard prevents honk storms.
       v.honkCooldown = Math.max(0, v.honkCooldown - dt);
       if (
+        !dormant &&
         v.type !== 'cow' &&
         v.isBraking &&
         v.brakeHoldTime > 2.5 &&
@@ -726,8 +810,10 @@ export class TrafficSystem {
         v.honkCooldown = 8;
       }
 
-      // Live brake light visual response
-      if (v.brakeLightMat) {
+      // Live brake light visual response — change-detected so setHex runs
+      // only on transitions, not 68x/frame.
+      if (!dormant && v.brakeLightMat && v.brakeVisualOn !== v.isBraking) {
+        v.brakeVisualOn = v.isBraking;
         if (v.isBraking) {
           v.brakeLightMat.emissive.setHex(0xff0000);
           v.brakeLightMat.emissiveIntensity = 2.4;
@@ -738,44 +824,57 @@ export class TrafficSystem {
       }
 
       // Police lightbar: cheap alternating red/blue flash.
-      if (v.lightbarMats) {
+      if (!dormant && v.lightbarMats) {
         v.lightbarTimer = (v.lightbarTimer ?? 0) + dt;
         const phase = Math.floor(v.lightbarTimer / 0.35) % 2;
         v.lightbarMats[0].emissiveIntensity = phase === 0 ? 3.2 : 0.15;
         v.lightbarMats[1].emissiveIntensity = phase === 1 ? 3.2 : 0.15;
       }
 
+      // Advance. Ground height is re-sampled ONLY inside the flyover band —
+      // the rest of the world is flat (recycle() sets y correctly), which
+      // kills ~60 Vector3+object allocations per frame: getGroundHeight()
+      // allocates per call and we only need .height.
       v.position.z += v.direction * v.speed * dt;
-      v.position.y = getGroundHeight(v.position.x, v.position.z).height;
       v.velocity.set(0, 0, v.direction * v.speed);
-      v.mesh.position.z = v.position.z;
-      v.mesh.position.y = v.position.y;
-      // E-rickshaws wobble faintly at speed — cheap street life, physics untouched.
-      v.mesh.position.x =
-        v.position.x +
-        (v.type === 'e_rickshaw'
-          ? Math.sin(performance.now() * 0.004 + v.id * 1.7) * 0.06 * Math.min(1, v.speed / 8)
-          : 0);
-
-      // OBB Collision with player
-      const pDx = Math.abs(playerPos.x - v.position.x);
-      const pDz = Math.abs(playerPos.z - v.position.z);
-      const combinedHalfWidth = 1.0 + v.width / 2;
-      const combinedHalfLength = 2.1 + v.length / 2;
-
-      const isOverlapping = pDx < combinedHalfWidth && pDz < combinedHalfLength;
-      if (isOverlapping) {
-        // Physical separation runs every frame, but the collision EVENT fires
-        // only on the rising edge — GameEngine applies damage/sound per event.
-        if (!v.wasColliding) {
-          collided = true;
-          hitVehicle = v;
-          hitSpeed = Math.abs(playerVelocity.length() * 3.6 - v.speed * 3.6);
+      if (!dormant) {
+        const nz = v.position.z;
+        if (nz > -540 && nz < -260) {
+          v.position.y = getGroundHeight(v.position.x, nz).height;
         }
-        if (playerPos.z > v.position.z) {
-          v.position.z -= 0.6 * v.direction;
-        } else {
-          v.position.z += 0.6 * v.direction;
+        v.mesh.position.z = v.position.z;
+        v.mesh.position.y = v.position.y;
+        // E-rickshaws wobble faintly at speed — cheap street life, physics untouched.
+        v.mesh.position.x =
+          v.position.x +
+          (v.type === 'e_rickshaw'
+            ? Math.sin(nowMs * 0.004 + v.id * 1.7) * 0.06 * Math.min(1, v.speed / 8)
+            : 0);
+      }
+
+      // OBB collision with player — every frame, never staggered.
+      // (Dormant vehicles are 400m+ away; overlap is impossible.)
+      let isOverlapping = false;
+      if (!dormant) {
+        const pDx = Math.abs(playerPos.x - v.position.x);
+        const pDz = Math.abs(playerPos.z - v.position.z);
+        const combinedHalfWidth = 1.0 + v.width / 2;
+        const combinedHalfLength = 2.1 + v.length / 2;
+
+        isOverlapping = pDx < combinedHalfWidth && pDz < combinedHalfLength;
+        if (isOverlapping) {
+          // Physical separation runs every frame, but the collision EVENT fires
+          // only on the rising edge — GameEngine applies damage/sound per event.
+          if (!v.wasColliding) {
+            collided = true;
+            hitVehicle = v;
+            hitSpeed = Math.abs(playerVelocity.length() * 3.6 - v.speed * 3.6);
+          }
+          if (playerPos.z > v.position.z) {
+            v.position.z -= 0.6 * v.direction;
+          } else {
+            v.position.z += 0.6 * v.direction;
+          }
         }
       }
       v.wasColliding = isOverlapping;
