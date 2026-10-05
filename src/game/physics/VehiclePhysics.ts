@@ -110,7 +110,7 @@ export class VehiclePhysics {
     const maxSteer = THREE.MathUtils.lerp(
       0.62, // ~35.5 degrees at low speed
       0.18, // ~10 degrees at top speed
-      speedRatio * 0.65
+      speedRatio
     );
 
     // input.steer: -1 (left), +1 (right)
@@ -164,10 +164,11 @@ export class VehiclePhysics {
     if (this.fuelRemaining <= 0) {
       input.throttle = 0;
     } else if (input.throttle > 0) {
-      this.fuelRemaining = Math.max(0, this.fuelRemaining - 0.0003 * input.throttle * dt);
+      // Fuel burn scales with throttle and speed: a full tank lasts ~1-2h of mixed driving
+      this.fuelRemaining = Math.max(0, this.fuelRemaining - 0.004 * (0.3 + 0.7 * input.throttle) * (0.5 + Math.abs(this.forwardSpeed) / 45) * dt);
     }
 
-    const wheelRadius = 0.32;
+    const wheelRadius = this.spec.wheelRadiusM ?? 0.32;
     const baseTorque = this.spec.torqueNm * engineMult * performanceFactor;
     let tractionForce = 0;
 
@@ -206,6 +207,8 @@ export class VehiclePhysics {
 
       const driveTorque = baseTorque * 0.92 * gearRatio * (GAME_CONFIG.FINAL_DRIVE * 0.88);
       tractionForce = -input.throttle * (driveTorque / wheelRadius);
+      // Reverse is speed-capped: no 150 km/h backing-up
+      if (this.forwardSpeed < -12) tractionForce = Math.max(0, tractionForce);
 
     } else {
       // Park or Neutral
@@ -216,11 +219,18 @@ export class VehiclePhysics {
 
     this.rpm = THREE.MathUtils.clamp(this.rpm, GAME_CONFIG.IDLE_RPM, GAME_CONFIG.REDLINE_RPM);
 
+    // Soft top-speed limiter: the catalog's rated top speed is real, not display fiction
+    if (this.speedKmh > this.spec.topSpeedKmH) {
+      tractionForce *= Math.max(0, 1 - (this.speedKmh - this.spec.topSpeedKmH) / 25);
+    }
+
     // 4. Braking & Longitudinal Forces
     let brakeForceTotal = 0;
     if (input.brake > 0) {
       const maxBrake = this.spec.brakeForce * brakeMult * 1.35;
       brakeForceTotal = input.brake * maxBrake * (this.forwardSpeed > 0 ? 1 : -1);
+      // Grip-limited braking: wet/dirt surfaces mean longer stopping distances
+      brakeForceTotal *= (0.55 + 0.45 * avgSurfaceGrip);
     }
 
     // Engine braking when off throttle
@@ -241,6 +251,10 @@ export class VehiclePhysics {
     const effectiveWheelbase = this.spec.wheelbase;
     // Kinematic Ackermann target yaw rate
     const kinematicYawRate = (this.forwardSpeed / effectiveWheelbase) * Math.tan(this.steerAngle);
+    // Yaw rate clamp: full lock at very high speed must not instantly spin the car
+    const clampedYawRate = THREE.MathUtils.clamp(kinematicYawRate, -1.4 * avgSurfaceGrip, 1.4 * avgSurfaceGrip);
+    // Per-car handling character: >1 nimble (hatchbacks), <1 boaty (heavy SUVs)
+    const agility = this.spec.agility ?? 1.0;
 
     if (this.handbrakeEngaged && Math.abs(this.forwardSpeed) > 5.0) {
       // Handbrake drift: allows high yaw velocity and rear slip
@@ -250,8 +264,8 @@ export class VehiclePhysics {
     } else {
       this.isDrifting = false;
       // High-precision smooth yaw tracking: turns naturally and crisply
-      const yawResponsiveness = 18.0 * avgSurfaceGrip;
-      this.angularVelocity = THREE.MathUtils.lerp(this.angularVelocity, kinematicYawRate, yawResponsiveness * dt);
+      const yawResponsiveness = 18.0 * avgSurfaceGrip * agility;
+      this.angularVelocity = THREE.MathUtils.lerp(this.angularVelocity, clampedYawRate, yawResponsiveness * dt);
     }
 
     // Update vehicle heading
@@ -260,7 +274,7 @@ export class VehiclePhysics {
     // Integrate forward and lateral velocities
     const newForwardSpeed = this.forwardSpeed + forwardAcc * dt;
     // Lateral drift dampening (tyres grip road firmly unless drifting)
-    const lateralDamp = this.isDrifting ? 4.0 : 22.0 * avgSurfaceGrip;
+    const lateralDamp = this.isDrifting ? 4.0 : 22.0 * avgSurfaceGrip * agility;
     const newLateralSpeed = lateralSpeed * Math.exp(-lateralDamp * dt);
 
     // Stop completely when braked to a halt

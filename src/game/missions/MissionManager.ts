@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { POINTS_OF_INTEREST } from '../world/MapData';
 import { GameMode, MissionType, PassengerJob } from '../types';
+import { SaveManager } from '../save/SaveManager';
 
 export interface MissionDefinition {
   id: string;
@@ -163,6 +164,32 @@ export class MissionManager {
 
   private taxiJobCounter: number = 0;
 
+  // --- Single-shot result latch: completion/failure is reported exactly once,
+  // --- then job/mission state is released so beacons/HUD don't stick around.
+  private completionReported: boolean = false;
+
+  // --- Honest fare metering: actual distance driven after pickup (meters).
+  private tripDistanceM: number = 0;
+  private lastTripPos: THREE.Vector3 | null = null;
+
+  // --- Mission distance (meters) for the revived totalKmDriven stat.
+  private missionDistanceM: number = 0;
+  private lastMissionPos: THREE.Vector3 | null = null;
+
+  // --- Smooth-driving evaluation accumulators (taxi satisfaction).
+  private hardBrakeTime: number = 0;
+  private overspeedTime: number = 0;
+
+  private resetRunState() {
+    this.completionReported = false;
+    this.tripDistanceM = 0;
+    this.lastTripPos = null;
+    this.missionDistanceM = 0;
+    this.lastMissionPos = null;
+    this.hardBrakeTime = 0;
+    this.overspeedTime = 0;
+  }
+
   public startMission(missionId: string): MissionDefinition {
     const def = MISSION_LIST.find(m => m.id === missionId) || MISSION_LIST[0];
     this.currentMode = 'mission';
@@ -174,6 +201,7 @@ export class MissionManager {
     this.isFailed = false;
     this.failReason = '';
     this.completionResult = null;
+    this.resetRunState();
     return def;
   }
 
@@ -197,6 +225,7 @@ export class MissionManager {
     this.isFailed = false;
     this.failReason = '';
     this.completionResult = null;
+    this.resetRunState();
     return this.currentTaxiJob;
   }
 
@@ -207,6 +236,7 @@ export class MissionManager {
     this.isCompleted = false;
     this.isFailed = false;
     this.completionResult = null;
+    this.resetRunState();
   }
 
   public onCollision() {
@@ -222,8 +252,22 @@ export class MissionManager {
     }
   }
 
-  public update(dt: number, playerPos: THREE.Vector3, playerSpeedKmh: number, gear: string): { completed: boolean; failed: boolean } {
-    if (this.isCompleted || this.isFailed) return { completed: this.isCompleted, failed: this.isFailed };
+  public update(
+    dt: number,
+    playerPos: THREE.Vector3,
+    playerSpeedKmh: number,
+    gear: string,
+    brakeInput: number = 0,
+    speedLimitKmh: number = 80
+  ): { completed: boolean; failed: boolean } {
+    // Single-shot event semantics: a latched completion/failure is reported
+    // exactly once, then the run is finalized (stats persisted, job/mission
+    // released). This prevents per-frame cash duplication in the engine.
+    if (this.completionReported) return { completed: false, failed: false };
+    if (this.isCompleted || this.isFailed) {
+      this.finalizeRun(this.isCompleted);
+      return { completed: this.isCompleted, failed: this.isFailed };
+    }
 
     // Update timers
     if (this.currentMode !== 'free_drive') {
@@ -231,6 +275,7 @@ export class MissionManager {
       if (this.timeLeftSec <= 0) {
         this.isFailed = true;
         this.failReason = 'Time limit expired!';
+        this.finalizeRun(false);
         return { completed: false, failed: true };
       }
     }
@@ -247,18 +292,54 @@ export class MissionManager {
 
         if (dist < 10 && playerSpeedKmh < 8) {
           job.isPickedUp = true;
-          // Passenger entered
+          // Passenger entered — fare meter starts from here
+          this.tripDistanceM = 0;
+          this.lastTripPos = playerPos.clone();
         }
       } else {
+        // Fare meter: accumulate actual distance driven since pickup
+        if (this.lastTripPos) {
+          this.tripDistanceM += playerPos.distanceTo(this.lastTripPos);
+        }
+        this.lastTripPos = playerPos.clone();
+
+        // Smooth-driving evaluation: hard braking dings satisfaction
+        if (brakeInput > 0.8 && playerSpeedKmh > 15) {
+          this.hardBrakeTime += dt;
+          if (this.hardBrakeTime >= 1.0) {
+            job.satisfaction = Math.max(1.0, job.satisfaction - 0.15);
+            job.penalties += 10;
+            this.hardBrakeTime = 0;
+          }
+        } else {
+          this.hardBrakeTime = Math.max(0, this.hardBrakeTime - dt);
+        }
+
+        // Sustained overspeed dings satisfaction
+        if (playerSpeedKmh > speedLimitKmh + 20) {
+          this.overspeedTime += dt;
+          if (this.overspeedTime >= 3.0) {
+            job.satisfaction = Math.max(1.0, job.satisfaction - 0.1);
+            job.penalties += 15;
+            this.overspeedTime = 0;
+          }
+        } else {
+          this.overspeedTime = 0;
+        }
+
         // Distance to drop-off
         const dDx = playerPos.x - job.dropLocation[0];
         const dDz = playerPos.z - job.dropLocation[2];
-        const dist = Math.sqrt(dDx * dDz + dDz * dDz);
+        const dist = Math.sqrt(dDx * dDx + dDz * dDz);
 
         if (dist < 14 && playerSpeedKmh < 8) {
           this.isCompleted = true;
           const stars = Math.round(job.satisfaction);
-          const totalFare = Math.max(80, job.baseFare + job.perKmRate * 5 - job.penalties + (stars >= 4 ? 60 : 0));
+          const km = this.tripDistanceM / 1000;
+          const totalFare = Math.max(
+            80,
+            Math.round(job.baseFare + job.perKmRate * km - job.penalties + (stars >= 4 ? 60 : 0))
+          );
 
           this.completionResult = {
             title: 'Job Completed!',
@@ -267,6 +348,7 @@ export class MissionManager {
             penalties: job.penalties,
             message: `Passenger safely dropped off at ${job.dropName}. Rating: ${stars} Stars!`,
           };
+          this.finalizeRun(true);
           return { completed: true, failed: false };
         }
       }
@@ -275,6 +357,12 @@ export class MissionManager {
     // 2. Mission Check
     if (this.currentMode === 'mission' && this.currentMission) {
       const m = this.currentMission;
+      // Track mission distance for the totalKmDriven stat
+      if (this.lastMissionPos) {
+        this.missionDistanceM += playerPos.distanceTo(this.lastMissionPos);
+      }
+      this.lastMissionPos = playerPos.clone();
+
       const tDx = playerPos.x - m.targetPos[0];
       const tDz = playerPos.z - m.targetPos[2];
       const dist = Math.sqrt(tDx * tDx + tDz * tDz);
@@ -291,6 +379,7 @@ export class MissionManager {
               penalties: this.collisionsCount * 50,
               message: 'Vehicle parked perfectly inside the yellow bay!',
             };
+            this.finalizeRun(true);
             return { completed: true, failed: false };
           }
         } else {
@@ -304,6 +393,7 @@ export class MissionManager {
               penalties: this.collisionsCount * 100,
               message: m.description,
             };
+            this.finalizeRun(true);
             return { completed: true, failed: false };
           }
         }
@@ -311,5 +401,50 @@ export class MissionManager {
     }
 
     return { completed: false, failed: false };
+  }
+
+  /** Live fare meter for the HUD: actual distance-based fare while the job runs. */
+  public getLiveFare(): number {
+    const job = this.currentTaxiJob;
+    if (!job) return 0;
+    if (!job.isPickedUp) return job.baseFare;
+    const km = this.tripDistanceM / 1000;
+    return Math.max(80, Math.round(job.baseFare + job.perKmRate * km - job.penalties));
+  }
+
+  /**
+   * Latch the run result (single-shot), persist progression stats, and release
+   * job/mission state so the destination beacon and HUD cards don't stick.
+   */
+  private finalizeRun(completed: boolean) {
+    this.completionReported = true;
+    this.persistRunStats(completed);
+    this.currentTaxiJob = null;
+    this.currentMission = null;
+    this.lastTripPos = null;
+    this.lastMissionPos = null;
+  }
+
+  /** Revive the dead save fields: job count, per-mission high scores, total km. */
+  private persistRunStats(completed: boolean) {
+    const data = SaveManager.load();
+    let changed = false;
+
+    if (this.currentMode === 'taxi') {
+      if (completed) {
+        data.totalJobsCompleted += 1;
+        changed = true;
+      }
+      data.totalKmDriven += this.tripDistanceM / 1000;
+      changed = true;
+    } else if (this.currentMode === 'mission' && this.currentMission) {
+      const m = this.currentMission;
+      const cash = this.completionResult?.cashEarned ?? 0;
+      data.highScores[m.id] = Math.max(data.highScores[m.id] || 0, cash);
+      data.totalKmDriven += this.missionDistanceM / 1000;
+      changed = true;
+    }
+
+    if (changed) SaveManager.save(data);
   }
 }
