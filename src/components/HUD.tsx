@@ -4,6 +4,7 @@ import { InputManager } from '../game/input/InputManager';
 import { Gear, HUDState } from '../game/types';
 import { Minimap } from './Minimap';
 import { TouchControls } from './TouchControls';
+import { getArchetypeLabel } from '../game/missions/MissionManager';
 
 interface HUDProps {
   state: HUDState;
@@ -134,6 +135,17 @@ export const HUD: React.FC<HUDProps> = ({
             </div>
           </div>
           <div className="text-xs font-semibold text-neutral-100">{state.passengerName}</div>
+          {/* Passenger archetype tag + tip/bonus hint */}
+          {state.taxiArchetype && state.taxiArchetype !== 'standard' && (
+            <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
+              <span className="text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300">
+                {getArchetypeLabel(state.taxiArchetype)}
+              </span>
+              {state.taxiTipHint && (
+                <span className="text-[10px] font-semibold text-emerald-300/90">{state.taxiTipHint}</span>
+              )}
+            </div>
+          )}
           <div className="text-[11px] italic text-amber-200/90 mt-1 line-clamp-2">
             {state.passengerQuote}
           </div>

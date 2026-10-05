@@ -6,6 +6,7 @@ import { CarVisuals, createCarMesh } from './cars/CarMeshGenerator';
 import { GAME_CONFIG } from './config';
 import { InputManager } from './input/InputManager';
 import { MissionManager } from './missions/MissionManager';
+import type { MissionDef } from './missions/MissionPacks';
 import { VehiclePhysics } from './physics/VehiclePhysics';
 import { SaveManager } from './save/SaveManager';
 import { TrafficSystem } from './traffic/TrafficSystem';
@@ -126,6 +127,7 @@ export class GameEngine {
     this.audioEngine = new AudioEngine();
     this.missionManager = new MissionManager();
     this.trafficSystem = new TrafficSystem(savedData.settings.trafficDensity);
+    this.trafficSystem.setAudioEngine(this.audioEngine);
     this.scene.add(this.trafficSystem.trafficGroup);
 
     // 4. City, Highway & World Construction
@@ -394,6 +396,9 @@ export class GameEngine {
     } else if (mode === 'mission' && missionId) {
       const m = this.missionManager.startMission(missionId);
       this.physics.reset(new THREE.Vector3(...m.startPos), m.startHeading);
+      // Phase-2 mission packs can force weather (e.g. the night-rain taxi dash).
+      const missionWeather = (m as MissionDef).weather;
+      if (missionWeather) this.setWeather(missionWeather);
       this.destinationMarker.position.set(m.targetPos[0], 0, m.targetPos[2]);
       this.destinationMarker.visible = true;
     }
@@ -595,7 +600,8 @@ export class GameEngine {
       this.physics.speedKmh,
       this.physics.gearMode,
       this.inputManager.state.brake,
-      getNearestRoadInfo(this.physics.position.x, this.physics.position.z).speedLimit
+      getNearestRoadInfo(this.physics.position.x, this.physics.position.z).speedLimit,
+      this.physics.fuelRemaining
     );
 
     if (missionStatus.completed && this.missionManager.completionResult) {
@@ -617,6 +623,12 @@ export class GameEngine {
         message: this.missionManager.failReason,
       });
       this.destinationMarker.visible = false;
+    }
+
+    // Checkpoint missions: keep the beacon glued to the active checkpoint.
+    if (this.destinationMarker.visible && this.missionManager.currentMode === 'mission') {
+      const mt = this.missionManager.getMissionTarget();
+      if (mt) this.destinationMarker.position.set(mt[0], 0.4, mt[2]);
     }
 
     // Destination beacon animation

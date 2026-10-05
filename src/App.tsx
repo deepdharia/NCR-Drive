@@ -9,6 +9,9 @@ import { MissionSelectModal } from './components/MissionSelectModal';
 import { SettingsModal } from './components/SettingsModal';
 import { PauseModal } from './components/PauseModal';
 import { MissionResultModal } from './components/MissionResultModal';
+import { TaxiOfferModal } from './components/TaxiOfferModal';
+import { TaxiOffer, getArchetypeTipHint } from './game/missions/MissionManager';
+import { TaxiArchetype } from './game/types';
 
 const INITIAL_HUD: HUDState = {
   speedKmH: 0,
@@ -52,6 +55,20 @@ export default function App() {
     stars?: number;
   } | null>(null);
 
+  // Taxi career: pending fare offer + active-job display meta (archetype/tip).
+  const [taxiOffer, setTaxiOffer] = useState<TaxiOffer | null>(null);
+  const [taxiMeta, setTaxiMeta] = useState<{ archetype: TaxiArchetype; tipHint: string } | null>(null);
+
+  // Sync the HUD taxi-card meta from the engine's active job.
+  const syncTaxiMeta = useCallback(() => {
+    const job = engineRef.current?.missionManager.currentTaxiJob;
+    if (job) {
+      setTaxiMeta({ archetype: job.archetype, tipHint: getArchetypeTipHint(job.archetype) });
+    } else {
+      setTaxiMeta(null);
+    }
+  }, []);
+
   // Initialize GameEngine outside React render loop
   useEffect(() => {
     if (!containerRef.current || engineRef.current) return;
@@ -66,6 +83,7 @@ export default function App() {
       onMissionEnd: (res) => {
         setMissionResult(res);
         setSaveData(SaveManager.load());
+        setTaxiMeta(null);
       },
     });
 
@@ -83,14 +101,32 @@ export default function App() {
   }, []);
 
   // Handlers for Modes
+  // Taxi career: show a fare offer first — the job only starts on ACCEPT.
   const handleStartTaxi = useCallback(() => {
     if (!engineRef.current) return;
+    setTaxiOffer(engineRef.current.missionManager.generateTaxiOffer());
+    setShowPause(false);
+    setShowMissions(false);
+    setMissionResult(null);
+  }, []);
+
+  const handleAcceptTaxiOffer = useCallback(() => {
+    if (!engineRef.current || !taxiOffer) return;
     lastRunRef.current = { mode: 'taxi' };
+    engineRef.current.missionManager.pendingTaxiOffer = taxiOffer;
     engineRef.current.startMode('taxi');
+    syncTaxiMeta();
+    setTaxiOffer(null);
     setScreen('game');
     setShowPause(false);
     setShowMissions(false);
     setMissionResult(null);
+  }, [taxiOffer, syncTaxiMeta]);
+
+  const handleDeclineTaxiOffer = useCallback(() => {
+    if (!engineRef.current) return;
+    // No penalty — a fresh offer appears.
+    setTaxiOffer(engineRef.current.missionManager.generateTaxiOffer());
   }, []);
 
   const handleStartMission = useCallback((missionId: string) => {
@@ -186,19 +222,18 @@ export default function App() {
     // Actually restart the last run (mission/taxi/free drive), not just reset the car.
     const last = lastRunRef.current;
     engineRef.current.startMode(last.mode, last.missionId);
+    if (last.mode === 'taxi') syncTaxiMeta();
     engineRef.current.setPaused(false);
     setShowPause(false);
     setMissionResult(null);
-  }, []);
+  }, [syncTaxiMeta]);
 
-  // Taxi career loop: jump straight into the next fare without returning to the menu.
+  // Taxi career loop: NEXT FARE opens a fresh offer instead of dropping to the menu.
   const handleNextFare = useCallback(() => {
     if (!engineRef.current) return;
-    lastRunRef.current = { mode: 'taxi' };
-    engineRef.current.startMode('taxi');
-    setScreen('game');
-    setShowPause(false);
     setMissionResult(null);
+    setTaxiOffer(engineRef.current.missionManager.generateTaxiOffer());
+    setShowPause(false);
   }, []);
 
   const handleMainMenu = useCallback(() => {
@@ -217,7 +252,11 @@ export default function App() {
       {/* In-Game Driving HUD */}
       {screen === 'game' && engineRef.current && (
         <HUD
-          state={hudState}
+          state={{
+            ...hudState,
+            taxiArchetype: taxiMeta?.archetype,
+            taxiTipHint: taxiMeta?.tipHint,
+          }}
           inputManager={engineRef.current.inputManager}
           playerX={engineRef.current.physics.position.x}
           playerZ={engineRef.current.physics.position.z}
@@ -259,6 +298,7 @@ export default function App() {
           onSelectMission={handleStartMission}
           onClose={() => setShowMissions(false)}
           hindiLabels={saveData.settings.hindiLabels}
+          highScores={saveData.highScores}
         />
       )}
 
@@ -274,6 +314,8 @@ export default function App() {
           onClose={() => setShowSettings(false)}
           onQualityChange={handleQualityChange}
           onWeatherChange={handleWeatherChange}
+          onVolumeChange={(v) => engineRef.current?.audioEngine.setVolume(v)}
+          onMuteToggle={() => engineRef.current?.audioEngine.toggleMute() ?? false}
         />
       )}
 
@@ -286,6 +328,16 @@ export default function App() {
           onOpenGarage={handleOpenGarage}
           onOpenSettings={() => setShowSettings(true)}
           onMainMenu={handleMainMenu}
+        />
+      )}
+
+      {/* Taxi Fare Offer Modal (accept / decline before the job starts) */}
+      {taxiOffer && (
+        <TaxiOfferModal
+          offer={taxiOffer}
+          onAccept={handleAcceptTaxiOffer}
+          onDecline={handleDeclineTaxiOffer}
+          hindiLabels={saveData.settings.hindiLabels}
         />
       )}
 
