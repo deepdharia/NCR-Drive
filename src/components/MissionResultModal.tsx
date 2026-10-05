@@ -13,7 +13,7 @@ interface MissionResultModalProps {
   onRetry: () => void;
 }
 
-export const MissionResultModal: React.FC<MissionResultModalProps> = ({
+export const MissionResultModal: React.FC<MissionResultModalProps> = React.memo(({
   success,
   title,
   cashEarned,
@@ -103,4 +103,4 @@ export const MissionResultModal: React.FC<MissionResultModalProps> = ({
       </div>
     </div>
   );
-};
+});

@@ -10,7 +10,7 @@ interface PauseModalProps {
   onMainMenu: () => void;
 }
 
-export const PauseModal: React.FC<PauseModalProps> = ({
+export const PauseModal: React.FC<PauseModalProps> = React.memo(({
   onResume,
   onRestart,
   onResetCar,
@@ -75,4 +75,4 @@ export const PauseModal: React.FC<PauseModalProps> = ({
       </div>
     </div>
   );
-};
+});
