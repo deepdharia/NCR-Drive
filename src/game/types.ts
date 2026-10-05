@@ -48,6 +48,8 @@ export interface CarSpecs {
   fuelTankCapacity: number; // Litres
   topSpeedKmH: number;
   isDiesel?: boolean;
+  wheelRadiusM?: number; // m (default 0.32) — feeds traction force and road RPM
+  agility?: number; // handling character multiplier, default 1.0 (>1 nimble, <1 boaty)
   colors: string[]; // hex codes
   defaultColor: string;
   description: string;

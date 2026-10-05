@@ -91,8 +91,17 @@ export class SaveManager {
     return false;
   }
 
-  public static unlockCar(carId: string): boolean {
+  public static selectCar(carId: string): boolean {
     const data = this.load();
+    if (data.ownedCarIds.includes(carId)) {
+      data.selectedCarId = carId;
+      this.save(data);
+      return true;
+    }
+    return false;
+  }
+
+  public static unlockCar(carId: string): boolean {    const data = this.load();
     if (!data.ownedCarIds.includes(carId)) {
       data.ownedCarIds.push(carId);
       data.selectedCarId = carId;

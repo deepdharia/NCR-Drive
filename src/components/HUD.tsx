@@ -143,6 +143,21 @@ export const HUD: React.FC<HUDProps> = ({
               <span className="text-amber-300">{state.targetDistanceMeters}m</span>
             </div>
           )}
+          {/* Live fare meter */}
+          <div className="mt-1.5 flex justify-between items-center text-[11px] font-bold">
+            <span className="text-neutral-400">{hindiLabels ? 'किराया:' : 'Fare:'}</span>
+            <span className="text-emerald-300 text-sm">₹{(state.fareAmount ?? 0).toLocaleString('en-IN')}</span>
+          </div>
+          {/* Job countdown */}
+          {state.missionTimeLeft !== undefined && (
+            <div className="mt-1.5 flex justify-between items-center text-[11px] font-bold">
+              <span className="text-neutral-400">{hindiLabels ? 'समय:' : 'Time left:'}</span>
+              <span className={`flex items-center gap-1 ${state.missionTimeLeft < 30 ? 'text-rose-400' : 'text-amber-300'}`}>
+                <Timer className="w-3.5 h-3.5" />
+                {Math.ceil(state.missionTimeLeft)}s
+              </span>
+            </div>
+          )}
         </div>
       )}
 

@@ -8,24 +8,20 @@ export const GAME_CONFIG = {
   // HUD Update Rate
   HUD_UPDATE_INTERVAL_MS: 66, // ~15 Hz
 
-  // Dynamic Handling & Tyres (Pacejka-lite)
-  TYRE_B: 10.0, // Stiffness factor
-  TYRE_C: 1.65, // Shape factor
-  TYRE_D: 1.15, // Peak friction
-  TYRE_E: 0.97, // Curvature factor
+  // Dynamic Handling & Tyres
+  // NOTE (2026-10-05): Pacejka constants TYRE_B/C/D/E and drift tuning
+  // DRIFT_SLIP_THRESHOLD/DRIFT_FRICTION_SCALE were removed — the physics
+  // model is arcade damping, not a Pacejka slip model; keep them out.
   SURFACE_GRIP: {
     asphalt_dry: 1.0,
     asphalt_wet: 0.78,
     dirt_shoulder: 0.55,
     speed_breaker: 0.85,
   },
-  DRIFT_SLIP_THRESHOLD: 0.28,
-  DRIFT_FRICTION_SCALE: 0.62,
 
   // Weight Transfer & Suspension
   WEIGHT_TRANSFER_PITCH: 0.16, // Nose dive under braking / squat on launch
   WEIGHT_TRANSFER_ROLL: 0.22,  // Body roll in corners
-  ANTI_ROLL_BAR_STIFFNESS: 4500, // N/rad
   SPRING_REST_LENGTH: 0.38, // Metres
   SUSPENSION_TRAVEL_MAX: 0.18, // Metres
 
@@ -35,9 +31,6 @@ export const GAME_CONFIG = {
   GEAR_RATIOS: [3.45, 2.05, 1.38, 1.02, 0.82], // 1st to 5th
   REVERSE_RATIO: 3.3,
   FINAL_DRIVE: 4.1,
-  SHIFT_UP_RPM: 4800,
-  SHIFT_DOWN_RPM: 2100,
-  AIR_RESISTANCE_COEFF: 0.38,
   ROLLING_RESISTANCE_COEFF: 0.015,
 
   // Steering

@@ -14,6 +14,20 @@ interface GarageModalProps {
   onRepairCar: () => void;
 }
 
+// Catalog-wide maxima (with max stage-3 upgrades applied) for honest bar scaling.
+const MAX_TORQUE_NM = Math.max(...CAR_CATALOG.map((c) => c.torqueNm)) * 1.48;
+const MAX_BRAKE_N = Math.max(...CAR_CATALOG.map((c) => c.brakeForce)) * 1.6;
+const MAX_GRIP = Math.max(...CAR_CATALOG.map((c) => c.tyreGrip)) * 1.54;
+
+// Real per-stage multipliers, matching VehiclePhysics (engineMult/brakeMult/tyreMult/tankMult).
+const UPGRADE_EFFECT_LABEL: Record<'engine' | 'brakes' | 'suspension' | 'tyres' | 'tank', string> = {
+  engine: '+16% torque / stage',
+  brakes: '+20% braking / stage',
+  suspension: '',
+  tyres: '+18% grip / stage',
+  tank: '+15% fuel / stage',
+};
+
 export const GarageModal: React.FC<GarageModalProps> = ({
   saveData,
   onSelectCar,
@@ -40,22 +54,23 @@ export const GarageModal: React.FC<GarageModalProps> = ({
   };
   const currentColor = saveData.carColors[car.id] || car.defaultColor;
 
+  // Carousel is preview-only: browsing the showroom never changes the active car.
+  // Selection commits only via SET ACTIVE or purchase.
   const handleNext = () => {
     const next = (selectedIdx + 1) % CAR_CATALOG.length;
     setSelectedIdx(next);
-    onSelectCar(CAR_CATALOG[next].id);
   };
 
   const handlePrev = () => {
     const prev = (selectedIdx - 1 + CAR_CATALOG.length) % CAR_CATALOG.length;
     setSelectedIdx(prev);
-    onSelectCar(CAR_CATALOG[prev].id);
   };
 
   const handleBuy = () => {
     if (saveData.cash >= car.price) {
       SaveManager.spendCash(car.price);
       SaveManager.unlockCar(car.id);
+      onSelectCar(car.id); // purchase commits the selection
       onRefreshSave();
     }
   };
@@ -71,11 +86,11 @@ export const GarageModal: React.FC<GarageModalProps> = ({
     }
   };
 
-  // Performance Stat calculations
-  const engineBonus = currentUpgrades.engine * 8;
-  const brakeBonus = currentUpgrades.brakes * 6;
-  const tyreBonus = currentUpgrades.tyres * 7;
-  const suspBonus = currentUpgrades.suspension * 6;
+  // Performance stats — computed from the REAL physics multipliers in
+  // VehiclePhysics (engine +16%/stage torque, brakes +20%/stage, tyres +18%/stage).
+  const torqueNow = car.torqueNm * (1 + currentUpgrades.engine * 0.16);
+  const brakeNowKn = (car.brakeForce * (1 + currentUpgrades.brakes * 0.2)) / 1000;
+  const gripNow = car.tyreGrip * (1 + currentUpgrades.tyres * 0.18);
 
   return (
     <div className="absolute inset-0 bg-neutral-950/85 backdrop-blur-xl z-40 flex flex-col font-display text-neutral-100 select-none">
@@ -151,7 +166,7 @@ export const GarageModal: React.FC<GarageModalProps> = ({
               {isOwned && !isSelected && (
                 <button
                   onClick={() => {
-                    SaveManager.load().selectedCarId = car.id;
+                    SaveManager.selectCar(car.id);
                     onSelectCar(car.id);
                     onRefreshSave();
                   }}
@@ -226,30 +241,30 @@ export const GarageModal: React.FC<GarageModalProps> = ({
               VEHICLE TELEMETRY & SPECS
             </h2>
 
-            {/* Spec Bars */}
+            {/* Spec Bars — values computed from real physics multipliers */}
             <div className="space-y-3">
               <div>
                 <div className="flex justify-between text-xs font-bold mb-1">
                   <span className="text-neutral-400">Top Speed</span>
-                  <span className="text-amber-400">{car.topSpeedKmH + engineBonus} km/h</span>
+                  <span className="text-amber-400">{car.topSpeedKmH} km/h</span>
                 </div>
                 <div className="w-full h-2 bg-neutral-800 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-amber-400"
-                    style={{ width: `${((car.topSpeedKmH + engineBonus) / 260) * 100}%` }}
+                    style={{ width: `${(car.topSpeedKmH / 260) * 100}%` }}
                   />
                 </div>
               </div>
 
               <div>
                 <div className="flex justify-between text-xs font-bold mb-1">
-                  <span className="text-neutral-400">Engine Power</span>
-                  <span className="text-teal-400">{car.powerHp + engineBonus} HP</span>
+                  <span className="text-neutral-400">Torque</span>
+                  <span className="text-teal-400">{Math.round(torqueNow)} Nm</span>
                 </div>
                 <div className="w-full h-2 bg-neutral-800 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-teal-400"
-                    style={{ width: `${((car.powerHp + engineBonus) / 580) * 100}%` }}
+                    style={{ width: `${Math.min(100, (torqueNow / MAX_TORQUE_NM) * 100)}%` }}
                   />
                 </div>
               </div>
@@ -257,12 +272,25 @@ export const GarageModal: React.FC<GarageModalProps> = ({
               <div>
                 <div className="flex justify-between text-xs font-bold mb-1">
                   <span className="text-neutral-400">Braking Force</span>
-                  <span className="text-rose-400">{(car.brakeForce + brakeBonus * 400) / 1000} kN</span>
+                  <span className="text-rose-400">{brakeNowKn.toFixed(1)} kN</span>
                 </div>
                 <div className="w-full h-2 bg-neutral-800 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-rose-500"
-                    style={{ width: `${((car.brakeForce + brakeBonus * 400) / 15000) * 100}%` }}
+                    style={{ width: `${Math.min(100, ((brakeNowKn * 1000) / MAX_BRAKE_N) * 100)}%` }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex justify-between text-xs font-bold mb-1">
+                  <span className="text-neutral-400">Handling</span>
+                  <span className="text-sky-400">{gripNow.toFixed(2)}× grip</span>
+                </div>
+                <div className="w-full h-2 bg-neutral-800 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-sky-400"
+                    style={{ width: `${Math.min(100, (gripNow / MAX_GRIP) * 100)}%` }}
                   />
                 </div>
               </div>
@@ -298,6 +326,11 @@ export const GarageModal: React.FC<GarageModalProps> = ({
                       >
                         <div>
                           <div className="text-xs font-bold text-neutral-200 uppercase">{part}</div>
+                          {UPGRADE_EFFECT_LABEL[part] && (
+                            <div className="text-[10px] text-neutral-500 font-semibold">
+                              {UPGRADE_EFFECT_LABEL[part]}
+                            </div>
+                          )}
                           <div className="flex gap-1 mt-1">
                             {[1, 2, 3].map((star) => (
                               <div
