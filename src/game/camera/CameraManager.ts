@@ -81,9 +81,10 @@ export class CameraManager {
       const targetRoll = -carRoll * 0.35;
       this.currentCameraRoll = THREE.MathUtils.lerp(this.currentCameraRoll, targetRoll, 8 * dt);
 
-      // Dynamic camera distance: pulls back slightly at high speed for high-speed thrill
-      const dist = 5.2 + speedRatio * 0.9;
-      const height = 1.95 + speedRatio * 0.25;
+      // Dynamic camera distance: pulls back slightly at high speed for high-speed thrill.
+      // (QA: default sat too close — the car's rear filled the frame.)
+      const dist = 6.6 + speedRatio * 1.1;
+      const height = 2.35 + speedRatio * 0.3;
 
       const idealPos = new THREE.Vector3(
         carPos.x - forwardX * dist,
