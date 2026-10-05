@@ -10,6 +10,10 @@ export interface POI {
   position: [number, number, number];
   parkingSpot?: [number, number, number];
   description: string;
+  /** Horizontal discovery radius in meters (default 25). */
+  discoveryRadius?: number;
+  /** Cash bonus on first discovery (default ₹150). */
+  discoveryBonus?: number;
 }
 
 export const POINTS_OF_INTEREST: POI[] = [
@@ -20,7 +24,9 @@ export const POINTS_OF_INTEREST: POI[] = [
     zone: 'Delhi',
     position: [0, 0, -1100],
     parkingSpot: [25, 0, -1080],
-    description: 'Iconic war memorial archway on Kartavya Path.'
+    description: 'Iconic war memorial archway on Kartavya Path.',
+    discoveryRadius: 40,
+    discoveryBonus: 250
   },
   {
     id: 'connaught_place',
@@ -29,7 +35,9 @@ export const POINTS_OF_INTEREST: POI[] = [
     zone: 'Delhi',
     position: [0, 0, -800],
     parkingSpot: [-30, 0, -790],
-    description: 'Colonnaded Georgian architecture circular hub and metro junction.'
+    description: 'Colonnaded Georgian architecture circular hub and metro junction.',
+    discoveryRadius: 45,
+    discoveryBonus: 200
   },
   {
     id: 'igi_airport',
@@ -38,7 +46,9 @@ export const POINTS_OF_INTEREST: POI[] = [
     zone: 'Delhi',
     position: [-220, 0, -600],
     parkingSpot: [-200, 0, -620],
-    description: 'International departures forecourt with drop-off lane.'
+    description: 'International departures forecourt with drop-off lane.',
+    discoveryRadius: 50,
+    discoveryBonus: 200
   },
   {
     id: 'dhaula_kuan',
@@ -47,7 +57,9 @@ export const POINTS_OF_INTEREST: POI[] = [
     zone: 'Delhi',
     position: [0, 7.5, -400],
     parkingSpot: [0, 7.5, -400],
-    description: 'Multi-tier elevated flyover passing over Delhi Ring Road.'
+    description: 'Multi-tier elevated flyover passing over Delhi Ring Road.',
+    discoveryRadius: 35,
+    discoveryBonus: 150
   },
   {
     id: 'toll_plaza',
@@ -56,7 +68,9 @@ export const POINTS_OF_INTEREST: POI[] = [
     zone: 'Highway',
     position: [0, 0, 150],
     parkingSpot: [18, 0, 150],
-    description: 'Electronic toll lanes with FASTag overhead scanners.'
+    description: 'Electronic toll lanes with FASTag overhead scanners.',
+    discoveryRadius: 30,
+    discoveryBonus: 100
   },
   {
     id: 'cyber_hub',
@@ -65,7 +79,9 @@ export const POINTS_OF_INTEREST: POI[] = [
     zone: 'Gurgaon',
     position: [120, 0, 800],
     parkingSpot: [150, 0, 810],
-    description: 'Futuristic glass-and-steel IT tech park and nightlife hub.'
+    description: 'Futuristic glass-and-steel IT tech park and nightlife hub.',
+    discoveryRadius: 40,
+    discoveryBonus: 200
   },
   {
     id: 'mg_road_mall',
@@ -74,7 +90,9 @@ export const POINTS_OF_INTEREST: POI[] = [
     zone: 'Gurgaon',
     position: [-140, 0, 950],
     parkingSpot: [-170, 0, 960],
-    description: 'Shopping district with multi-tier valet parking.'
+    description: 'Shopping district with multi-tier valet parking.',
+    discoveryRadius: 35,
+    discoveryBonus: 150
   },
   {
     id: 'iffco_chowk',
@@ -83,7 +101,9 @@ export const POINTS_OF_INTEREST: POI[] = [
     zone: 'Gurgaon',
     position: [0, 0, 1050],
     parkingSpot: [20, 0, 1070],
-    description: 'Major transit intersection with underpass and bus stops.'
+    description: 'Major transit intersection with underpass and bus stops.',
+    discoveryRadius: 35,
+    discoveryBonus: 150
   },
   {
     id: 'murthal_dhaba',
@@ -92,7 +112,9 @@ export const POINTS_OF_INTEREST: POI[] = [
     zone: 'Haryana',
     position: [80, 0, 1550],
     parkingSpot: [110, 0, 1550],
-    description: 'Open-air highway eatery serving hot parathas and sweet kulhad chai.'
+    description: 'Open-air highway eatery serving hot parathas and sweet kulhad chai.',
+    discoveryRadius: 25,
+    discoveryBonus: 200
   },
   {
     id: 'manesar_industrial',
@@ -101,7 +123,9 @@ export const POINTS_OF_INTEREST: POI[] = [
     zone: 'Haryana',
     position: [-100, 0, 1800],
     parkingSpot: [-120, 0, 1800],
-    description: 'Manufacturing plants, logistics hubs and wide open KMP expressway.'
+    description: 'Manufacturing plants, logistics hubs and wide open KMP expressway.',
+    discoveryRadius: 40,
+    discoveryBonus: 150
   }
 ];
 

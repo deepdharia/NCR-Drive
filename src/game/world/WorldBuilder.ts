@@ -226,6 +226,34 @@ export class WorldBuilder {
     return tex;
   }
 
+  // Small Hindi/English shop signboards (Janpath market, mall). Cached by
+  // text so repeated labels share one GPU texture.
+  private static shopSignTextures: Map<string, THREE.CanvasTexture> = new Map();
+
+  public static getShopSignTexture(text: string, bg: string): THREE.CanvasTexture {
+    const key = `${text}|${bg}`;
+    let tex = this.shopSignTextures.get(key);
+    if (!tex) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 256;
+      canvas.height = 64;
+      const ctx = canvas.getContext('2d')!;
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, 256, 64);
+      ctx.strokeStyle = '#f8fafc';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(3, 3, 250, 58);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 30px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, 128, 34);
+      tex = new THREE.CanvasTexture(canvas);
+      this.shopSignTextures.set(key, tex);
+    }
+    return tex;
+  }
+
   public static buildWorld(): WorldObjects {
     const worldGroup = new THREE.Group();
 
@@ -442,6 +470,137 @@ export class WorldBuilder {
     termGroup.add(atcCab);
     worldGroup.add(termGroup);
 
+    // 3d. Delhi Government Precinct — sandstone secretariat-style blocks with
+    //     colonnade fronts flanking Kartavya Path (India Gate approach).
+    //     Clear of the 14m road (half-width 7), the metro (x=35, z>=-950),
+    //     and the India Gate vendor carts.
+    {
+      const govtColGeo = new THREE.BoxGeometry(1.6, 10, 1.6);
+      const govtBeamGeo = new THREE.BoxGeometry(38, 2, 2);
+      const govtStepGeo = new THREE.BoxGeometry(40, 0.5, 4);
+
+      const addGovtBlock = (
+        cx: number, cz: number, w: number, h: number, d: number, faceDir: 1 | -1
+      ) => {
+        const g = new THREE.Group();
+        const block = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), sandstoneMat);
+        block.position.y = h / 2;
+        block.castShadow = true;
+        g.add(block);
+        // Colonnade front (faces the road)
+        const fx = faceDir * (w / 2 + 3);
+        for (let i = 0; i < 6; i++) {
+          const col = new THREE.Mesh(govtColGeo, sandstoneMat);
+          col.position.set(fx, 5, -15 + i * 6);
+          col.castShadow = true;
+          g.add(col);
+        }
+        const beam = new THREE.Mesh(govtBeamGeo, sandstoneMat);
+        beam.position.set(fx, 11, 0);
+        g.add(beam);
+        // Entrance steps
+        for (let s = 0; s < 2; s++) {
+          const step = new THREE.Mesh(govtStepGeo, concreteMat);
+          step.position.set(faceDir * (w / 2 + 4.5 + s * 1.2), 0.25 + s * 0.4, 0);
+          g.add(step);
+        }
+        g.position.set(cx, 0, cz);
+        worldGroup.add(g);
+      };
+
+      addGovtBlock(-32, -1042, 40, 26, 26, 1);   // west of Kartavya Path
+      addGovtBlock(34, -1002, 42, 30, 26, -1);   // east of Kartavya Path
+      addGovtBlock(-34, -948, 38, 22, 24, 1);     // west, south end
+    }
+
+    // 3e. Janpath Market Row — 10 small shops with Hindi/English signboards
+    //     lining both sides of Kartavya Path. Clear of the road (x=±22, road
+    //     half-width 7) and the metro (east side, z < -950).
+    {
+      const shopBodyGeo = new THREE.BoxGeometry(8, 5, 7);
+      const shopSignGeo = new THREE.PlaneGeometry(7.4, 1.85);
+      const shopWallMat = new THREE.MeshStandardMaterial({ color: 0xe7e0d2, roughness: 0.85 });
+      const shopTrimMat = new THREE.MeshStandardMaterial({ color: 0x7c2d12, roughness: 0.8 });
+
+      const shops: [string, string][] = [
+        ['चाय वाला', '#b45309'],
+        ['जनपथ मार्केट', '#1d4ed8'],
+        ['साड़ी हाउस', '#be123c'],
+        ['जूते वाला', '#4d7c0f'],
+        ['मिठाई भंडार', '#c2410c'],
+        ['कपड़े की दुकान', '#6d28d9'],
+        ['फल वाला', '#15803d'],
+        ['किताब घर', '#0e7490'],
+        ['नाई की दुकान', '#334155'],
+        ['पराठे वाला', '#a16207'],
+      ];
+
+      shops.forEach(([text, bg], i) => {
+        const side = i % 2 === 0 ? -1 : 1; // alternate west/east
+        const row = Math.floor(i / 2);
+        const sx = side * 22;
+        const sz = -1060 + row * 20;
+        const shop = new THREE.Group();
+
+        const body = new THREE.Mesh(shopBodyGeo, shopWallMat);
+        body.position.y = 2.5;
+        body.castShadow = true;
+        shop.add(body);
+
+        const trim = new THREE.Mesh(new THREE.BoxGeometry(8.4, 0.7, 7.4), shopTrimMat);
+        trim.position.y = 5.1;
+        shop.add(trim);
+
+        const signMat = new THREE.MeshStandardMaterial({
+          map: this.getShopSignTexture(text, bg),
+          roughness: 0.5,
+        });
+        const sign = new THREE.Mesh(shopSignGeo, signMat);
+        // Faces the road: west shops face +x, east shops face -x
+        sign.position.set(side * -1 * 4.06, 3.4, 0);
+        sign.rotation.y = side === -1 ? Math.PI / 2 : -Math.PI / 2;
+        shop.add(sign);
+
+        shop.position.set(sx, 0, sz);
+        worldGroup.add(shop);
+      });
+    }
+
+    // 3f. Connaught Place Commercial Blocks — 5 mid-rise blocks around the
+    //     colonnade ring giving CP real mass. Angles dodge the radial-road
+    //     gaps (same ~11° rule as the colonnade), the parked-car row, and the
+    //     vendor carts.
+    {
+      const cpBlockAngles = [45, 105, 135, 225, 315];
+      const cpBlockHeights = [24, 30, 20, 26, 22];
+      const cpWinGeo = new THREE.BoxGeometry(28.6, 2.2, 24.6);
+
+      cpBlockAngles.forEach((deg, i) => {
+        const a = (deg * Math.PI) / 180;
+        const bx = Math.cos(a) * 95;
+        const bz = -800 + Math.sin(a) * 95;
+        const h = cpBlockHeights[i];
+
+        const block = new THREE.Mesh(new THREE.BoxGeometry(28, h, 24), concreteMat);
+        block.position.set(bx, h / 2, bz);
+        block.rotation.y = -a;
+        block.castShadow = true;
+        worldGroup.add(block);
+
+        // Emissive office window band
+        const winMat = new THREE.MeshStandardMaterial({
+          color: 0x93c5fd,
+          emissive: 0x3b82f6,
+          emissiveIntensity: 0.55,
+          roughness: 0.3,
+        });
+        const win = new THREE.Mesh(cpWinGeo, winMat);
+        win.position.set(bx, h * 0.62, bz);
+        win.rotation.y = -a;
+        worldGroup.add(win);
+      });
+    }
+
     // 4. Delhi Metro Elevated Viaduct & Animated High-Speed Train
     const metroGroup = new THREE.Group();
     for (let z = -950; z <= 850; z += 48) {
@@ -579,6 +738,58 @@ export class WorldBuilder {
       worldGroup.add(mesh);
     }
 
+    // 7b. Gurgaon Corporate Depth — 7 more glass towers filling out the
+    //     skyline east/west of the corridor. All clear of the main road
+    //     (half-width ≤13), the Cyber Hub / MG Road branches, the metro
+    //     (x=35, z≤850), and the existing towers.
+    {
+      const extraTowers = [
+        { x: 200, z: 700, w: 55, d: 50, h: 140 },
+        { x: 215, z: 900, w: 60, d: 55, h: 175 },
+        { x: 150, z: 1120, w: 50, d: 46, h: 110 },
+        { x: 70, z: 1050, w: 48, d: 44, h: 90 },
+        { x: -200, z: 1000, w: 55, d: 50, h: 130 },
+        { x: -80, z: 1150, w: 48, d: 44, h: 85 },
+        { x: 70, z: 600, w: 45, d: 42, h: 100 },
+      ];
+      for (const t of extraTowers) {
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(t.w, t.h, t.d), glassMat);
+        mesh.position.set(t.x, t.h / 2, t.z);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        worldGroup.add(mesh);
+        // Rooftop crown box for silhouette variety
+        const crown = new THREE.Mesh(new THREE.BoxGeometry(t.w * 0.4, 8, t.d * 0.4), glassMat);
+        crown.position.set(t.x, t.h + 4, t.z);
+        worldGroup.add(crown);
+      }
+    }
+
+    // 7c. Ambience Mall Block — big-box retail with an illuminated signboard,
+    //     west of the IFFCO Chowk junction. Clear of the junction road (x=0,
+    //     half-width 10) and the existing towers.
+    {
+      const mall = new THREE.Mesh(
+        new THREE.BoxGeometry(70, 18, 50),
+        new THREE.MeshStandardMaterial({ color: 0xd6cfc2, roughness: 0.7 })
+      );
+      mall.position.set(-70, 9, 1150);
+      mall.castShadow = true;
+      worldGroup.add(mall);
+
+      const mallSignMat = new THREE.MeshStandardMaterial({
+        map: this.getShopSignTexture('AMBIENCE MALL', '#7c2d12'),
+        roughness: 0.4,
+        emissive: 0xffffff,
+        emissiveMap: this.getShopSignTexture('AMBIENCE MALL', '#7c2d12'),
+        emissiveIntensity: 0.35,
+      });
+      const mallSign = new THREE.Mesh(new THREE.PlaneGeometry(34, 8.5), mallSignMat);
+      mallSign.position.set(-34.9, 12, 1150);
+      mallSign.rotation.y = Math.PI / 2; // faces the road (+x)
+      worldGroup.add(mallSign);
+    }
+
     // 8. Haryana Outskirts & Old Rao Punjabi Dhaba (Z: 1550)
     const dhabaGroup = new THREE.Group();
     dhabaGroup.position.set(100, 0, 1550);
@@ -701,6 +912,81 @@ export class WorldBuilder {
       // Connaught Place vendors (inside the circle, off the drivable radials)
       addVendorCart(25, -830, 0.2, 3);
       addVendorCart(-25, -832, -0.3, 4);
+    }
+
+    // 8c. Haryana Village & Industrial Sheds — rural edge near Manesar so the
+    //     cow country looks lived-in. Clear of the highway (half-width 10),
+    //     the KMP connector diagonal, the dhaba service lane, and the
+    //     mustard fields (x=-150±75).
+    {
+      const villageWallMat = new THREE.MeshStandardMaterial({ color: 0xd9c8a9, roughness: 0.9 });
+      const villageTrimMat = new THREE.MeshStandardMaterial({ color: 0x92400e, roughness: 0.85 });
+      const houseBodyGeo = new THREE.BoxGeometry(8, 4, 7);
+      const houseRoofGeo = new THREE.ConeGeometry(6.2, 2.6, 4);
+      const courtyardWallGeo = new THREE.BoxGeometry(10, 1.6, 0.5);
+
+      const addHouse = (x: number, z: number, rotY: number) => {
+        const house = new THREE.Group();
+        const body = new THREE.Mesh(houseBodyGeo, villageWallMat);
+        body.position.y = 2;
+        body.castShadow = true;
+        house.add(body);
+        const roof = new THREE.Mesh(houseRoofGeo, villageTrimMat);
+        roof.position.y = 5.3;
+        roof.rotation.y = Math.PI / 4;
+        roof.castShadow = true;
+        house.add(roof);
+        // Courtyard boundary walls (U-shape, open at the back)
+        for (const [wx, wz, wrot] of [[0, 7.5, 0], [-5, 4, Math.PI / 2], [5, 4, Math.PI / 2]] as [number, number, number][]) {
+          const wall = new THREE.Mesh(courtyardWallGeo, villageWallMat);
+          wall.position.set(wx, 0.8, wz);
+          wall.rotation.y = wrot;
+          house.add(wall);
+        }
+        house.position.set(x, 0, z);
+        house.rotation.y = rotY;
+        worldGroup.add(house);
+      };
+
+      addHouse(-55, 1740, 0.1);
+      addHouse(-40, 1740, -0.08);
+      addHouse(-25, 1740, 0.05);
+      addHouse(-50, 1800, 0.12);
+      addHouse(-35, 1800, -0.1);
+      addHouse(-20, 1800, 0.06);
+      addHouse(-42, 1860, -0.05);
+
+      // Industrial sheds with sawtooth-ish rooflines, west of the highway
+      // (east side is pinched by the dhaba service lane and mustard fields).
+      const shedMat = new THREE.MeshStandardMaterial({ color: 0x9aa5b1, roughness: 0.6, metalness: 0.35 });
+      const shedDarkMat = new THREE.MeshStandardMaterial({ color: 0x4b5563, roughness: 0.7 });
+      const shedGeo = new THREE.BoxGeometry(40, 10, 30);
+      const shedRidgeGeo = new THREE.BoxGeometry(40, 1.2, 4);
+
+      const addShed = (x: number, z: number) => {
+        const shed = new THREE.Group();
+        const body = new THREE.Mesh(shedGeo, shedMat);
+        body.position.y = 5;
+        body.castShadow = true;
+        shed.add(body);
+        // Sawtooth roof ridges
+        for (let r = -1; r <= 1; r++) {
+          const ridge = new THREE.Mesh(shedRidgeGeo, shedDarkMat);
+          ridge.position.set(0, 10.9, r * 9);
+          ridge.rotation.x = 0.18;
+          shed.add(ridge);
+        }
+        // Loading dock strip
+        const dock = new THREE.Mesh(new THREE.BoxGeometry(40, 1.1, 5), shedDarkMat);
+        dock.position.set(0, 0.55, 17.5);
+        shed.add(dock);
+        shed.position.set(x, 0, z);
+        worldGroup.add(shed);
+      };
+
+      addShed(-50, 1400);
+      addShed(-52, 1465);
+      addShed(-50, 1530);
     }
 
     // 9. Mustard Fields in Haryana (Vibrant Golden-Yellow patches)
