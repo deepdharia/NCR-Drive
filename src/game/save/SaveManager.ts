@@ -17,6 +17,7 @@ const DEFAULT_SAVE: PlayerSaveData = {
   highScores: {},
   totalJobsCompleted: 0,
   totalKmDriven: 0,
+  discoveredPOIs: [],
   settings: {
     quality: 'auto',
     trafficDensity: 'medium',

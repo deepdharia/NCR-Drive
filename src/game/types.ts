@@ -73,6 +73,7 @@ export interface PlayerSaveData {
   highScores: Record<string, number>;
   totalJobsCompleted: number;
   totalKmDriven: number;
+  discoveredPOIs: string[]; // POI ids the player has discovered (landmark check-ins)
   settings: {
     quality: QualityLevel;
     trafficDensity: 'low' | 'medium' | 'high';

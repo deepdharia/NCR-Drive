@@ -4,7 +4,7 @@ import { getGroundHeight, ROAD_SEGMENTS } from '../world/MapData';
 import type { RoadSegment } from '../types';
 import type { AudioEngine } from '../audio/AudioEngine';
 
-export type TrafficVehicleType = 'car' | 'taxi' | 'auto_rickshaw' | 'bus' | 'truck' | 'bike' | 'cow';
+export type TrafficVehicleType = 'car' | 'taxi' | 'auto_rickshaw' | 'e_rickshaw' | 'police_van' | 'bus' | 'truck' | 'bike' | 'cow';
 
 export interface TrafficVehicle {
   id: number;
@@ -25,6 +25,8 @@ export interface TrafficVehicle {
   honkCooldown: number;
   overtakeState: 'none' | 'overtaking';
   wasColliding: boolean; // edge-trigger for player collision events
+  lightbarMats?: [THREE.MeshStandardMaterial, THREE.MeshStandardMaterial]; // police van roof beacons
+  lightbarTimer?: number; // police van flash phase clock
 }
 
 // ---------------------------------------------------------------------------
@@ -84,6 +86,8 @@ const carLowerGeo = new THREE.BoxGeometry(1.82, 0.68, 4.3);
 const carCabinGeo = new THREE.BoxGeometry(1.54, 0.62, 2.3);
 const carTailGeo = new THREE.BoxGeometry(1.4, 0.16, 0.05);
 const taxiRoofMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.3 });
+// Taxi liveries: classic black-yellow, white, silver-blue (roof stays yellow).
+const taxiBodyColors = [0x181a1f, 0xf1f5f9, 0x8fb8dd];
 const carBodyMats = new Map<number, THREE.MeshPhysicalMaterial>();
 function carBodyMat(color: number): THREE.MeshPhysicalMaterial {
   let m = carBodyMats.get(color);
@@ -93,6 +97,77 @@ function carBodyMat(color: number): THREE.MeshPhysicalMaterial {
   }
   return m;
 }
+
+// E-rickshaw (smaller than the auto, yellow-green Delhi style)
+const erickLowerGeo = new THREE.BoxGeometry(1.2, 0.7, 2.2);
+const erickCanopyGeo = new THREE.BoxGeometry(1.22, 0.55, 1.7);
+const erickGlassGeo = new THREE.PlaneGeometry(1.05, 0.5);
+const erickTailGeo = new THREE.BoxGeometry(1.0, 0.09, 0.05);
+const erickBodyMat = new THREE.MeshStandardMaterial({ color: 0x65a30d, roughness: 0.55 });
+const erickAccentMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.6 });
+const erickGlassMat = new THREE.MeshPhysicalMaterial({ color: 0x0f172a, transmission: 0.8 });
+
+// Police PCR van (white with blue stripe + roof lightbar)
+const policeBodyGeo = new THREE.BoxGeometry(2.0, 1.5, 4.7);
+const policeCabinGeo = new THREE.BoxGeometry(1.86, 0.85, 2.6);
+const policeStripeGeo = new THREE.BoxGeometry(2.02, 0.28, 4.72);
+const policeBarBaseGeo = new THREE.BoxGeometry(1.1, 0.12, 0.28);
+const policeBeaconGeo = new THREE.BoxGeometry(0.42, 0.22, 0.24);
+const policeBodyMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.35 });
+const policeGlassMat = new THREE.MeshPhysicalMaterial({ color: 0x1e293b, roughness: 0.1, transmission: 0.7 });
+const policeMarkingMat = new THREE.MeshStandardMaterial({ color: 0x1d4ed8, roughness: 0.5 });
+
+// Canvas text plates: truck rear-door art + bus route board.
+// Textures/materials are cached by text so the pool shares just a handful.
+const textPlateTexCache = new Map<string, THREE.CanvasTexture>();
+const textPlateMatCache = new Map<string, THREE.MeshStandardMaterial>();
+function textPlateTexture(text: string, bg = '#f59e0b', fg = '#431407'): THREE.CanvasTexture {
+  const key = `${bg}|${fg}|${text}`;
+  let t = textPlateTexCache.get(key);
+  if (!t) {
+    const c = document.createElement('canvas');
+    c.width = 512;
+    c.height = 160;
+    const g = c.getContext('2d')!;
+    g.fillStyle = bg;
+    g.fillRect(0, 0, 512, 160);
+    g.strokeStyle = fg;
+    g.lineWidth = 8;
+    g.strokeRect(10, 10, 492, 140);
+    g.fillStyle = fg;
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    const lines = text.split('\n');
+    let size = lines.length > 1 ? 40 : 52;
+    const setFont = () => {
+      g.font = `bold ${size}px "Noto Sans", "Mangal", sans-serif`;
+    };
+    setFont();
+    while (size > 16 && lines.some((l) => g.measureText(l).width > 460)) {
+      size -= 4;
+      setFont();
+    }
+    lines.forEach((l, i) =>
+      g.fillText(l, 256, 80 + (i - (lines.length - 1) / 2) * (size * 1.25))
+    );
+    t = new THREE.CanvasTexture(c);
+    t.anisotropy = 4;
+    textPlateTexCache.set(key, t);
+  }
+  return t;
+}
+function textPlateMat(text: string, bg?: string, fg?: string): THREE.MeshStandardMaterial {
+  const key = `${bg ?? ''}|${fg ?? ''}|${text}`;
+  let m = textPlateMatCache.get(key);
+  if (!m) {
+    m = new THREE.MeshStandardMaterial({ map: textPlateTexture(text, bg, fg), roughness: 0.6 });
+    textPlateMatCache.set(key, m);
+  }
+  return m;
+}
+const flapPlateGeo = new THREE.PlaneGeometry(2.3, 0.72);
+const busBoardPlateGeo = new THREE.PlaneGeometry(1.7, 0.3);
+const TRUCK_FLAP_TEXTS = ['HORN OK PLEASE', 'USE DIPPER AT NIGHT', 'बुरी नज़र वाले\nतेरा मुँह काला'];
 
 // India drives on the LEFT. For a vehicle travelling +Z (direction 1) the left
 // side is +X; for -Z travel (direction -1) the left side is -X.
@@ -141,6 +216,10 @@ function targetSpeedFor(type: TrafficVehicleType): number {
     case 'auto_rickshaw':
     case 'bike':
       return 10 + Math.random() * 6; // 10–16 m/s
+    case 'e_rickshaw':
+      return 8 + Math.random() * 4; // 8–12 m/s
+    case 'police_van':
+      return 16 + Math.random() * 4; // 16–20 m/s
     case 'cow':
       return 0.4;
     default:
@@ -179,6 +258,7 @@ export class TrafficSystem {
     width: number;
     mass: number;
     brakeLightMat?: THREE.MeshStandardMaterial;
+    lightbarMats?: [THREE.MeshStandardMaterial, THREE.MeshStandardMaterial];
   } {
     const group = new THREE.Group();
     let length = 4.3;
@@ -188,6 +268,8 @@ export class TrafficSystem {
     // Per-vehicle brake-light material: emissive is mutated per frame, so it
     // cannot be shared across vehicles. Created only for types that have one.
     let brakeLightMat: THREE.MeshStandardMaterial | undefined;
+    // Police van roof beacons: flashed per frame, also per-vehicle.
+    let lightbarMats: [THREE.MeshStandardMaterial, THREE.MeshStandardMaterial] | undefined;
     const makeBrakeLightMat = (): THREE.MeshStandardMaterial => {
       const m = new THREE.MeshStandardMaterial({
         color: 0xdc2626,
@@ -268,6 +350,95 @@ export class TrafficSystem {
       tl.position.set(0, 0.65, -1.32);
       group.add(tl);
 
+    } else if (type === 'e_rickshaw') {
+      length = 2.4;
+      width = 1.25;
+      mass = 350;
+      const blm = makeBrakeLightMat();
+
+      // Battery e-rickshaw: lime body, yellow canopy — smaller than the auto
+      const lower = new THREE.Mesh(erickLowerGeo, erickBodyMat);
+      lower.position.y = 0.52;
+      lower.castShadow = true;
+      group.add(lower);
+
+      const canopy = new THREE.Mesh(erickCanopyGeo, erickAccentMat);
+      canopy.position.set(0, 1.12, -0.15);
+      canopy.castShadow = true;
+      group.add(canopy);
+
+      const glass = new THREE.Mesh(erickGlassGeo, erickGlassMat);
+      glass.position.set(0, 1.05, 1.0);
+      glass.rotation.x = -Math.PI / 10;
+      group.add(glass);
+
+      const frontW = new THREE.Mesh(sharedTireGeo, sharedTireMat);
+      frontW.rotation.z = Math.PI / 2;
+      frontW.position.set(0, 0.26, 0.9);
+      group.add(frontW);
+
+      for (const sx of [-0.55, 0.55]) {
+        const rearW = new THREE.Mesh(sharedTireGeo, sharedTireMat);
+        rearW.rotation.z = Math.PI / 2;
+        rearW.position.set(sx, 0.26, -0.75);
+        group.add(rearW);
+      }
+
+      const tl = new THREE.Mesh(erickTailGeo, blm);
+      tl.position.set(0, 0.6, -1.12);
+      group.add(tl);
+
+    } else if (type === 'police_van') {
+      length = 4.7;
+      width = 2.0;
+      mass = 1800;
+      const blm = makeBrakeLightMat();
+
+      // White PCR van with blue stripe + roof lightbar
+      const body = new THREE.Mesh(policeBodyGeo, policeBodyMat);
+      body.position.y = 1.0;
+      body.castShadow = true;
+      group.add(body);
+
+      const glass = new THREE.Mesh(policeCabinGeo, policeGlassMat);
+      glass.position.set(0, 1.55, 0.1);
+      group.add(glass);
+
+      const stripe = new THREE.Mesh(policeStripeGeo, policeMarkingMat);
+      stripe.position.y = 0.85;
+      group.add(stripe);
+
+      const barBase = new THREE.Mesh(policeBarBaseGeo, sharedTireMat);
+      barBase.position.set(0, 2.06, 0.1);
+      group.add(barBase);
+
+      // Alternating red/blue beacons — flashed per frame in update()
+      const redMat = new THREE.MeshStandardMaterial({
+        color: 0xef4444,
+        emissive: 0xef4444,
+        emissiveIntensity: 3,
+        roughness: 0.3,
+      });
+      const blueMat = new THREE.MeshStandardMaterial({
+        color: 0x3b82f6,
+        emissive: 0x3b82f6,
+        emissiveIntensity: 0.2,
+        roughness: 0.3,
+      });
+      const red = new THREE.Mesh(policeBeaconGeo, redMat);
+      red.position.set(-0.28, 2.22, 0.1);
+      group.add(red);
+      const blue = new THREE.Mesh(policeBeaconGeo, blueMat);
+      blue.position.set(0.28, 2.22, 0.1);
+      group.add(blue);
+      lightbarMats = [redMat, blueMat];
+
+      addWheels(0.92, 1.5, 0.34);
+
+      const bl = new THREE.Mesh(carTailGeo, blm);
+      bl.position.set(0, 0.9, -2.36);
+      group.add(bl);
+
     } else if (type === 'bus') {
       length = 11.2;
       width = 2.65;
@@ -289,6 +460,14 @@ export class TrafficSystem {
       const routeBoard = new THREE.Mesh(busRouteGeo, busRouteMat);
       routeBoard.position.set(0, 2.85, 5.42);
       group.add(routeBoard);
+
+      // Real route text on the board (shared cached texture)
+      const boardText = new THREE.Mesh(
+        busBoardPlateGeo,
+        textPlateMat('502 MEHRAULI - KASHMERE GATE', '#f59e0b', '#451a03')
+      );
+      boardText.position.set(0, 2.85, 5.45);
+      group.add(boardText);
 
       addWheels(1.18, 4.0, 0.45);
 
@@ -317,6 +496,13 @@ export class TrafficSystem {
       const flap = new THREE.Mesh(truckFlapGeo, truckFlapMat);
       flap.position.set(0, 1.2, -4.42);
       group.add(flap);
+
+      // Rear-door art plate: random livery from 3 shared cached textures
+      const flapText = TRUCK_FLAP_TEXTS[Math.floor(Math.random() * TRUCK_FLAP_TEXTS.length)];
+      const plate = new THREE.Mesh(flapPlateGeo, textPlateMat(flapText));
+      plate.rotation.y = Math.PI;
+      plate.position.set(0, 1.2, -4.475);
+      group.add(plate);
 
       addWheels(1.12, 2.9, 0.45);
 
@@ -360,14 +546,16 @@ export class TrafficSystem {
       group.add(head);
 
     } else {
-      // Standard Hatchback, Sedan, or Yellow-Black Taxi
+      // Standard Hatchback, Sedan, or Taxi (3 liveries: black-yellow, white, silver-blue)
       length = 4.4;
       width = 1.84;
       mass = 1180;
       const blm = makeBrakeLightMat();
 
       const isTaxi = type === 'taxi';
-      const bodyColor = isTaxi ? 0x181a1f : (Math.random() > 0.6 ? 0xd97706 : Math.random() > 0.5 ? 0x2563eb : 0xdc2626);
+      const bodyColor = isTaxi
+        ? taxiBodyColors[Math.floor(Math.random() * taxiBodyColors.length)]
+        : (Math.random() > 0.6 ? 0xd97706 : Math.random() > 0.5 ? 0x2563eb : 0xdc2626);
       const carMat = carBodyMat(bodyColor);
 
       const lower = new THREE.Mesh(carLowerGeo, carMat);
@@ -390,19 +578,31 @@ export class TrafficSystem {
       group.add(bl);
     }
 
-    return { mesh: group, length, width, mass, brakeLightMat };
+    return { mesh: group, length, width, mass, brakeLightMat, lightbarMats };
+  }
+
+  /** Weighted spawn mix: e-rickshaws ~10% in city zones, police vans rare (~3%). */
+  private pickSpawnType(): TrafficVehicleType {
+    const r = Math.random();
+    if (r < 0.03) return 'police_van';
+    if (r < 0.13) return 'e_rickshaw';
+    const rest: TrafficVehicleType[] = ['car', 'taxi', 'auto_rickshaw', 'bus', 'truck', 'bike', 'cow'];
+    return rest[Math.floor(Math.random() * rest.length)];
   }
 
   private initPool() {
-    const types: TrafficVehicleType[] = ['car', 'taxi', 'auto_rickshaw', 'bus', 'truck', 'bike', 'cow'];
-
     for (let i = 0; i < this.vehiclePoolSize; i++) {
-      const type = types[Math.floor(Math.random() * types.length)];
-      const { mesh, length, width, mass, brakeLightMat } = this.createVehicleMesh(type);
+      const type = this.pickSpawnType();
+      const { mesh, length, width, mass, brakeLightMat, lightbarMats } = this.createVehicleMesh(type);
 
       const direction: 1 | -1 = Math.random() > 0.5 ? 1 : -1;
       // Cows stay on rural Haryana roads (z > 1300) — never on the expressway.
-      const z = type === 'cow' ? 1300 + Math.random() * 600 : (Math.random() - 0.5) * 1900;
+      // E-rickshaws stay in Delhi/Gurgaon city zones, off the fast expressway.
+      let z: number;
+      if (type === 'cow') z = 1300 + Math.random() * 600;
+      else if (type === 'e_rickshaw')
+        z = Math.random() < 0.5 ? -950 + Math.random() * 500 : 650 + Math.random() * 300;
+      else z = (Math.random() - 0.5) * 1900;
       const seg = nearestRoadSegment(0, z);
       const laneIndex = Math.floor(Math.random() * lanesPerDirection(seg));
       // Left-hand traffic (India): +Z travel uses +X lanes, -Z travel uses -X.
@@ -418,7 +618,9 @@ export class TrafficSystem {
         type,
         mesh,
         brakeLightMat,
-        position: mesh.position,
+        lightbarMats,
+        lightbarTimer: 0,
+        position: mesh.position.clone(), // physics truth; mesh.position is visual (may carry wobble)
         velocity: new THREE.Vector3(0, 0, direction * targetSpeed),
         speed: targetSpeed * (0.85 + Math.random() * 0.3),
         targetSpeed,
@@ -458,6 +660,10 @@ export class TrafficSystem {
         if (v.type === 'cow' && newZ <= 1300) {
           // Keep cows on rural Haryana roads; they stay dormant until the player drives there.
           newZ = 1300 + Math.random() * 600;
+        }
+        if (v.type === 'e_rickshaw' && (newZ > 1300 || (newZ > -450 && newZ < 650))) {
+          // E-rickshaws belong in the city — never the fast expressway or Haryana.
+          newZ = newZ > 325 ? 650 + Math.random() * 300 : -950 + Math.random() * 500;
         }
         v.position.z = newZ;
         const seg = nearestRoadSegment(v.position.x, newZ);
@@ -531,12 +737,25 @@ export class TrafficSystem {
         }
       }
 
+      // Police lightbar: cheap alternating red/blue flash.
+      if (v.lightbarMats) {
+        v.lightbarTimer = (v.lightbarTimer ?? 0) + dt;
+        const phase = Math.floor(v.lightbarTimer / 0.35) % 2;
+        v.lightbarMats[0].emissiveIntensity = phase === 0 ? 3.2 : 0.15;
+        v.lightbarMats[1].emissiveIntensity = phase === 1 ? 3.2 : 0.15;
+      }
+
       v.position.z += v.direction * v.speed * dt;
       v.position.y = getGroundHeight(v.position.x, v.position.z).height;
       v.velocity.set(0, 0, v.direction * v.speed);
       v.mesh.position.z = v.position.z;
       v.mesh.position.y = v.position.y;
-      v.mesh.position.x = v.position.x;
+      // E-rickshaws wobble faintly at speed — cheap street life, physics untouched.
+      v.mesh.position.x =
+        v.position.x +
+        (v.type === 'e_rickshaw'
+          ? Math.sin(performance.now() * 0.004 + v.id * 1.7) * 0.06 * Math.min(1, v.speed / 8)
+          : 0);
 
       // OBB Collision with player
       const pDx = Math.abs(playerPos.x - v.position.x);

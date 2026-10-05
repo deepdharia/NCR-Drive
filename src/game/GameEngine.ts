@@ -64,6 +64,11 @@ export class GameEngine {
   private hasPaidToll: boolean = false;
   private tollAlertTimer: number = 0;
 
+  // Landmark discovery (throttled check + toast state)
+  private discoveryTimer: number = 0;
+  private discoveryToastTimer: number = 0;
+  private discoveryToastText: string | null = null;
+
   // Callbacks to React HUD
   private onHudUpdateCallback?: (hud: HUDState) => void;
   private onMissionEndCallback?: (result: { success: boolean; cashEarned: number; title: string; message: string; stars?: number }) => void;
@@ -593,6 +598,16 @@ export class GameEngine {
       this.tollAlertTimer -= clampedDt;
     }
 
+    // Landmark discovery: throttled to ~1 check/second (never per frame).
+    this.discoveryTimer += clampedDt;
+    if (this.discoveryTimer >= 1.0) {
+      this.discoveryTimer = 0;
+      this.checkLandmarkDiscovery();
+    }
+    if (this.discoveryToastTimer > 0) {
+      this.discoveryToastTimer -= clampedDt;
+    }
+
     // Mission Progression
     const missionStatus = this.missionManager.update(
       clampedDt,
@@ -667,6 +682,34 @@ export class GameEngine {
     }
   }
 
+  /**
+   * Landmark discovery: first visit to a POI grants a cash bonus and a toast.
+   * Horizontal (x/z) distance only — driving under the Dhaula Kuan flyover
+   * still counts as visiting the landmark. One discovery per check tick.
+   */
+  private checkLandmarkDiscovery() {
+    const data = SaveManager.load();
+    const discovered = data.discoveredPOIs ?? [];
+    for (const poi of POINTS_OF_INTEREST) {
+      if (discovered.includes(poi.id)) continue;
+      const dx = this.physics.position.x - poi.position[0];
+      const dz = this.physics.position.z - poi.position[2];
+      const radius = poi.discoveryRadius ?? 25;
+      if (dx * dx + dz * dz <= radius * radius) {
+        const bonus = poi.discoveryBonus ?? 150;
+        data.discoveredPOIs = [...discovered, poi.id];
+        data.cash += bonus;
+        SaveManager.save(data);
+        // Re-sync the engine's cached save so the HUD cash updates instantly.
+        this.cachedSave = data;
+        const label = this.cachedSave.settings.hindiLabels ? poi.hindiName : poi.name;
+        this.discoveryToastText = `📍 Discovered: ${label}! +₹${bonus}`;
+        this.discoveryToastTimer = 3.5;
+        break;
+      }
+    }
+  }
+
   private dispatchHud() {
     if (!this.onHudUpdateCallback) return;
 
@@ -725,6 +768,7 @@ export class GameEngine {
         (this.missionManager as unknown as { getLiveFare?: () => number }).getLiveFare?.() ??
         this.missionManager.currentTaxiJob?.baseFare,
       fastagNotification: this.tollAlertTimer > 0 ? 'FASTag Paid: ₹75 (Kherki Daula Toll)' : null,
+      notificationMessage: this.discoveryToastTimer > 0 ? this.discoveryToastText : null,
       hasGpsTarget: this.destinationMarker.visible,
       gpsTargetName,
     };

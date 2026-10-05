@@ -1,5 +1,5 @@
 import React from 'react';
-import { Fuel, Wrench, IndianRupee, AlertTriangle, Navigation, Star, Gauge, Timer } from 'lucide-react';
+import { Fuel, Wrench, IndianRupee, AlertTriangle, Navigation, Star, Gauge, Timer, MapPin } from 'lucide-react';
 import { InputManager } from '../game/input/InputManager';
 import { Gear, HUDState } from '../game/types';
 import { Minimap } from './Minimap';
@@ -105,6 +105,14 @@ export const HUD: React.FC<HUDProps> = ({
           <div className="hud-glass px-4 py-2 rounded-2xl border-2 border-emerald-500 bg-emerald-950/80 text-emerald-200 font-bold text-sm flex items-center gap-2 shadow-2xl animate-bounce">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
             {state.fastagNotification}
+          </div>
+        )}
+
+        {/* Landmark discovery toast */}
+        {state.notificationMessage && (
+          <div className="hud-glass px-4 py-2 rounded-2xl border-2 border-amber-500 bg-amber-950/80 text-amber-200 font-bold text-sm flex items-center gap-2 shadow-2xl animate-bounce">
+            <MapPin className="w-4 h-4 text-amber-400" />
+            {state.notificationMessage}
           </div>
         )}
 
