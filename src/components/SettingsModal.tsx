@@ -1,5 +1,5 @@
-import React from 'react';
-import { X, Sliders, Monitor, Volume2, CloudRain, Globe } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, Sliders, Monitor, Volume2, VolumeX, CloudRain, Globe } from 'lucide-react';
 import { SaveManager } from '../game/save/SaveManager';
 import { PlayerSaveData, QualityLevel, Weather } from '../game/types';
 
@@ -9,6 +9,10 @@ interface SettingsModalProps {
   onClose: () => void;
   onQualityChange: (quality: QualityLevel) => void;
   onWeatherChange: (weather: Weather) => void;
+  /** Live volume callback (0..1) — same pattern as onQualityChange/onWeatherChange. Optional. */
+  onVolumeChange?: (vol: number) => void;
+  /** Toggles engine mute; returns the new muted state. Optional. */
+  onMuteToggle?: () => boolean;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -17,8 +21,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onClose,
   onQualityChange,
   onWeatherChange,
+  onVolumeChange,
+  onMuteToggle,
 }) => {
   const settings = saveData.settings;
+  const [muted, setMuted] = useState(false);
 
   const updateSetting = <K extends keyof PlayerSaveData['settings']>(
     key: K,
@@ -36,6 +43,24 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
     if (key === 'quality') onQualityChange(val as QualityLevel);
     if (key === 'weather') onWeatherChange(val as Weather);
+  };
+
+  const volumePct = Math.round(settings.soundVolume * 100);
+
+  const handleVolumeInput = (pct: number) => {
+    const v = Math.min(1, Math.max(0, pct / 100));
+    updateSetting('soundVolume', v); // persists via the existing onUpdateSave path
+    onVolumeChange?.(v); // live apply
+    if (muted && v > 0) {
+      // Raising the volume unmutes.
+      const m = onMuteToggle?.();
+      setMuted(m ?? false);
+    }
+  };
+
+  const handleMuteToggle = () => {
+    const m = onMuteToggle?.();
+    setMuted(m ?? !muted);
   };
 
   return (
@@ -97,6 +122,39 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   {d}
                 </button>
               ))}
+            </div>
+          </div>
+
+          {/* Sound & Volume */}
+          <div>
+            <div className="text-neutral-400 font-bold mb-2 flex items-center gap-1.5">
+              <Volume2 className="w-4 h-4 text-amber-400" />
+              SOUND & VOLUME
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleMuteToggle}
+                aria-label={muted ? 'Unmute' : 'Mute'}
+                className={`p-2.5 rounded-xl font-bold transition-all ${
+                  muted
+                    ? 'bg-rose-500/20 border border-rose-500/60 text-rose-300'
+                    : 'bg-neutral-900 border border-neutral-800 text-neutral-300 hover:text-neutral-100'
+                }`}
+              >
+                {muted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+              </button>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={volumePct}
+                onChange={(e) => handleVolumeInput(Number(e.target.value))}
+                className="flex-1 accent-amber-500 h-2 cursor-pointer"
+                aria-label="Master volume"
+              />
+              <span className="w-12 text-right text-neutral-200 font-bold tabular-nums">
+                {volumePct}%
+              </span>
             </div>
           </div>
 

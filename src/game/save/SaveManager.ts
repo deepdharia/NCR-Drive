@@ -23,7 +23,6 @@ const DEFAULT_SAVE: PlayerSaveData = {
     controlScheme: 'wheel_right',
     steeringAssist: true,
     soundVolume: 0.8,
-    musicVolume: 0.7,
     hindiLabels: false,
     weather: 'clear',
     timeOfDay: 14, // 2 PM daylight

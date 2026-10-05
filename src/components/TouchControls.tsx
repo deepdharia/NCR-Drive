@@ -9,7 +9,7 @@ interface TouchControlsProps {
   leftBlinker: boolean;
   rightBlinker: boolean;
   headlights: boolean;
-  controlScheme?: 'wheel_right' | 'wheel_left' | 'arrows' | 'tilt';
+  controlScheme?: 'wheel_right' | 'wheel_left' | 'arrows';
   onCycleCamera: () => void;
   onPause: () => void;
 }

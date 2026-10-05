@@ -1,6 +1,9 @@
+import { SaveManager } from '../save/SaveManager';
+
 export class AudioEngine {
   private ctx: AudioContext | null = null;
   private isMuted: boolean = false;
+  private volume: number = 0.75; // user volume 0..1, restored on unmute/init
   private masterGain: GainNode | null = null;
 
   // Engine sound nodes
@@ -17,6 +20,7 @@ export class AudioEngine {
   // Ambient wind/city
   private ambientGain: GainNode | null = null;
   private rainGain: GainNode | null = null;
+  private ambientSource: AudioBufferSourceNode | null = null;
 
   private isInitialized: boolean = false;
 
@@ -29,8 +33,17 @@ export class AudioEngine {
     try {
       const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       this.ctx = new AudioCtx();
+      // Apply the player's saved volume (defaults to 0.75 for fresh installs).
+      try {
+        const saved = SaveManager.load().settings.soundVolume;
+        if (typeof saved === 'number' && Number.isFinite(saved)) {
+          this.volume = Math.min(1, Math.max(0, saved));
+        }
+      } catch {
+        // fall back to default volume
+      }
       this.masterGain = this.ctx.createGain();
-      this.masterGain.gain.setValueAtTime(0.75, this.ctx.currentTime);
+      this.masterGain.gain.setValueAtTime(this.isMuted ? 0 : this.volume, this.ctx.currentTime);
       this.masterGain.connect(this.ctx.destination);
 
       this.setupEngineSynth();
@@ -136,6 +149,7 @@ export class AudioEngine {
     this.rainGain.connect(this.masterGain);
 
     rainNoise.start();
+    this.ambientSource = rainNoise;
   }
 
   public updateEngine(rpm: number, throttle: number, speedKmh: number, isDrifting: boolean, isDiesel: boolean = false) {
@@ -266,15 +280,16 @@ export class AudioEngine {
   }
 
   public setVolume(vol: number) {
-    if (this.masterGain && this.ctx) {
-      this.masterGain.gain.setValueAtTime(vol, this.ctx.currentTime);
+    this.volume = Math.min(1, Math.max(0, vol));
+    if (this.masterGain && this.ctx && !this.isMuted) {
+      this.masterGain.gain.setValueAtTime(this.volume, this.ctx.currentTime);
     }
   }
 
   public toggleMute(): boolean {
     this.isMuted = !this.isMuted;
     if (this.masterGain && this.ctx) {
-      this.masterGain.gain.setValueAtTime(this.isMuted ? 0 : 0.75, this.ctx.currentTime);
+      this.masterGain.gain.setValueAtTime(this.isMuted ? 0 : this.volume, this.ctx.currentTime);
     }
     return this.isMuted;
   }
@@ -285,12 +300,14 @@ export class AudioEngine {
       this.engineOsc1?.stop();
       this.engineOsc2?.stop();
       this.squealSource?.stop();
+      this.ambientSource?.stop();
     } catch {
       // Nodes may already be stopped
     }
     this.engineOsc1 = null;
     this.engineOsc2 = null;
     this.squealSource = null;
+    this.ambientSource = null;
     if (this.ctx) {
       this.ctx.close().catch(() => {});
       this.ctx = null;

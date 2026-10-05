@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GAME_CONFIG } from '../config';
 import { getGroundHeight, ROAD_SEGMENTS } from '../world/MapData';
 import type { RoadSegment } from '../types';
+import type { AudioEngine } from '../audio/AudioEngine';
 
 export type TrafficVehicleType = 'car' | 'taxi' | 'auto_rickshaw' | 'bus' | 'truck' | 'bike' | 'cow';
 
@@ -20,6 +21,7 @@ export interface TrafficVehicle {
   width: number;
   mass: number;
   isBraking: boolean;
+  brakeHoldTime: number; // seconds continuously brake-held behind an obstacle
   honkCooldown: number;
   overtakeState: 'none' | 'overtaking';
   wasColliding: boolean; // edge-trigger for player collision events
@@ -151,11 +153,18 @@ export class TrafficSystem {
   public trafficGroup: THREE.Group = new THREE.Group();
   private vehiclePoolSize: number = 42;
   private idCounter: number = 0;
+  private audioEngine?: AudioEngine;
 
   constructor(density: 'low' | 'medium' | 'high' = 'medium') {
     this.trafficGroup.name = 'traffic_system';
     this.setDensity(density);
     this.initPool();
+  }
+
+  /** Optional: wire the game's AudioEngine so held-up traffic can honk.
+   *  GameEngine should call this once after construction. */
+  public setAudioEngine(engine: AudioEngine): void {
+    this.audioEngine = engine;
   }
 
   public setDensity(density: 'low' | 'medium' | 'high') {
@@ -420,6 +429,7 @@ export class TrafficSystem {
         mass,
         isBraking: false,
         honkCooldown: 0,
+        brakeHoldTime: 0,
         overtakeState: 'none',
         wasColliding: false,
       };
@@ -457,16 +467,20 @@ export class TrafficSystem {
         v.position.y = getGroundHeight(v.position.x, newZ).height;
         v.speed = v.targetSpeed;
         v.wasColliding = false;
+        v.brakeHoldTime = 0;
+        v.honkCooldown = 0;
         v.mesh.position.copy(v.position);
       }
 
       // Check obstacles ahead
       let shouldBrake = false;
+      let blockerDist = Infinity;
       const distToPlayerZ = (playerPos.z - v.position.z) * v.direction;
       const distToPlayerX = Math.abs(playerPos.x - v.position.x);
 
       if (distToPlayerZ > 0 && distToPlayerZ < 20 && distToPlayerX < 2.6) {
         shouldBrake = true;
+        blockerDist = distToPlayerZ;
       }
 
       for (const other of this.vehicles) {
@@ -475,6 +489,7 @@ export class TrafficSystem {
         const diffX = Math.abs(other.position.x - v.position.x);
         if (diffZ > 0 && diffZ < (v.length + 9) && diffX < 2.2) {
           shouldBrake = true;
+          blockerDist = Math.min(blockerDist, diffZ);
           break;
         }
       }
@@ -483,9 +498,26 @@ export class TrafficSystem {
         // Brake toward a crawl (cows never speed up to brake).
         v.speed = THREE.MathUtils.lerp(v.speed, Math.min(2.0, v.targetSpeed), 6.0 * dt);
         v.isBraking = true;
+        v.brakeHoldTime += dt;
       } else {
         v.speed = THREE.MathUtils.lerp(v.speed, v.targetSpeed, 2.8 * dt);
         v.isBraking = false;
+        v.brakeHoldTime = 0;
+      }
+
+      // Impatient honk: brake-held behind an obstacle for a while -> pip-pip.
+      // Cows never honk. Cooldown + proximity guard prevents honk storms.
+      v.honkCooldown = Math.max(0, v.honkCooldown - dt);
+      if (
+        v.type !== 'cow' &&
+        v.isBraking &&
+        v.brakeHoldTime > 2.5 &&
+        v.honkCooldown <= 0 &&
+        blockerDist < 12 &&
+        this.audioEngine
+      ) {
+        this.audioEngine.playHorn();
+        v.honkCooldown = 8;
       }
 
       // Live brake light visual response

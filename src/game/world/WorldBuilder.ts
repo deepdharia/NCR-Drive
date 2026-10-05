@@ -609,6 +609,100 @@ export class WorldBuilder {
 
     worldGroup.add(dhabaGroup);
 
+    // 8b. Parked life: cheap low-poly parked cars + vendor carts (static set
+    //     dressing). Shared geometries/materials keep this to a handful of
+    //     draw calls; no lights, no interiors, no shadows on small parts.
+    {
+      const parkedBodyGeo = new THREE.BoxGeometry(1.8, 0.85, 4.1);
+      const parkedCabinGeo = new THREE.BoxGeometry(1.6, 0.65, 2.1);
+      const parkedWheelGeo = new THREE.CylinderGeometry(0.32, 0.32, 0.24, 10);
+      const parkedWheelMat = new THREE.MeshStandardMaterial({ color: 0x111318, roughness: 0.9 });
+      const parkedGlassMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.3, metalness: 0.4 });
+      const parkedPaintMats = new Map<number, THREE.MeshStandardMaterial>();
+      const parkedPaint = (color: number) => {
+        let m = parkedPaintMats.get(color);
+        if (!m) {
+          m = new THREE.MeshStandardMaterial({ color, roughness: 0.5, metalness: 0.3 });
+          parkedPaintMats.set(color, m);
+        }
+        return m;
+      };
+      const parkedColors = [0x9ca3af, 0x374151, 0x7f1d1d, 0x1e3a8a, 0x365314, 0xd6d3d1];
+
+      const addParkedCar = (x: number, z: number, rotY: number, colorIdx: number) => {
+        const car = new THREE.Group();
+        const body = new THREE.Mesh(parkedBodyGeo, parkedPaint(parkedColors[colorIdx % parkedColors.length]));
+        body.position.y = 0.72;
+        body.castShadow = true;
+        car.add(body);
+        const cabin = new THREE.Mesh(parkedCabinGeo, parkedGlassMat);
+        cabin.position.set(0, 1.42, -0.25);
+        car.add(cabin);
+        const wheelPos: [number, number][] = [[-0.85, 1.35], [0.85, 1.35], [-0.85, -1.35], [0.85, -1.35]];
+        for (const [wx, wz] of wheelPos) {
+          const wheel = new THREE.Mesh(parkedWheelGeo, parkedWheelMat);
+          wheel.rotation.z = Math.PI / 2;
+          wheel.position.set(wx, 0.32, wz);
+          car.add(wheel);
+        }
+        car.position.set(x, 0, z);
+        car.rotation.y = rotY;
+        worldGroup.add(car);
+      };
+
+      // Dhaba parking row (behind the hut, clear of the service lane)
+      const dhabaRow: [number, number][] = [[94, 1574], [100, 1576], [106, 1574], [112, 1576], [118, 1574]];
+      dhabaRow.forEach(([x, z], i) => addParkedCar(x, z, Math.PI / 2 + (i % 2) * 0.06, i));
+      // CP parking row (outside the colonnade ring, clear of radials)
+      const cpRow: [number, number][] = [[55, -765], [61, -765], [67, -765], [73, -765], [79, -765]];
+      cpRow.forEach(([x, z], i) => addParkedCar(x, z, (i % 2) * 0.05, i + 2));
+
+      // Vendor carts: wooden cart + pole + colourful umbrella
+      const cartWoodGeo = new THREE.BoxGeometry(1.7, 0.9, 1.1);
+      const cartWheelGeo = new THREE.CylinderGeometry(0.3, 0.3, 0.12, 10);
+      const cartPoleGeo = new THREE.CylinderGeometry(0.05, 0.05, 2.3, 8);
+      const cartUmbrellaGeo = new THREE.ConeGeometry(1.5, 0.75, 10);
+      const cartWoodMat = new THREE.MeshStandardMaterial({ color: 0x92400e, roughness: 0.9 });
+      const cartUmbrellaMats = [
+        new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.7 }),
+        new THREE.MeshStandardMaterial({ color: 0x2563eb, roughness: 0.7 }),
+        new THREE.MeshStandardMaterial({ color: 0x16a34a, roughness: 0.7 }),
+        new THREE.MeshStandardMaterial({ color: 0xea580c, roughness: 0.7 }),
+        new THREE.MeshStandardMaterial({ color: 0x9333ea, roughness: 0.7 }),
+      ];
+      const addVendorCart = (x: number, z: number, rotY: number, colorIdx: number) => {
+        const cart = new THREE.Group();
+        const box = new THREE.Mesh(cartWoodGeo, cartWoodMat);
+        box.position.y = 0.75;
+        box.castShadow = true;
+        cart.add(box);
+        for (const [wx, wz] of [[-0.7, 0.45], [0.7, 0.45], [-0.7, -0.45], [0.7, -0.45]] as [number, number][]) {
+          const w = new THREE.Mesh(cartWheelGeo, parkedWheelMat);
+          w.rotation.z = Math.PI / 2;
+          w.position.set(wx, 0.3, wz);
+          cart.add(w);
+        }
+        const pole = new THREE.Mesh(cartPoleGeo, cartWoodMat);
+        pole.position.y = 1.9;
+        cart.add(pole);
+        const umbrella = new THREE.Mesh(cartUmbrellaGeo, cartUmbrellaMats[colorIdx % cartUmbrellaMats.length]);
+        umbrella.position.y = 3.1;
+        umbrella.castShadow = true;
+        cart.add(umbrella);
+        cart.position.set(x, 0, z);
+        cart.rotation.y = rotY;
+        worldGroup.add(cart);
+      };
+
+      // India Gate plaza vendors (clear of the 14m road and the monument)
+      addVendorCart(-16, -1085, 0.4, 0);
+      addVendorCart(17, -1098, -0.5, 1);
+      addVendorCart(-19, -1118, 0.9, 2);
+      // Connaught Place vendors (inside the circle, off the drivable radials)
+      addVendorCart(25, -830, 0.2, 3);
+      addVendorCart(-25, -832, -0.3, 4);
+    }
+
     // 9. Mustard Fields in Haryana (Vibrant Golden-Yellow patches)
     const mustardMat = new THREE.MeshStandardMaterial({ color: 0xeab308, roughness: 0.9 });
     for (let mz = 1400; mz <= 1850; mz += 140) {

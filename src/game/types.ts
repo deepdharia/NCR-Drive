@@ -76,10 +76,9 @@ export interface PlayerSaveData {
   settings: {
     quality: QualityLevel;
     trafficDensity: 'low' | 'medium' | 'high';
-    controlScheme: 'wheel_right' | 'wheel_left' | 'arrows' | 'tilt';
+    controlScheme: 'wheel_right' | 'wheel_left' | 'arrows';
     steeringAssist: boolean;
-    soundVolume: number;
-    musicVolume: number;
+    soundVolume: number; // 0..1 master volume
     hindiLabels: boolean;
     weather: Weather;
     timeOfDay: number; // 0..24
@@ -109,6 +108,8 @@ export interface HUDState {
   passengerName?: string;
   passengerQuote?: string;
   passengerSatisfaction?: number; // 1 to 5
+  taxiArchetype?: TaxiArchetype;
+  taxiTipHint?: string;
   missionTitle?: string;
   missionObjective?: string;
   missionTimeLeft?: number; // seconds
@@ -160,6 +161,7 @@ export interface RoadSegment {
 export interface PassengerJob {
   id: string;
   passengerName: string;
+  archetype: TaxiArchetype;
   pickupLocation: [number, number, number];
   dropLocation: [number, number, number];
   pickupName: string;
@@ -167,8 +169,14 @@ export interface PassengerJob {
   quote: string;
   baseFare: number;
   perKmRate: number;
+  fareMult: number; // VIP 1.4x etc. — applied to the distance component
+  tipBonus: number; // impatient: speed tip paid at completion when fast
+  flatBonus: number; // hopper: flat completion bonus
+  satisfactionDecayMult: number; // VIP 2x — penalties sting more
   timeLimitSec: number;
   isPickedUp: boolean;
   satisfaction: number; // 5.0 base
   penalties: number;
 }
+
+export type TaxiArchetype = 'standard' | 'vip' | 'impatient' | 'hopper';
