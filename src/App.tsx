@@ -33,6 +33,8 @@ const INITIAL_HUD: HUDState = {
 export default function App() {
   const containerRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<GameEngine | null>(null);
+  // Last run context so Retry / Next Fare can restart the exact same mode.
+  const lastRunRef = useRef<{ mode: GameMode; missionId?: string }>({ mode: 'free_drive' });
 
   const [screen, setScreen] = useState<GameScreen>('main_menu');
   const [saveData, setSaveData] = useState<PlayerSaveData>(() => SaveManager.load());
@@ -47,6 +49,7 @@ export default function App() {
     title: string;
     cashEarned: number;
     message: string;
+    stars?: number;
   } | null>(null);
 
   // Initialize GameEngine outside React render loop
@@ -82,6 +85,7 @@ export default function App() {
   // Handlers for Modes
   const handleStartTaxi = useCallback(() => {
     if (!engineRef.current) return;
+    lastRunRef.current = { mode: 'taxi' };
     engineRef.current.startMode('taxi');
     setScreen('game');
     setShowPause(false);
@@ -91,6 +95,7 @@ export default function App() {
 
   const handleStartMission = useCallback((missionId: string) => {
     if (!engineRef.current) return;
+    lastRunRef.current = { mode: 'mission', missionId };
     engineRef.current.startMode('mission', missionId);
     setScreen('game');
     setShowMissions(false);
@@ -100,6 +105,7 @@ export default function App() {
 
   const handleStartFreeDrive = useCallback(() => {
     if (!engineRef.current) return;
+    lastRunRef.current = { mode: 'free_drive' };
     engineRef.current.startMode('free_drive');
     setScreen('game');
     setShowPause(false);
@@ -116,6 +122,7 @@ export default function App() {
 
   const handleDriveFromGarage = useCallback(() => {
     if (!engineRef.current) return;
+    lastRunRef.current = { mode: 'free_drive' };
     engineRef.current.startMode('free_drive');
     setScreen('game');
   }, []);
@@ -176,8 +183,20 @@ export default function App() {
 
   const handleRestart = useCallback(() => {
     if (!engineRef.current) return;
-    engineRef.current.resetCarToRoad();
+    // Actually restart the last run (mission/taxi/free drive), not just reset the car.
+    const last = lastRunRef.current;
+    engineRef.current.startMode(last.mode, last.missionId);
     engineRef.current.setPaused(false);
+    setShowPause(false);
+    setMissionResult(null);
+  }, []);
+
+  // Taxi career loop: jump straight into the next fare without returning to the menu.
+  const handleNextFare = useCallback(() => {
+    if (!engineRef.current) return;
+    lastRunRef.current = { mode: 'taxi' };
+    engineRef.current.startMode('taxi');
+    setScreen('game');
     setShowPause(false);
     setMissionResult(null);
   }, []);
@@ -247,7 +266,11 @@ export default function App() {
       {showSettings && (
         <SettingsModal
           saveData={saveData}
-          onUpdateSave={setSaveData}
+          onUpdateSave={(updated) => {
+            setSaveData(updated);
+            // Keep the engine's cached settings in sync after any change.
+            engineRef.current?.refreshSettings();
+          }}
           onClose={() => setShowSettings(false)}
           onQualityChange={handleQualityChange}
           onWeatherChange={handleWeatherChange}
@@ -273,6 +296,9 @@ export default function App() {
           title={missionResult.title}
           cashEarned={missionResult.cashEarned}
           message={missionResult.message}
+          stars={missionResult.stars}
+          showNextFare={lastRunRef.current.mode === 'taxi'}
+          onNextFare={handleNextFare}
           onContinue={() => {
             setMissionResult(null);
             handleMainMenu();

@@ -46,6 +46,15 @@ export class GameEngine {
   private frameCount: number = 0;
   private lastFpsCalcTime: number = 0;
 
+  // Cached save data (refreshed on mode start / settings change) — avoids
+  // localStorage JSON.parse on every frame.
+  private cachedSave: PlayerSaveData;
+
+  // Auto-quality hysteresis state
+  private lowFpsStreak: number = 0;
+  private highFpsStreak: number = 0;
+  private autoQualityTier: 'med' | 'low' = 'med';
+
   // Garage preview mode
   public isGarageMode: boolean = false;
   private garageRotation: number = 0;
@@ -56,7 +65,7 @@ export class GameEngine {
 
   // Callbacks to React HUD
   private onHudUpdateCallback?: (hud: HUDState) => void;
-  private onMissionEndCallback?: (result: { success: boolean; cashEarned: number; title: string; message: string }) => void;
+  private onMissionEndCallback?: (result: { success: boolean; cashEarned: number; title: string; message: string; stars?: number }) => void;
 
   constructor(container: HTMLElement) {
     const width = container.clientWidth || window.innerWidth;
@@ -111,6 +120,7 @@ export class GameEngine {
 
     // 3. Subsystems
     const savedData = SaveManager.load();
+    this.cachedSave = savedData;
     this.cameraManager = new CameraManager(savedData.settings.preferredCamera);
     this.inputManager = new InputManager();
     this.audioEngine = new AudioEngine();
@@ -246,24 +256,38 @@ export class GameEngine {
 
   private setupEffects(weather: Weather) {
     if (weather === 'rain') {
-      const rainCount = 1500;
-      const rainGeo = new THREE.BufferGeometry();
-      const rainPos = new Float32Array(rainCount * 3);
-      for (let i = 0; i < rainCount; i++) {
-        rainPos[i * 3] = (Math.random() - 0.5) * 95;
-        rainPos[i * 3 + 1] = Math.random() * 50;
-        rainPos[i * 3 + 2] = (Math.random() - 0.5) * 95;
-      }
-      rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos, 3));
-      const rainMat = new THREE.PointsMaterial({
-        color: 0x93c5fd,
-        size: 0.5,
-        transparent: true,
-        opacity: 0.75,
-      });
-      this.rainParticles = new THREE.Points(rainGeo, rainMat);
-      this.scene.add(this.rainParticles);
-      this.audioEngine.setRain(true);
+      this.createRainParticles();
+    }
+  }
+
+  private createRainParticles() {
+    if (this.rainParticles) return;
+    const rainCount = 1500;
+    const rainGeo = new THREE.BufferGeometry();
+    const rainPos = new Float32Array(rainCount * 3);
+    for (let i = 0; i < rainCount; i++) {
+      rainPos[i * 3] = (Math.random() - 0.5) * 95;
+      rainPos[i * 3 + 1] = Math.random() * 50;
+      rainPos[i * 3 + 2] = (Math.random() - 0.5) * 95;
+    }
+    rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos, 3));
+    const rainMat = new THREE.PointsMaterial({
+      color: 0x93c5fd,
+      size: 0.5,
+      transparent: true,
+      opacity: 0.75,
+    });
+    this.rainParticles = new THREE.Points(rainGeo, rainMat);
+    this.scene.add(this.rainParticles);
+    this.audioEngine.setRain(true);
+  }
+
+  private disposeRainParticles() {
+    if (this.rainParticles) {
+      this.scene.remove(this.rainParticles);
+      this.rainParticles.geometry.dispose();
+      (this.rainParticles.material as THREE.Material).dispose();
+      this.rainParticles = null;
     }
   }
 
@@ -280,20 +304,33 @@ export class GameEngine {
     this.renderer.setPixelRatio(q.pixelRatio);
     this.renderer.shadowMap.enabled = q.shadows;
     this.trafficSystem.setDensity(quality === 'low' ? 'low' : quality === 'high' ? 'high' : 'medium');
+    if (quality === 'auto') {
+      // User re-armed auto mode: restart from the med tier.
+      this.autoQualityTier = 'med';
+      this.lowFpsStreak = 0;
+      this.highFpsStreak = 0;
+    }
+  }
+
+  /** Re-read save data (settings/cash) into the engine cache. Call after any SettingsModal change. */
+  public refreshSettings() {
+    this.cachedSave = SaveManager.load();
   }
 
   public setWeather(weather: Weather) {
     if (weather === 'rain') {
       this.scene.fog = new THREE.FogExp2(0x64748b, 0.0035);
       this.renderer.toneMappingExposure = 1.0;
-      this.audioEngine.setRain(true);
+      this.createRainParticles();
     } else if (weather === 'smog') {
       this.scene.fog = new THREE.FogExp2(0x78716c, 0.0045);
       this.renderer.toneMappingExposure = 1.05;
+      this.disposeRainParticles();
       this.audioEngine.setRain(false);
     } else {
       this.scene.fog = new THREE.FogExp2(0xa7c2d9, 0.0013);
       this.renderer.toneMappingExposure = 1.2;
+      this.disposeRainParticles();
       this.audioEngine.setRain(false);
     }
   }
@@ -306,6 +343,17 @@ export class GameEngine {
     const upgrades = saved.carUpgrades[carId];
 
     this.scene.remove(this.carVisuals.group);
+    // Dispose the old car's GPU resources (geometries/materials are per-car).
+    this.carVisuals.group.traverse((obj) => {
+      const mesh = obj as THREE.Mesh;
+      if (mesh.geometry) mesh.geometry.dispose();
+      const mat = mesh.material as THREE.Material | THREE.Material[] | undefined;
+      if (Array.isArray(mat)) {
+        mat.forEach((m) => m.dispose());
+      } else if (mat) {
+        mat.dispose();
+      }
+    });
 
     const pos = this.physics.position.clone();
     const heading = this.physics.heading;
@@ -324,6 +372,11 @@ export class GameEngine {
   }
 
   public startMode(mode: GameMode, missionId?: string) {
+    // Guard: a mission start without an id would silently do nothing — fall back to free drive.
+    if (mode === 'mission' && !missionId) {
+      mode = 'free_drive';
+    }
+    this.refreshSettings();
     this.isGarageMode = false;
     this.isPaused = false;
     this.audioEngine.init();
@@ -353,6 +406,7 @@ export class GameEngine {
   public enterGarage() {
     this.isGarageMode = true;
     this.isPaused = false;
+    this.refreshSettings();
     this.destinationMarker.visible = false;
     this.physics.position.set(0, 0.4, 0);
     this.physics.heading = 0;
@@ -394,9 +448,30 @@ export class GameEngine {
       this.frameCount = 0;
       this.lastFpsCalcTime = time;
 
-      const saved = SaveManager.load();
-      if (saved.settings.quality === 'auto' && this.fpsCounter < 45) {
-        this.setQuality('low');
+      // Auto quality with hysteresis: downgrade only after 3 consecutive slow
+      // seconds, and step back up after 10 good seconds — never ratchets down
+      // permanently on a single hitch.
+      if (this.cachedSave.settings.quality === 'auto') {
+        if (this.fpsCounter < 45) {
+          this.lowFpsStreak++;
+          this.highFpsStreak = 0;
+        } else if (this.fpsCounter > 55) {
+          this.highFpsStreak++;
+          this.lowFpsStreak = 0;
+        } else {
+          this.lowFpsStreak = 0;
+          this.highFpsStreak = 0;
+        }
+
+        if (this.lowFpsStreak >= 3 && this.autoQualityTier !== 'low') {
+          this.setQuality('low');
+          this.autoQualityTier = 'low';
+          this.lowFpsStreak = 0;
+        } else if (this.highFpsStreak >= 10 && this.autoQualityTier === 'low') {
+          this.setQuality('med');
+          this.autoQualityTier = 'med';
+          this.highFpsStreak = 0;
+        }
       }
     }
 
@@ -436,7 +511,7 @@ export class GameEngine {
     this.physicsAccumulator += clampedDt;
     let substeps = 0;
 
-    const isRaining = SaveManager.load().settings.weather === 'rain';
+    const isRaining = this.cachedSave.settings.weather === 'rain';
 
     while (this.physicsAccumulator >= fixedDt && substeps < GAME_CONFIG.MAX_SUB_STEPS) {
       this.physics.update(fixedDt, this.inputManager.state, getGroundHeight, isRaining);
@@ -500,7 +575,11 @@ export class GameEngine {
       this.hasPaidToll = true;
       this.tollAlertTimer = 3.5;
       this.audioEngine.playFastagBeep();
-      SaveManager.spendCash(75);
+      // spendCash already clamps: returns false and deducts nothing when balance < 75,
+      // so cash can never go negative here.
+      if (SaveManager.spendCash(75)) {
+        this.cachedSave.cash -= 75;
+      }
     } else if (distToToll > 45) {
       this.hasPaidToll = false;
     }
@@ -514,17 +593,20 @@ export class GameEngine {
       clampedDt,
       this.physics.position,
       this.physics.speedKmh,
-      this.physics.gearMode
+      this.physics.gearMode,
+      this.inputManager.state.brake,
+      getNearestRoadInfo(this.physics.position.x, this.physics.position.z).speedLimit
     );
 
     if (missionStatus.completed && this.missionManager.completionResult) {
       const res = this.missionManager.completionResult;
-      SaveManager.addCash(res.cashEarned);
+      this.cachedSave.cash = SaveManager.addCash(res.cashEarned);
       this.onMissionEndCallback?.({
         success: true,
         cashEarned: res.cashEarned,
         title: res.title,
         message: res.message,
+        stars: res.stars,
       });
       this.destinationMarker.visible = false;
     } else if (missionStatus.failed) {
@@ -577,7 +659,7 @@ export class GameEngine {
     if (!this.onHudUpdateCallback) return;
 
     const roadInfo = getNearestRoadInfo(this.physics.position.x, this.physics.position.z);
-    const saved = SaveManager.load();
+    const saved = this.cachedSave;
 
     let targetDist = 0;
     let gpsTargetName: string | undefined = undefined;
@@ -625,7 +707,11 @@ export class GameEngine {
       missionObjective: this.missionManager.currentMission?.description,
       missionTimeLeft: Math.max(0, Math.ceil(this.missionManager.timeLeftSec)),
       targetDistanceMeters: targetDist,
-      fareAmount: this.missionManager.currentTaxiJob?.baseFare,
+      // Live fare meter when available (P1-D adds MissionManager.getLiveFare);
+      // falls back to the job's base fare so the HUD never shows a stale 0.
+      fareAmount:
+        (this.missionManager as unknown as { getLiveFare?: () => number }).getLiveFare?.() ??
+        this.missionManager.currentTaxiJob?.baseFare,
       fastagNotification: this.tollAlertTimer > 0 ? 'FASTag Paid: ₹75 (Kherki Daula Toll)' : null,
       hasGpsTarget: this.destinationMarker.visible,
       gpsTargetName,
@@ -644,6 +730,8 @@ export class GameEngine {
   public destroy() {
     this.isRunning = false;
     window.removeEventListener('resize', this.onResize);
+    this.audioEngine.dispose();
+    this.pmremGenerator.dispose();
     this.renderer.dispose();
   }
 }

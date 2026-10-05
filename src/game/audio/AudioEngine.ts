@@ -278,4 +278,27 @@ export class AudioEngine {
     }
     return this.isMuted;
   }
+
+  /** Stop all looping nodes and close the context so nothing keeps playing after unmount. */
+  public dispose() {
+    try {
+      this.engineOsc1?.stop();
+      this.engineOsc2?.stop();
+      this.squealSource?.stop();
+    } catch {
+      // Nodes may already be stopped
+    }
+    this.engineOsc1 = null;
+    this.engineOsc2 = null;
+    this.squealSource = null;
+    if (this.ctx) {
+      this.ctx.close().catch(() => {});
+      this.ctx = null;
+    }
+    this.masterGain = null;
+    this.engineGain = null;
+    this.ambientGain = null;
+    this.rainGain = null;
+    this.isInitialized = false;
+  }
 }

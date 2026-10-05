@@ -6,6 +6,9 @@ interface MissionResultModalProps {
   title: string;
   cashEarned: number;
   message: string;
+  stars?: number;
+  showNextFare?: boolean;
+  onNextFare?: () => void;
   onContinue: () => void;
   onRetry: () => void;
 }
@@ -15,6 +18,9 @@ export const MissionResultModal: React.FC<MissionResultModalProps> = ({
   title,
   cashEarned,
   message,
+  stars,
+  showNextFare,
+  onNextFare,
   onContinue,
   onRetry,
 }) => {
@@ -39,6 +45,18 @@ export const MissionResultModal: React.FC<MissionResultModalProps> = ({
         </h2>
         <p className="text-xs text-neutral-300 mb-5 leading-relaxed max-w-xs">{message}</p>
 
+        {/* Star rating */}
+        {success && typeof stars === 'number' && (
+          <div className="flex items-center justify-center gap-1.5 mb-5" aria-label={`${stars} out of 5 stars`}>
+            {[1, 2, 3, 4, 5].map((i) => (
+              <Star
+                key={i}
+                className={`w-7 h-7 ${i <= Math.round(stars) ? 'text-amber-400 fill-amber-400' : 'text-neutral-600'}`}
+              />
+            ))}
+          </div>
+        )}
+
         {/* Cash Reward card */}
         {success && cashEarned > 0 && (
           <div className="w-full hud-glass-saffron p-3.5 rounded-2xl border border-amber-500/40 mb-6 flex items-center justify-between">
@@ -60,12 +78,26 @@ export const MissionResultModal: React.FC<MissionResultModalProps> = ({
             TRY AGAIN
           </button>
 
+          {showNextFare && onNextFare && (
+            <button
+              onClick={onNextFare}
+              className="flex-1 py-3 rounded-2xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-xl active:scale-95 transition-all"
+            >
+              NEXT FARE
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          )}
+
           <button
             onClick={onContinue}
-            className="flex-1 py-3 rounded-2xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-xl active:scale-95 transition-all"
+            className={`flex-1 py-3 rounded-2xl font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all ${
+              showNextFare
+                ? 'hud-glass border border-neutral-700 hover:border-neutral-500 text-neutral-200'
+                : 'bg-amber-500 hover:bg-amber-400 text-neutral-950 font-extrabold shadow-xl'
+            }`}
           >
             CONTINUE
-            <ArrowRight className="w-4 h-4" />
+            {!showNextFare && <ArrowRight className="w-4 h-4" />}
           </button>
         </div>
       </div>
