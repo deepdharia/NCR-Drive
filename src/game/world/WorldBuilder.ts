@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { GAME_CONFIG } from '../config';
-import { POINTS_OF_INTEREST, ROAD_SEGMENTS, ROAD_WAYPOINTS } from './MapData';
+import { POINTS_OF_INTEREST, ROAD_SEGMENTS, ROAD_WAYPOINTS, getGroundHeight } from './MapData';
 
 export interface WorldObjects {
   group: THREE.Group;
@@ -91,6 +91,33 @@ export class WorldBuilder {
     tex.repeat.set(1, 16);
     this.roadTexture = tex;
     return tex;
+  }
+
+  private static roadMaterials: Map<number, THREE.MeshStandardMaterial> = new Map();
+
+  /**
+   * Returns a road material whose texture repeat is bucketed by segment length
+   * (P1-C fix: a single shared repeat stretched lane dashes on short/long segments).
+   * 4 buckets keep the GPU texture count low.
+   */
+  public static getRoadMaterial(length: number): THREE.MeshStandardMaterial {
+    const bucket = length < 100 ? 4 : length < 160 ? 8 : length < 220 ? 12 : 16;
+    let mat = this.roadMaterials.get(bucket);
+    if (!mat) {
+      const tex = this.getRoadTexture().clone();
+      tex.needsUpdate = true;
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(1, bucket);
+      mat = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        map: tex,
+        roughness: 0.72,
+        metalness: 0.15,
+      });
+      this.roadMaterials.set(bucket, mat);
+    }
+    return mat;
   }
 
   // High-Resolution NHAI Green Overhead Gantry Signboards
@@ -215,15 +242,8 @@ export class WorldBuilder {
     ground.receiveShadow = true;
     worldGroup.add(ground);
 
-    // 2. High-Fidelity Roads with Painted Markings
-    const roadTex = this.getRoadTexture();
-    const roadMat = new THREE.MeshStandardMaterial({
-      color: 0xffffff,
-      map: roadTex,
-      roughness: 0.72,
-      metalness: 0.15,
-    });
-
+    // 2. High-Fidelity Roads with Painted Markings (per-bucket material keeps
+    //    lane-dash scale consistent across segments of different length)
     const yellowKerbMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.6 });
     const concreteMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.85 });
     const steelGuardrailMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.85, roughness: 0.25 });
@@ -241,7 +261,7 @@ export class WorldBuilder {
 
       // Paved asphalt surface
       const roadGeo = new THREE.BoxGeometry(seg.width, 0.16, length);
-      const roadMesh = new THREE.Mesh(roadGeo, roadMat);
+      const roadMesh = new THREE.Mesh(roadGeo, this.getRoadMaterial(length));
       roadMesh.position.set(midX, midY + 0.06, midZ);
       roadMesh.rotation.y = angle;
       roadMesh.rotation.x = -Math.atan2(dy, length);
@@ -291,11 +311,15 @@ export class WorldBuilder {
         }
       }
 
-      // Flyover Pillars if bridge segment
+      // Flyover Pillars if bridge segment — sized to the actual deck height so
+      // no concrete stubs pierce the driving surface (P1-C fix)
       if (seg.start.isBridge || seg.end.isBridge) {
         for (let bz = -length / 2; bz <= length / 2; bz += 40) {
-          const pier = new THREE.Mesh(new THREE.BoxGeometry(3.5, 8.5, 3.5), concreteMat);
-          pier.position.set(midX, 4.0, midZ + bz);
+          const pierZ = midZ + bz;
+          const deckY = getGroundHeight(midX, pierZ).height;
+          const pierH = Math.max(deckY, 0.5);
+          const pier = new THREE.Mesh(new THREE.BoxGeometry(3.5, pierH, 3.5), concreteMat);
+          pier.position.set(midX, pierH / 2 - 0.1, pierZ);
           pier.castShadow = true;
           worldGroup.add(pier);
         }
@@ -354,6 +378,69 @@ export class WorldBuilder {
     indiaGateGroup.add(flagMesh);
 
     worldGroup.add(indiaGateGroup);
+
+    // 3b. Connaught Place Colonnade Ring (Delhi Z: -800) — cheap density so CP
+    //     is no longer an empty label (P1-C fix). Gaps at the four cardinals
+    //     where the radial roads cross the ring.
+    const cpGroup = new THREE.Group();
+    cpGroup.position.set(0, 0, -800);
+    const cpColumns = 28;
+    const cpRadius = 55;
+    for (let i = 0; i < cpColumns; i++) {
+      const a = (i / cpColumns) * Math.PI * 2;
+      const frac = (a / (Math.PI / 2)) % 1;
+      if (Math.min(frac, 1 - frac) < 0.12) continue; // road crossing gap
+      const cx = Math.cos(a) * cpRadius;
+      const cz = Math.sin(a) * cpRadius;
+      const col = new THREE.Mesh(new THREE.BoxGeometry(2.2, 11, 2.2), concreteMat);
+      col.position.set(cx, 5.5, cz);
+      col.castShadow = true;
+      cpGroup.add(col);
+    }
+    // Entablature band crowning the colonnade
+    const cpBandMat = new THREE.MeshStandardMaterial({ color: 0xd6cfc2, roughness: 0.8, side: THREE.DoubleSide });
+    const cpBand = new THREE.Mesh(new THREE.CylinderGeometry(cpRadius, cpRadius, 2.6, 48, 1, true), cpBandMat);
+    cpBand.position.y = 12.3;
+    cpGroup.add(cpBand);
+    // Flat roof lip
+    const cpRoof = new THREE.Mesh(new THREE.CylinderGeometry(cpRadius + 3, cpRadius + 3, 0.6, 48), concreteMat);
+    cpRoof.position.y = 13.9;
+    cpGroup.add(cpRoof);
+    worldGroup.add(cpGroup);
+
+    // 3c. IGI Airport Terminal 3 block (Delhi x: -265, z: -560) — the POI had
+    //     no geometry at all (P1-C fix). Terminal + concourse wing + ATC tower.
+    const termGroup = new THREE.Group();
+    termGroup.position.set(-265, 0, -560);
+    const termGlassMat = new THREE.MeshStandardMaterial({
+      color: 0x93c5fd,
+      emissive: 0x3b82f6,
+      emissiveIntensity: 0.9,
+      roughness: 0.25,
+      metalness: 0.4,
+    });
+    const termBlock = new THREE.Mesh(new THREE.BoxGeometry(60, 14, 26), concreteMat);
+    termBlock.position.y = 7;
+    termBlock.castShadow = true;
+    termGroup.add(termBlock);
+    // Emissive departure-level window band
+    const termWindows = new THREE.Mesh(new THREE.BoxGeometry(60.6, 2.4, 26.6), termGlassMat);
+    termWindows.position.y = 9.5;
+    termGroup.add(termWindows);
+    // Concourse wing (west side, away from the airport link road)
+    const termWing = new THREE.Mesh(new THREE.BoxGeometry(30, 9, 20), concreteMat);
+    termWing.position.set(-42, 4.5, 4);
+    termWing.castShadow = true;
+    termGroup.add(termWing);
+    // ATC control tower
+    const atcShaft = new THREE.Mesh(new THREE.BoxGeometry(4, 26, 4), concreteMat);
+    atcShaft.position.set(40, 13, 10);
+    atcShaft.castShadow = true;
+    termGroup.add(atcShaft);
+    const atcCab = new THREE.Mesh(new THREE.BoxGeometry(9, 4, 9), termGlassMat);
+    atcCab.position.set(40, 28, 10);
+    termGroup.add(atcCab);
+    worldGroup.add(termGroup);
 
     // 4. Delhi Metro Elevated Viaduct & Animated High-Speed Train
     const metroGroup = new THREE.Group();

@@ -239,8 +239,27 @@ export function getGroundHeight(x: number, z: number): GroundHeightResult {
     return { height, normal, surfaceType };
   }
 
-  // Shoulder dirt: if car leaves paved road width
-  if (Math.abs(x) > 16 && (z < 1200 || Math.abs(x - 80) > 14)) {
+  // Shoulder dirt: compare against the actual half-width of the nearest road
+  // segment (P1-C fix — was a hardcoded |x| > 16 that misclassified paved
+  // shoulders on narrow 12 m segments and dirt on the 26 m toll plaza)
+  let nearestHalfWidth = 11;
+  let nearestSegDistSq = Infinity;
+  for (const seg of ROAD_SEGMENTS) {
+    const ax = seg.start.x, az = seg.start.z;
+    const bx = seg.end.x, bz = seg.end.z;
+    const dx = bx - ax, dz = bz - az;
+    const lenSq = dx * dx + dz * dz;
+    const t = lenSq > 0
+      ? Math.min(1, Math.max(0, ((x - ax) * dx + (z - az) * dz) / lenSq))
+      : 0;
+    const px = ax + dx * t, pz = az + dz * t;
+    const dSq = (x - px) * (x - px) + (z - pz) * (z - pz);
+    if (dSq < nearestSegDistSq) {
+      nearestSegDistSq = dSq;
+      nearestHalfWidth = seg.width / 2;
+    }
+  }
+  if (Math.sqrt(nearestSegDistSq) > nearestHalfWidth && (z < 1200 || Math.abs(x - 80) > 14)) {
     surfaceType = 'dirt_shoulder';
   }
 
