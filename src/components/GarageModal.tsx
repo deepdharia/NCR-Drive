@@ -93,9 +93,9 @@ export const GarageModal: React.FC<GarageModalProps> = ({
   const gripNow = car.tyreGrip * (1 + currentUpgrades.tyres * 0.18);
 
   return (
-    <div className="absolute inset-0 bg-neutral-950/85 backdrop-blur-xl z-40 flex flex-col font-display text-neutral-100 select-none">
+    <div className="absolute inset-0 z-40 flex flex-col font-display text-neutral-100 select-none">
       {/* Top Bar */}
-      <div className="h-16 px-6 border-b border-neutral-800 flex items-center justify-between">
+      <div className="h-16 px-6 border-b border-neutral-800 flex items-center justify-between bg-neutral-950/90 backdrop-blur-xl">
         <div className="flex items-center gap-3">
           <div className="w-3 h-8 bg-amber-500 rounded-full" />
           <div>
@@ -126,10 +126,12 @@ export const GarageModal: React.FC<GarageModalProps> = ({
         </div>
       </div>
 
-      {/* Main Content Area */}
+      {/* Main Content Area — side panels are opaque; the center stays
+          transparent so the live 3D 360° turntable (GameEngine.updateGarage)
+          shows through behind it. */}
       <div className="flex-1 flex overflow-hidden p-6 gap-6">
         {/* Left: Car Carousel & Visual Selector */}
-        <div className="w-1/3 flex flex-col justify-between">
+        <div className="w-1/3 flex flex-col justify-between bg-neutral-950/85 backdrop-blur-xl rounded-3xl border border-neutral-800 p-6">
           <div>
             {/* Tagline & Name */}
             <div className="text-xs text-teal-400 font-bold uppercase tracking-widest mb-1">
@@ -227,15 +229,17 @@ export const GarageModal: React.FC<GarageModalProps> = ({
           </div>
         </div>
 
-        {/* Center: 3D interactive view hint */}
+        {/* Center: live 3D turntable visible through the transparent middle.
+            The engine orbits the camera around the active car (updateGarage),
+            so this label describes something real. */}
         <div className="flex-1 flex flex-col justify-end items-center pointer-events-none pb-4">
-          <div className="hud-glass px-4 py-1.5 rounded-full text-xs font-semibold text-neutral-400 border border-neutral-800">
-            360° Showroom Preview Active
+          <div className="hud-glass px-4 py-1.5 rounded-full text-xs font-semibold text-neutral-300 border border-neutral-700 shadow-xl">
+            360° Showroom Preview
           </div>
         </div>
 
         {/* Right: Performance Specs & Upgrades */}
-        <div className="w-1/3 flex flex-col justify-between">
+        <div className="w-1/3 flex flex-col justify-between bg-neutral-950/85 backdrop-blur-xl rounded-3xl border border-neutral-800 p-6">
           <div>
             <h2 className="text-sm font-extrabold text-neutral-300 uppercase tracking-wider mb-3">
               VEHICLE TELEMETRY & SPECS
