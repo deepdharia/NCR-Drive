@@ -79,23 +79,24 @@ export const GAME_CONFIG = {
   AUDIO_MASTER_VOLUME: 0.8,
 
   // Quality Profiles
+  // NOTE: antiAliasing was removed from these tiers — MSAA is fixed at
+  // WebGLRenderer creation (antialias: true) and cannot change post-hoc
+  // without recreating the renderer, so per-tier AA values would be a lie.
   QUALITY_SETTINGS: {
     low: {
       shadows: false,
       pixelRatio: 1.0,
-      renderDistance: 380,
+      renderDistance: 600,
       trafficCount: 22,
       particles: false,
-      antiAliasing: false,
     },
     med: {
       shadows: true,
       shadowMapSize: 1024,
       pixelRatio: 1.25,
-      renderDistance: 550,
+      renderDistance: 600,
       trafficCount: 42,
       particles: true,
-      antiAliasing: true,
     },
     high: {
       shadows: true,
@@ -104,7 +105,6 @@ export const GAME_CONFIG = {
       renderDistance: 800,
       trafficCount: 65,
       particles: true,
-      antiAliasing: true,
     },
   },
 };

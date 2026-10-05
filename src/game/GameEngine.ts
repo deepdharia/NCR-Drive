@@ -35,6 +35,8 @@ export class GameEngine {
   private skyDome: THREE.Mesh;
   private destinationMarker: THREE.Group;
   private rainParticles: THREE.Points | null = null;
+  // Rain density follows the active quality tier (1500 on med/high, 0 on low).
+  private rainParticleCount: number = 1500;
   private pmremGenerator: THREE.PMREMGenerator;
 
   // Loop & timing
@@ -269,7 +271,12 @@ export class GameEngine {
 
   private createRainParticles() {
     if (this.rainParticles) return;
-    const rainCount = 1500;
+    if (this.rainParticleCount <= 0) {
+      // Low quality tier: no rain visuals (audio still plays via setWeather).
+      this.audioEngine.setRain(true);
+      return;
+    }
+    const rainCount = this.rainParticleCount;
     const rainGeo = new THREE.BufferGeometry();
     const rainPos = new Float32Array(rainCount * 3);
     for (let i = 0; i < rainCount; i++) {
@@ -310,6 +317,29 @@ export class GameEngine {
     const q = GAME_CONFIG.QUALITY_SETTINGS[quality === 'auto' ? 'med' : quality];
     this.renderer.setPixelRatio(q.pixelRatio);
     this.renderer.shadowMap.enabled = q.shadows;
+    // Honest shadow resolution: apply the tier's shadowMapSize to the light.
+    // (low has shadows: false and no shadowMapSize key.)
+    if (q.shadows && 'shadowMapSize' in q && q.shadowMapSize) {
+      const s = q.shadowMapSize;
+      if (this.dirLight.shadow.mapSize.x !== s) {
+        this.dirLight.shadow.mapSize.set(s, s);
+        // Force three.js to re-allocate the shadow map at the new size.
+        if (this.dirLight.shadow.map) {
+          this.dirLight.shadow.map.dispose();
+          this.dirLight.shadow.map = null;
+        }
+      }
+    }
+    // Honest render distance: the tier's far-plane goes straight on the camera.
+    this.cameraManager.camera.far = q.renderDistance;
+    this.cameraManager.camera.updateProjectionMatrix();
+    // Honest particles: tier rain density (0 = no rain visuals on low).
+    this.rainParticleCount = q.particles ? 1500 : 0;
+    if (this.rainParticleCount === 0 && this.rainParticles) {
+      this.disposeRainParticles();
+    }
+    // NOTE: tier trafficCount (22/42/65) is informational — the live pool size
+    // is owned by TrafficSystem.setDensity (24/44/68). Kept in sync by P4-C.
     this.trafficSystem.setDensity(quality === 'low' ? 'low' : quality === 'high' ? 'high' : 'medium');
     if (quality === 'auto') {
       // User re-armed auto mode: restart from the med tier.
