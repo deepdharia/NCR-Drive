@@ -16,7 +16,7 @@ const ARCHETYPE_STYLES: Record<string, string> = {
   standard: 'bg-neutral-500/20 border-neutral-400/40 text-neutral-300',
 };
 
-export const TaxiOfferModal: React.FC<TaxiOfferModalProps> = ({
+export const TaxiOfferModal: React.FC<TaxiOfferModalProps> = React.memo(({
   offer,
   onAccept,
   onDecline,
@@ -25,7 +25,7 @@ export const TaxiOfferModal: React.FC<TaxiOfferModalProps> = ({
   const tagStyle = ARCHETYPE_STYLES[offer.archetype] ?? ARCHETYPE_STYLES.standard;
 
   return (
-    <div className="absolute inset-0 bg-neutral-950/85 backdrop-blur-xl z-50 flex items-center justify-center p-6 select-none font-display text-neutral-100">
+    <div className="absolute inset-0 bg-neutral-950/85 backdrop-blur-xl z-[80] flex items-center justify-center p-6 select-none font-display text-neutral-100">
       <div className="w-full max-w-md hud-glass p-6 rounded-3xl border border-neutral-700 shadow-2xl flex flex-col text-neutral-100">
         {/* Header */}
         <div className="flex items-center justify-between mb-1">
@@ -99,17 +99,19 @@ export const TaxiOfferModal: React.FC<TaxiOfferModalProps> = ({
         )}
 
         {/* Actions */}
-        <div className="w-full flex gap-3">
+        <div className="w-full flex gap-3 relative z-10 pointer-events-auto">
           <button
+            type="button"
             onClick={onDecline}
-            className="flex-1 py-3 rounded-2xl hud-glass border border-neutral-700 hover:border-neutral-500 text-neutral-300 font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all"
+            className="flex-1 py-3 rounded-2xl hud-glass border border-neutral-700 hover:border-neutral-500 text-neutral-300 font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer relative pointer-events-auto"
           >
             <X className="w-4 h-4" />
             {hindiLabels ? 'छोड़ो' : 'DECLINE'}
           </button>
           <button
+            type="button"
             onClick={onAccept}
-            className="flex-1 py-3 rounded-2xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-xl active:scale-95 transition-all"
+            className="flex-1 py-3 rounded-2xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-xl active:scale-95 transition-all cursor-pointer relative pointer-events-auto"
           >
             <Check className="w-4 h-4" />
             {hindiLabels ? 'स्वीकार करो' : 'ACCEPT FARE'}
@@ -123,4 +125,4 @@ export const TaxiOfferModal: React.FC<TaxiOfferModalProps> = ({
       </div>
     </div>
   );
-};
+});
