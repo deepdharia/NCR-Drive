@@ -47,6 +47,9 @@ export default function App() {
   const [showMissions, setShowMissions] = useState<boolean>(false);
   const [showSettings, setShowSettings] = useState<boolean>(false);
   const [showPause, setShowPause] = useState<boolean>(false);
+  // Latest pause-toggle logic, read by the engine's Escape-key callback
+  // (registered once at mount) without stale closures.
+  const pauseToggleRef = useRef<() => void>(() => {});
   const [missionResult, setMissionResult] = useState<{
     success: boolean;
     title: string;
@@ -85,6 +88,7 @@ export default function App() {
         setSaveData(SaveManager.load());
         setTaxiMeta(null);
       },
+      onPauseRequest: () => pauseToggleRef.current(),
     });
 
     // Start menu preview mode initially
@@ -209,6 +213,18 @@ export default function App() {
     engineRef.current.setPaused(false);
     setShowPause(false);
   }, []);
+
+  // Escape key toggles pause during gameplay (wired via engine.setCallbacks).
+  // Only acts on the game screen; menus handle their own dismissal.
+  useEffect(() => {
+    pauseToggleRef.current = () => {
+      if (showPause) {
+        handleResume();
+      } else if (screen === 'game') {
+        handlePause();
+      }
+    };
+  }, [showPause, screen, handlePause, handleResume]);
 
   const handleResetCar = useCallback(() => {
     if (!engineRef.current) return;

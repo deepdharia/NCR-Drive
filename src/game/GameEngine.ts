@@ -74,6 +74,8 @@ export class GameEngine {
   // Callbacks to React HUD
   private onHudUpdateCallback?: (hud: HUDState) => void;
   private onMissionEndCallback?: (result: { success: boolean; cashEarned: number; title: string; message: string; stars?: number }) => void;
+  // Pause request from keyboard (Escape) — wired from React via setCallbacks.
+  private onPauseRequestCallback?: () => void;
 
   constructor(container: HTMLElement) {
     const width = container.clientWidth || window.innerWidth;
@@ -159,6 +161,7 @@ export class GameEngine {
     this.setupEffects(savedData.settings.weather);
 
     this.inputManager.setCallbacks({
+      onPause: () => this.onPauseRequestCallback?.(),
       onHorn: () => this.audioEngine.playHorn(),
       onIndicator: () => this.audioEngine.playIndicatorTick(),
       onCameraToggle: () => this.cycleCamera(),
@@ -308,9 +311,11 @@ export class GameEngine {
   public setCallbacks(callbacks: {
     onHudUpdate?: (hud: HUDState) => void;
     onMissionEnd?: (result: { success: boolean; cashEarned: number; title: string; message: string }) => void;
+    onPauseRequest?: () => void;
   }) {
     this.onHudUpdateCallback = callbacks.onHudUpdate;
     this.onMissionEndCallback = callbacks.onMissionEnd;
+    this.onPauseRequestCallback = callbacks.onPauseRequest;
   }
 
   public setQuality(quality: QualityLevel) {
