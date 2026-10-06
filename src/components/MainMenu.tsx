@@ -1,12 +1,11 @@
 import React from 'react';
-import { Play, Award, Compass, Car, Settings, IndianRupee, MapPin } from 'lucide-react';
+import { Play, Compass, Car, Settings, IndianRupee, MapPin } from 'lucide-react';
 import { getCarById } from '../game/cars/CarCatalog';
 import { PlayerSaveData } from '../game/types';
 
 interface MainMenuProps {
   saveData: PlayerSaveData;
   onStartTaxi: () => void;
-  onOpenMissions: () => void;
   onStartFreeDrive: () => void;
   onOpenGarage: () => void;
   onOpenSettings: () => void;
@@ -15,7 +14,6 @@ interface MainMenuProps {
 export const MainMenu: React.FC<MainMenuProps> = ({
   saveData,
   onStartTaxi,
-  onOpenMissions,
   onStartFreeDrive,
   onOpenGarage,
   onOpenSettings,
@@ -36,7 +34,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
             <h1 className="text-3xl font-extrabold tracking-tight text-neutral-100 flex items-center gap-2">
               NCR DRIVE
               <span className="text-xs px-2.5 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-400/40">
-                PRO SIM
+                OPEN WORLD
               </span>
             </h1>
           </div>
@@ -61,7 +59,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
         </div>
       </div>
 
-      {/* Center Left: Action Play Modes */}
+      {/* Core game loop: taxi career, free roam, garage */}
       <div className="max-w-md space-y-3.5 my-auto">
         {/* Taxi Career Mode */}
         <button
@@ -74,35 +72,14 @@ export const MainMenu: React.FC<MainMenuProps> = ({
             </div>
             <div className="text-left">
               <div className="text-lg leading-tight">
-                {hindi ? 'टैक्सी करियर' : 'TAXI SIM CAREER'}
+                {hindi ? 'टैक्सी करियर' : 'TAXI CAREER'}
               </div>
               <div className="text-xs font-semibold text-neutral-900/80">
-                Pick up passengers, earn ₹ fares, 5-star ratings
+                Take real-feeling fares across an open Delhi-NCR world
               </div>
             </div>
           </div>
           <span className="text-xl group-hover:translate-x-1 transition-transform">➔</span>
-        </button>
-
-        {/* Dr. Driving Missions */}
-        <button
-          onClick={onOpenMissions}
-          className="w-full p-4 rounded-2xl hud-glass-teal border border-teal-500/50 hover:border-teal-400 text-neutral-100 font-extrabold flex items-center justify-between shadow-xl active:scale-98 transition-all group"
-        >
-          <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-xl bg-teal-500/20 border border-teal-400/40 flex items-center justify-center text-teal-300">
-              <Award className="w-6 h-6" />
-            </div>
-            <div className="text-left">
-              <div className="text-lg leading-tight text-neutral-100">
-                {hindi ? 'डीआर ड्राइविंग मिशन' : 'DR. DRIVING CHALLENGES'}
-              </div>
-              <div className="text-xs font-medium text-teal-200/80">
-                Precision parking, clean expressway runs, radars
-              </div>
-            </div>
-          </div>
-          <span className="text-xl text-teal-400 group-hover:translate-x-1 transition-transform">➔</span>
         </button>
 
         {/* Free Drive */}
@@ -116,10 +93,10 @@ export const MainMenu: React.FC<MainMenuProps> = ({
             </div>
             <div className="text-left">
               <div className="text-lg leading-tight text-neutral-200">
-                {hindi ? 'फ्री ड्राइव' : 'FREE EXPLORATION'}
+                {hindi ? 'फ्री ड्राइव' : 'OPEN WORLD DRIVE'}
               </div>
               <div className="text-xs font-normal text-neutral-400">
-                Explore Delhi, NH-48, Gurgaon & Haryana roads
+                Drive anywhere. No mission, no timer — just the road
               </div>
             </div>
           </div>
