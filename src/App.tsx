@@ -5,7 +5,6 @@ import { GameMode, GameScreen, HUDState, PlayerSaveData, QualityLevel, Weather }
 import { HUD } from './components/HUD';
 import { MainMenu } from './components/MainMenu';
 import { GarageModal } from './components/GarageModal';
-import { MissionSelectModal } from './components/MissionSelectModal';
 import { SettingsModal } from './components/SettingsModal';
 import { PauseModal } from './components/PauseModal';
 import { MissionResultModal } from './components/MissionResultModal';
@@ -44,7 +43,6 @@ export default function App() {
   const [hudState, setHudState] = useState<HUDState>(INITIAL_HUD);
 
   // Modals state
-  const [showMissions, setShowMissions] = useState<boolean>(false);
   const [showSettings, setShowSettings] = useState<boolean>(false);
   const [showPause, setShowPause] = useState<boolean>(false);
   // Latest pause-toggle logic, read by the engine's Escape-key callback
@@ -110,7 +108,6 @@ export default function App() {
     if (!engineRef.current) return;
     setTaxiOffer(engineRef.current.missionManager.generateTaxiOffer());
     setShowPause(false);
-    setShowMissions(false);
     setMissionResult(null);
   }, []);
 
@@ -123,7 +120,6 @@ export default function App() {
     setTaxiOffer(null);
     setScreen('game');
     setShowPause(false);
-    setShowMissions(false);
     setMissionResult(null);
   }, [taxiOffer, syncTaxiMeta]);
 
@@ -133,15 +129,6 @@ export default function App() {
     setTaxiOffer(engineRef.current.missionManager.generateTaxiOffer());
   }, []);
 
-  const handleStartMission = useCallback((missionId: string) => {
-    if (!engineRef.current) return;
-    lastRunRef.current = { mode: 'mission', missionId };
-    engineRef.current.startMode('mission', missionId);
-    setScreen('game');
-    setShowMissions(false);
-    setShowPause(false);
-    setMissionResult(null);
-  }, []);
 
   const handleStartFreeDrive = useCallback(() => {
     if (!engineRef.current) return;
@@ -149,7 +136,6 @@ export default function App() {
     engineRef.current.startMode('free_drive');
     setScreen('game');
     setShowPause(false);
-    setShowMissions(false);
     setMissionResult(null);
   }, []);
 
@@ -288,7 +274,6 @@ export default function App() {
         <MainMenu
           saveData={saveData}
           onStartTaxi={handleStartTaxi}
-          onOpenMissions={() => setShowMissions(true)}
           onStartFreeDrive={handleStartFreeDrive}
           onOpenGarage={handleOpenGarage}
           onOpenSettings={() => setShowSettings(true)}
@@ -308,15 +293,6 @@ export default function App() {
         />
       )}
 
-      {/* Dr. Driving Mission Select Modal */}
-      {showMissions && (
-        <MissionSelectModal
-          onSelectMission={handleStartMission}
-          onClose={() => setShowMissions(false)}
-          hindiLabels={saveData.settings.hindiLabels}
-          highScores={saveData.highScores}
-        />
-      )}
 
       {/* Settings Modal */}
       {showSettings && (
