@@ -243,11 +243,11 @@ export const ROAD_SEGMENTS: RoadSegment[] = [
   { id: 'ashoka_cp', start: ROAD_WAYPOINTS[9], end: ROAD_WAYPOINTS[10], lanes: 2, width: 13, speedLimit: 40, streetName: 'Ashoka Road', zone: 'Delhi' },
   { id: 'cp_loop_return', start: ROAD_WAYPOINTS[10], end: ROAD_WAYPOINTS[3], lanes: 2, width: 13, speedLimit: 40, streetName: 'Connaught Place Outer Circle', zone: 'Delhi' },
 
-  { id: 's5_air', start: ROAD_WAYPOINTS[10], end: ROAD_WAYPOINTS[11], lanes: 2, width: 12, speedLimit: 60, streetName: 'Aerocity Link Road', zone: 'Delhi' },
+  { id: 's5_air', start: ROAD_WAYPOINTS[5], end: ROAD_WAYPOINTS[11], lanes: 2, width: 12, speedLimit: 60, streetName: 'Aerocity Link Road', zone: 'Delhi' },
   { id: 's6_air', start: ROAD_WAYPOINTS[11], end: ROAD_WAYPOINTS[12], lanes: 2, width: 12, speedLimit: 40, streetName: 'IGI Terminal 3', zone: 'Delhi' },
 
   // Dhaula Kuan Flyover
-  { id: 's7', start: ROAD_WAYPOINTS[8], end: ROAD_WAYPOINTS[13], lanes: 3, width: 18, speedLimit: 60, streetName: 'Ring Road Approach', zone: 'Delhi' },
+  { id: 's7', start: ROAD_WAYPOINTS[3], end: ROAD_WAYPOINTS[13], lanes: 3, width: 18, speedLimit: 60, streetName: 'Ring Road Approach', zone: 'Delhi' },
   { id: 's8', start: ROAD_WAYPOINTS[13], end: ROAD_WAYPOINTS[14], lanes: 3, width: 18, speedLimit: 70, streetName: 'Dhaula Kuan Flyover', zone: 'Delhi' },
   { id: 's9', start: ROAD_WAYPOINTS[14], end: ROAD_WAYPOINTS[15], lanes: 3, width: 18, speedLimit: 70, streetName: 'Dhaula Kuan Flyover Deck', zone: 'Delhi' },
   { id: 's10', start: ROAD_WAYPOINTS[15], end: ROAD_WAYPOINTS[16], lanes: 3, width: 18, speedLimit: 70, streetName: 'Dhaula Kuan Ramp Down', zone: 'Delhi' },
