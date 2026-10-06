@@ -28,6 +28,8 @@ export const TouchControls: React.FC<TouchControlsProps> = ({
   const [wheelRotation, setWheelRotation] = useState<number>(0);
   const [isPedalGasPressed, setIsPedalGasPressed] = useState<boolean>(false);
   const [isPedalBrakePressed, setIsPedalBrakePressed] = useState<boolean>(false);
+  const [throttlePressure, setThrottlePressure] = useState(0);
+  const [brakePressure, setBrakePressure] = useState(0);
   const [isHandbrakeActive, setIsHandbrakeActive] = useState<boolean>(false);
 
   // Steering wheel tracking state
@@ -98,6 +100,13 @@ export const TouchControls: React.FC<TouchControlsProps> = ({
     e.currentTarget.releasePointerCapture?.(e.pointerId);
     inputManager.setTouchSteer(0);
     setWheelRotation(0);
+  };
+
+  const pedalPressure = (e: React.PointerEvent<HTMLElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const y = Math.min(Math.max(e.clientY - rect.top, 0), rect.height);
+    // Bottom of pedal = light input, pushing higher = progressively stronger input.
+    return Math.min(1, Math.max(0.12, 1 - y / rect.height));
   };
 
   const isWheelRight = controlScheme === 'wheel_right';
@@ -200,15 +209,25 @@ export const TouchControls: React.FC<TouchControlsProps> = ({
           onPointerDown={(e) => {
             e.currentTarget.setPointerCapture(e.pointerId);
             setIsPedalBrakePressed(true);
-            inputManager.setTouchBrake(1.0);
+            const pressure = pedalPressure(e);
+            setBrakePressure(pressure);
+            inputManager.setTouchBrake(pressure);
+          }}
+          onPointerMove={(e) => {
+            if (!isPedalBrakePressed) return;
+            const pressure = pedalPressure(e);
+            setBrakePressure(pressure);
+            inputManager.setTouchBrake(pressure);
           }}
           onPointerUp={(e) => {
             e.currentTarget.releasePointerCapture?.(e.pointerId);
             setIsPedalBrakePressed(false);
+            setBrakePressure(0);
             inputManager.setTouchBrake(0);
           }}
           onPointerCancel={() => {
             setIsPedalBrakePressed(false);
+            setBrakePressure(0);
             inputManager.setTouchBrake(0);
           }}
           className={`w-20 h-32 rounded-2xl border-2 backdrop-blur-md flex flex-col items-center justify-center transition-all select-none cursor-pointer shadow-2xl ${
@@ -221,7 +240,7 @@ export const TouchControls: React.FC<TouchControlsProps> = ({
           <div className="w-12 h-1.5 bg-rose-400/40 rounded-full mb-1.5" />
           <div className="w-12 h-1.5 bg-rose-400/40 rounded-full mb-1.5" />
           <span className="text-xs font-display font-extrabold uppercase tracking-wider text-rose-200 mt-2">
-            BRAKE
+            BRAKE {isPedalBrakePressed ? `${Math.round(brakePressure * 100)}%` : ''}
           </span>
         </div>
 
@@ -230,15 +249,25 @@ export const TouchControls: React.FC<TouchControlsProps> = ({
           onPointerDown={(e) => {
             e.currentTarget.setPointerCapture(e.pointerId);
             setIsPedalGasPressed(true);
-            inputManager.setTouchThrottle(1.0);
+            const pressure = pedalPressure(e);
+            setThrottlePressure(pressure);
+            inputManager.setTouchThrottle(pressure);
+          }}
+          onPointerMove={(e) => {
+            if (!isPedalGasPressed) return;
+            const pressure = pedalPressure(e);
+            setThrottlePressure(pressure);
+            inputManager.setTouchThrottle(pressure);
           }}
           onPointerUp={(e) => {
             e.currentTarget.releasePointerCapture?.(e.pointerId);
             setIsPedalGasPressed(false);
+            setThrottlePressure(0);
             inputManager.setTouchThrottle(0);
           }}
           onPointerCancel={() => {
             setIsPedalGasPressed(false);
+            setThrottlePressure(0);
             inputManager.setTouchThrottle(0);
           }}
           className={`w-20 h-42 rounded-2xl border-2 backdrop-blur-md flex flex-col items-center justify-center transition-all select-none cursor-pointer shadow-2xl ${
@@ -252,7 +281,7 @@ export const TouchControls: React.FC<TouchControlsProps> = ({
           <div className="w-12 h-1.5 bg-emerald-400/40 rounded-full mb-2" />
           <div className="w-12 h-1.5 bg-emerald-400/40 rounded-full mb-2" />
           <span className="text-sm font-display font-extrabold uppercase tracking-wider text-emerald-100 mt-2">
-            GAS
+            GAS {isPedalGasPressed ? `${Math.round(throttlePressure * 100)}%` : ''}
           </span>
         </div>
       </div>
