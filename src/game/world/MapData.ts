@@ -40,6 +40,50 @@ export const POINTS_OF_INTEREST: POI[] = [
     discoveryBonus: 200
   },
   {
+    id: 'shivaji_stadium_metro',
+    name: 'ONGC Shivaji Stadium Metro',
+    hindiName: 'शिवाजी स्टेडियम मेट्रो',
+    zone: 'Delhi',
+    position: [-102, 0, -812],
+    parkingSpot: [-92, 0, -830],
+    description: 'Airport Express station frontage on Baba Kharak Singh Marg, beside the stadium and auto stand.',
+    discoveryRadius: 32,
+    discoveryBonus: 175
+  },
+  {
+    id: 'bangla_sahib',
+    name: 'Gurudwara Bangla Sahib',
+    hindiName: 'गुरुद्वारा बंगला साहिब',
+    zone: 'Delhi',
+    position: [-178, 0, -850],
+    parkingSpot: [-154, 0, -850],
+    description: 'White marble Sikh shrine with its landmark golden domes on the central Delhi road loop.',
+    discoveryRadius: 38,
+    discoveryBonus: 250
+  },
+  {
+    id: 'hanuman_mandir_cp',
+    name: 'Hanuman Mandir',
+    hindiName: 'हनुमान मंदिर',
+    zone: 'Delhi',
+    position: [-82, 0, -770],
+    parkingSpot: [-72, 0, -780],
+    description: 'Busy temple landmark beside the Shivaji Stadium and Connaught Place approach.',
+    discoveryRadius: 24,
+    discoveryBonus: 125
+  },
+  {
+    id: 'palika_bazaar',
+    name: 'Palika Bazaar',
+    hindiName: 'पालिका बाज़ार',
+    zone: 'Delhi',
+    position: [-22, 0, -785],
+    parkingSpot: [-35, 0, -792],
+    description: 'Underground market at the heart of Connaught Place.',
+    discoveryRadius: 24,
+    discoveryBonus: 125
+  },
+  {
     id: 'igi_airport',
     name: 'IGI Airport Terminal 3',
     hindiName: 'आईजीआई एयरपोर्ट टी३',
@@ -141,6 +185,13 @@ export const ROAD_WAYPOINTS: RoadWaypoint[] = [
   { x: 70, y: 0, z: -800, zone: 'Delhi', streetName: 'Barakhamba Road', speedLimit: 50 },
   { x: -70, y: 0, z: -800, zone: 'Delhi', streetName: 'Baba Kharak Singh Marg', speedLimit: 50 },
 
+  // Central Delhi prototype slice: Connaught Place -> Shivaji Stadium -> Bangla Sahib
+  { x: -102, y: 0, z: -812, zone: 'Delhi', streetName: 'Baba Kharak Singh Marg — Shivaji Stadium', speedLimit: 40 },
+  { x: -145, y: 0, z: -828, zone: 'Delhi', streetName: 'Baba Kharak Singh Marg', speedLimit: 40 },
+  { x: -178, y: 0, z: -850, zone: 'Delhi', streetName: 'Baba Kharak Singh Marg — Bangla Sahib', speedLimit: 35 },
+  { x: -150, y: 0, z: -890, zone: 'Delhi', streetName: 'Ashoka Road', speedLimit: 40 },
+  { x: -72, y: 0, z: -875, zone: 'Delhi', streetName: 'Ashoka Road CP Approach', speedLimit: 40 },
+
   // Airport Branch
   { x: -140, y: 0, z: -700, zone: 'Delhi', streetName: 'Aerocity Link Road', speedLimit: 60 },
   { x: -220, y: 0, z: -600, zone: 'Delhi', streetName: 'IGI Terminal 3 Departure', speedLimit: 40 },
@@ -184,38 +235,46 @@ export const ROAD_SEGMENTS: RoadSegment[] = [
   { id: 's3', start: ROAD_WAYPOINTS[2], end: ROAD_WAYPOINTS[3], lanes: 2, width: 14, speedLimit: 50, streetName: 'Connaught Place Radial', zone: 'Delhi' },
   { id: 's4_l', start: ROAD_WAYPOINTS[3], end: ROAD_WAYPOINTS[4], lanes: 2, width: 12, speedLimit: 50, streetName: 'Barakhamba Road', zone: 'Delhi' },
   { id: 's4_r', start: ROAD_WAYPOINTS[3], end: ROAD_WAYPOINTS[5], lanes: 2, width: 12, speedLimit: 50, streetName: 'Baba Kharak Singh Marg', zone: 'Delhi' },
-  { id: 's5_air', start: ROAD_WAYPOINTS[5], end: ROAD_WAYPOINTS[6], lanes: 2, width: 12, speedLimit: 60, streetName: 'Aerocity Link Road', zone: 'Delhi' },
-  { id: 's6_air', start: ROAD_WAYPOINTS[6], end: ROAD_WAYPOINTS[7], lanes: 2, width: 12, speedLimit: 40, streetName: 'IGI Terminal 3', zone: 'Delhi' },
+  // Central Delhi playable loop. Indices 6-10 are the CP/Shivaji/Bangla Sahib slice.
+  { id: 'cp_shivaji', start: ROAD_WAYPOINTS[5], end: ROAD_WAYPOINTS[6], lanes: 2, width: 14, speedLimit: 40, streetName: 'Baba Kharak Singh Marg', zone: 'Delhi' },
+  { id: 'shivaji_bks_1', start: ROAD_WAYPOINTS[6], end: ROAD_WAYPOINTS[7], lanes: 2, width: 14, speedLimit: 40, streetName: 'Baba Kharak Singh Marg', zone: 'Delhi' },
+  { id: 'shivaji_bks_2', start: ROAD_WAYPOINTS[7], end: ROAD_WAYPOINTS[8], lanes: 2, width: 14, speedLimit: 35, streetName: 'Baba Kharak Singh Marg', zone: 'Delhi' },
+  { id: 'bangla_ashoka', start: ROAD_WAYPOINTS[8], end: ROAD_WAYPOINTS[9], lanes: 2, width: 13, speedLimit: 40, streetName: 'Ashoka Road', zone: 'Delhi' },
+  { id: 'ashoka_cp', start: ROAD_WAYPOINTS[9], end: ROAD_WAYPOINTS[10], lanes: 2, width: 13, speedLimit: 40, streetName: 'Ashoka Road', zone: 'Delhi' },
+  { id: 'cp_loop_return', start: ROAD_WAYPOINTS[10], end: ROAD_WAYPOINTS[3], lanes: 2, width: 13, speedLimit: 40, streetName: 'Connaught Place Outer Circle', zone: 'Delhi' },
+
+  { id: 's5_air', start: ROAD_WAYPOINTS[10], end: ROAD_WAYPOINTS[11], lanes: 2, width: 12, speedLimit: 60, streetName: 'Aerocity Link Road', zone: 'Delhi' },
+  { id: 's6_air', start: ROAD_WAYPOINTS[11], end: ROAD_WAYPOINTS[12], lanes: 2, width: 12, speedLimit: 40, streetName: 'IGI Terminal 3', zone: 'Delhi' },
 
   // Dhaula Kuan Flyover
-  { id: 's7', start: ROAD_WAYPOINTS[3], end: ROAD_WAYPOINTS[8], lanes: 3, width: 18, speedLimit: 60, streetName: 'Ring Road Approach', zone: 'Delhi' },
-  { id: 's8', start: ROAD_WAYPOINTS[8], end: ROAD_WAYPOINTS[9], lanes: 3, width: 18, speedLimit: 70, streetName: 'Dhaula Kuan Flyover', zone: 'Delhi' },
-  { id: 's9', start: ROAD_WAYPOINTS[9], end: ROAD_WAYPOINTS[10], lanes: 3, width: 18, speedLimit: 70, streetName: 'Dhaula Kuan Flyover Deck', zone: 'Delhi' },
-  { id: 's10', start: ROAD_WAYPOINTS[10], end: ROAD_WAYPOINTS[11], lanes: 3, width: 18, speedLimit: 70, streetName: 'Dhaula Kuan Ramp Down', zone: 'Delhi' },
-  { id: 's11', start: ROAD_WAYPOINTS[11], end: ROAD_WAYPOINTS[12], lanes: 3, width: 18, speedLimit: 80, streetName: 'NH-48 Portal', zone: 'Highway' },
+  { id: 's7', start: ROAD_WAYPOINTS[8], end: ROAD_WAYPOINTS[13], lanes: 3, width: 18, speedLimit: 60, streetName: 'Ring Road Approach', zone: 'Delhi' },
+  { id: 's8', start: ROAD_WAYPOINTS[13], end: ROAD_WAYPOINTS[14], lanes: 3, width: 18, speedLimit: 70, streetName: 'Dhaula Kuan Flyover', zone: 'Delhi' },
+  { id: 's9', start: ROAD_WAYPOINTS[14], end: ROAD_WAYPOINTS[15], lanes: 3, width: 18, speedLimit: 70, streetName: 'Dhaula Kuan Flyover Deck', zone: 'Delhi' },
+  { id: 's10', start: ROAD_WAYPOINTS[15], end: ROAD_WAYPOINTS[16], lanes: 3, width: 18, speedLimit: 70, streetName: 'Dhaula Kuan Ramp Down', zone: 'Delhi' },
+  { id: 's11', start: ROAD_WAYPOINTS[16], end: ROAD_WAYPOINTS[17], lanes: 3, width: 18, speedLimit: 80, streetName: 'NH-48 Portal', zone: 'Highway' },
 
   // NH-48 Expressway (Divided 3+3 lanes)
-  { id: 's12', start: ROAD_WAYPOINTS[12], end: ROAD_WAYPOINTS[13], lanes: 3, width: 22, speedLimit: 100, streetName: 'NH-48 Delhi Gurgaon Expwy', zone: 'Highway' },
-  { id: 's13', start: ROAD_WAYPOINTS[13], end: ROAD_WAYPOINTS[14], lanes: 3, width: 22, speedLimit: 100, streetName: 'NH-48 Express Lanes', zone: 'Highway' },
-  { id: 's14_toll', start: ROAD_WAYPOINTS[14], end: ROAD_WAYPOINTS[15], lanes: 4, width: 26, speedLimit: 30, streetName: 'Kherki Daula FASTag Toll', zone: 'Highway' },
-  { id: 's15', start: ROAD_WAYPOINTS[15], end: ROAD_WAYPOINTS[16], lanes: 3, width: 22, speedLimit: 100, streetName: 'NH-48 Expressway Post-Toll', zone: 'Highway' },
-  { id: 's16', start: ROAD_WAYPOINTS[16], end: ROAD_WAYPOINTS[17], lanes: 3, width: 22, speedLimit: 90, streetName: 'NH-48 Gurgaon Gate', zone: 'Highway' },
+  { id: 's12', start: ROAD_WAYPOINTS[17], end: ROAD_WAYPOINTS[18], lanes: 3, width: 22, speedLimit: 100, streetName: 'NH-48 Delhi Gurgaon Expwy', zone: 'Highway' },
+  { id: 's13', start: ROAD_WAYPOINTS[18], end: ROAD_WAYPOINTS[19], lanes: 3, width: 22, speedLimit: 100, streetName: 'NH-48 Express Lanes', zone: 'Highway' },
+  { id: 's14_toll', start: ROAD_WAYPOINTS[19], end: ROAD_WAYPOINTS[20], lanes: 4, width: 26, speedLimit: 30, streetName: 'Kherki Daula FASTag Toll', zone: 'Highway' },
+  { id: 's15', start: ROAD_WAYPOINTS[20], end: ROAD_WAYPOINTS[21], lanes: 3, width: 22, speedLimit: 100, streetName: 'NH-48 Expressway Post-Toll', zone: 'Highway' },
+  { id: 's16', start: ROAD_WAYPOINTS[21], end: ROAD_WAYPOINTS[22], lanes: 3, width: 22, speedLimit: 90, streetName: 'NH-48 Gurgaon Gate', zone: 'Highway' },
 
   // Gurgaon City
-  { id: 's17', start: ROAD_WAYPOINTS[17], end: ROAD_WAYPOINTS[18], lanes: 3, width: 20, speedLimit: 60, streetName: 'Cyber City Intersection', zone: 'Gurgaon' },
-  { id: 's18_ch', start: ROAD_WAYPOINTS[18], end: ROAD_WAYPOINTS[19], lanes: 2, width: 14, speedLimit: 50, streetName: 'Cyber Hub Rapid Metro Way', zone: 'Gurgaon' },
-  { id: 's19_gcr', start: ROAD_WAYPOINTS[19], end: ROAD_WAYPOINTS[20], lanes: 2, width: 14, speedLimit: 60, streetName: 'Golf Course Road Link', zone: 'Gurgaon' },
-  { id: 's20_mg', start: ROAD_WAYPOINTS[18], end: ROAD_WAYPOINTS[21], lanes: 2, width: 14, speedLimit: 50, streetName: 'MG Road Boulevard', zone: 'Gurgaon' },
-  { id: 's21_mall', start: ROAD_WAYPOINTS[21], end: ROAD_WAYPOINTS[22], lanes: 2, width: 14, speedLimit: 40, streetName: 'Ambience Mall Promenade', zone: 'Gurgaon' },
-  { id: 's22_iffco', start: ROAD_WAYPOINTS[18], end: ROAD_WAYPOINTS[23], lanes: 3, width: 20, speedLimit: 50, streetName: 'IFFCO Chowk Junction', zone: 'Gurgaon' },
-  { id: 's23_sig', start: ROAD_WAYPOINTS[23], end: ROAD_WAYPOINTS[24], lanes: 3, width: 20, speedLimit: 60, streetName: 'Signature Tower Flyover', zone: 'Gurgaon' },
+  { id: 's17', start: ROAD_WAYPOINTS[22], end: ROAD_WAYPOINTS[23], lanes: 3, width: 20, speedLimit: 60, streetName: 'Cyber City Intersection', zone: 'Gurgaon' },
+  { id: 's18_ch', start: ROAD_WAYPOINTS[23], end: ROAD_WAYPOINTS[24], lanes: 2, width: 14, speedLimit: 50, streetName: 'Cyber Hub Rapid Metro Way', zone: 'Gurgaon' },
+  { id: 's19_gcr', start: ROAD_WAYPOINTS[24], end: ROAD_WAYPOINTS[25], lanes: 2, width: 14, speedLimit: 60, streetName: 'Golf Course Road Link', zone: 'Gurgaon' },
+  { id: 's20_mg', start: ROAD_WAYPOINTS[23], end: ROAD_WAYPOINTS[26], lanes: 2, width: 14, speedLimit: 50, streetName: 'MG Road Boulevard', zone: 'Gurgaon' },
+  { id: 's21_mall', start: ROAD_WAYPOINTS[26], end: ROAD_WAYPOINTS[27], lanes: 2, width: 14, speedLimit: 40, streetName: 'Ambience Mall Promenade', zone: 'Gurgaon' },
+  { id: 's22_iffco', start: ROAD_WAYPOINTS[23], end: ROAD_WAYPOINTS[28], lanes: 3, width: 20, speedLimit: 50, streetName: 'IFFCO Chowk Junction', zone: 'Gurgaon' },
+  { id: 's23_sig', start: ROAD_WAYPOINTS[28], end: ROAD_WAYPOINTS[29], lanes: 3, width: 20, speedLimit: 60, streetName: 'Signature Tower Flyover', zone: 'Gurgaon' },
 
   // Haryana / Manesar
-  { id: 's24', start: ROAD_WAYPOINTS[24], end: ROAD_WAYPOINTS[25], lanes: 3, width: 20, speedLimit: 80, streetName: 'Delhi-Jaipur Highway Outskirts', zone: 'Haryana' },
-  { id: 's25_dhaba', start: ROAD_WAYPOINTS[25], end: ROAD_WAYPOINTS[26], lanes: 2, width: 12, speedLimit: 40, streetName: 'Old Rao Dhaba Service Lane', zone: 'Haryana' },
-  { id: 's26_imt', start: ROAD_WAYPOINTS[25], end: ROAD_WAYPOINTS[27], lanes: 3, width: 20, speedLimit: 90, streetName: 'IMT Manesar Expressway', zone: 'Haryana' },
-  { id: 's27_kmp', start: ROAD_WAYPOINTS[27], end: ROAD_WAYPOINTS[28], lanes: 2, width: 14, speedLimit: 100, streetName: 'KMP Expressway Connector', zone: 'Haryana' },
-  { id: 's28_term', start: ROAD_WAYPOINTS[27], end: ROAD_WAYPOINTS[29], lanes: 3, width: 20, speedLimit: 80, streetName: 'Southern Peripheral Terminus', zone: 'Haryana' },
+  { id: 's24', start: ROAD_WAYPOINTS[29], end: ROAD_WAYPOINTS[30], lanes: 3, width: 20, speedLimit: 80, streetName: 'Delhi-Jaipur Highway Outskirts', zone: 'Haryana' },
+  { id: 's25_dhaba', start: ROAD_WAYPOINTS[30], end: ROAD_WAYPOINTS[31], lanes: 2, width: 12, speedLimit: 40, streetName: 'Old Rao Dhaba Service Lane', zone: 'Haryana' },
+  { id: 's26_imt', start: ROAD_WAYPOINTS[30], end: ROAD_WAYPOINTS[32], lanes: 3, width: 20, speedLimit: 90, streetName: 'IMT Manesar Expressway', zone: 'Haryana' },
+  { id: 's27_kmp', start: ROAD_WAYPOINTS[32], end: ROAD_WAYPOINTS[33], lanes: 2, width: 14, speedLimit: 100, streetName: 'KMP Expressway Connector', zone: 'Haryana' },
+  { id: 's28_term', start: ROAD_WAYPOINTS[32], end: ROAD_WAYPOINTS[34], lanes: 3, width: 20, speedLimit: 80, streetName: 'Southern Peripheral Terminus', zone: 'Haryana' },
 ];
 
 /**
@@ -300,7 +359,7 @@ export function getNearestRoadInfo(x: number, z: number): {
   zone: 'Delhi' | 'Gurgaon' | 'Highway' | 'Haryana';
   distance: number;
 } {
-  let closest = ROAD_WAYPOINTS[0];
+  let closest = ROAD_WAYPOINTS[5];
   let minDistanceSq = Infinity;
 
   for (const wp of ROAD_WAYPOINTS) {
