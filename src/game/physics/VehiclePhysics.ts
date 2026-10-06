@@ -109,14 +109,18 @@ export class VehiclePhysics {
     const speedRatio = Math.min(1.0, this.speedKmh / 160.0);
     const maxSteer = THREE.MathUtils.lerp(
       0.62, // ~35.5 degrees at low speed
-      0.18, // ~10 degrees at top speed
+      0.14, // ~8 degrees at top speed: calmer motorway steering
       speedRatio
     );
 
     // input.steer: -1 (left), +1 (right)
     const targetSteer = input.steer * maxSteer * (1 - this.damagePct * 0.15);
-    const steerSpeed = input.steer === 0 ? 18.0 : 15.0;
-    this.steerAngle = THREE.MathUtils.lerp(this.steerAngle, targetSteer, steerSpeed * dt);
+    // Steering rack response: deliberate at speed, quicker while parking, with natural self-centering.
+    const steerSpeed = input.steer === 0
+      ? THREE.MathUtils.lerp(10.0, 16.0, speedRatio)
+      : THREE.MathUtils.lerp(10.5, 6.5, speedRatio);
+    const steerBlend = 1 - Math.exp(-steerSpeed * dt);
+    this.steerAngle = THREE.MathUtils.lerp(this.steerAngle, targetSteer, steerBlend);
 
     // 2. Ground & Suspension Raycasting
     const halfWb = this.spec.wheelbase / 2;
@@ -228,7 +232,9 @@ export class VehiclePhysics {
     let brakeForceTotal = 0;
     if (input.brake > 0) {
       const maxBrake = this.spec.brakeForce * brakeMult * 1.35;
-      brakeForceTotal = input.brake * maxBrake * (this.forwardSpeed > 0 ? 1 : -1);
+      // Progressive pedal curve gives fine low-pressure control and strong braking near full press.
+      const brakePressure = 0.18 * input.brake + 0.82 * input.brake * input.brake;
+      brakeForceTotal = brakePressure * maxBrake * (this.forwardSpeed > 0 ? 1 : -1);
       // Grip-limited braking: wet/dirt surfaces mean longer stopping distances
       brakeForceTotal *= (0.55 + 0.45 * avgSurfaceGrip);
     }
