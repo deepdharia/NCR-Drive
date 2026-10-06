@@ -13,6 +13,7 @@ interface HUDProps {
   playerZ: number;
   playerHeading: number;
   hindiLabels?: boolean;
+  controlScheme?: 'wheel_right' | 'wheel_left' | 'arrows';
   onCycleCamera: () => void;
   onPause: () => void;
 }
@@ -24,6 +25,7 @@ export const HUD: React.FC<HUDProps> = ({
   playerZ,
   playerHeading,
   hindiLabels = false,
+  controlScheme,
   onCycleCamera,
   onPause,
 }) => {
@@ -37,13 +39,13 @@ export const HUD: React.FC<HUDProps> = ({
   return (
     <div className="absolute inset-0 pointer-events-none select-none z-20 overflow-hidden font-display">
       {/* Top Left: Minimap & Street Badge */}
-      <div className="absolute top-3 left-3 flex flex-col gap-2 pointer-events-auto">
+      <div className="hud-map absolute top-3 left-3 flex flex-col gap-2 pointer-events-auto">
         <Minimap
           playerX={playerX}
           playerZ={playerZ}
           playerHeading={playerHeading}
-          targetX={0}
-          targetZ={0}
+          targetX={state.gpsTargetX}
+          targetZ={state.gpsTargetZ}
           hasTarget={state.hasGpsTarget}
         />
 
@@ -60,7 +62,7 @@ export const HUD: React.FC<HUDProps> = ({
       </div>
 
       {/* Top Center: Cash Balance, Fuel, Damage */}
-      <div className="absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-3">
+      <div className="hud-resources absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-3">
         {/* Cash Balance */}
         <div className="hud-glass-saffron px-4 py-1.5 rounded-2xl flex items-center gap-2 shadow-xl border border-amber-500/40">
           <IndianRupee className="w-5 h-5 text-amber-400" />
@@ -99,7 +101,7 @@ export const HUD: React.FC<HUDProps> = ({
       </div>
 
       {/* Top Notifications (FASTag, Speed Limit) */}
-      <div className="absolute top-16 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 pointer-events-none">
+      <div className="hud-alerts absolute top-16 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 pointer-events-none">
         {/* FASTag Toll banner */}
         {state.fastagNotification && (
           <div className="hud-glass px-4 py-2 rounded-2xl border-2 border-emerald-500 bg-emerald-950/80 text-emerald-200 font-bold text-sm flex items-center gap-2 shadow-2xl animate-bounce">
@@ -134,7 +136,7 @@ export const HUD: React.FC<HUDProps> = ({
 
       {/* Active Taxi Job Card / Mission Objective Card */}
       {state.activeJob && (
-        <div className="absolute top-28 left-3 hud-glass-saffron p-3 rounded-2xl border border-amber-500/40 shadow-2xl max-w-[270px] pointer-events-auto">
+        <div className="hud-job absolute top-[212px] left-3 hud-glass-saffron p-3 rounded-2xl border border-amber-500/40 shadow-2xl max-w-[270px] pointer-events-auto">
           <div className="flex items-center justify-between text-xs text-amber-400 font-bold mb-1">
             <span>{hindiLabels ? 'सवारी' : 'TAXI RIDER'}</span>
             <div className="flex items-center text-amber-300">
@@ -184,7 +186,7 @@ export const HUD: React.FC<HUDProps> = ({
       {/* Mission Timer / Objective — sits below the minimap + street badge
           column (~200px tall) so it never overlaps or clips off-screen. */}
       {state.missionTitle && !state.activeJob && (
-        <div className="absolute top-[212px] left-3 hud-glass-teal p-3 rounded-2xl border border-teal-500/40 shadow-2xl max-w-[min(260px,calc(100vw-24px))] pointer-events-auto break-words">
+        <div className="hud-job absolute top-[212px] left-3 hud-glass-teal p-3 rounded-2xl border border-teal-500/40 shadow-2xl max-w-[min(260px,calc(100vw-24px))] pointer-events-auto break-words">
           <div className="flex items-center justify-between text-xs text-teal-400 font-bold mb-1">
             <span>{hindiLabels ? 'मिशन' : 'MISSION'}</span>
             {state.missionTimeLeft !== undefined && (
@@ -202,7 +204,7 @@ export const HUD: React.FC<HUDProps> = ({
       )}
 
       {/* Bottom Center: Dashboard Instrument Gauges (Speedometer, RPM, Gear) */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none">
+      <div className="hud-gauges absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none">
         <div className="relative w-44 h-44 flex items-center justify-center">
           {/* Circular SVG Speedometer Arc */}
           <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
@@ -261,9 +263,12 @@ export const HUD: React.FC<HUDProps> = ({
         </div>
       </div>
 
+      <div className="hud-keys">WASD / ARROWS <span>DRIVE</span> C <span>CAMERA</span> R <span>REVERSE</span> ESC <span>PAUSE</span></div>
+
       {/* On-Screen Mobile Driving Controls */}
       <TouchControls
         inputManager={inputManager}
+        controlScheme={controlScheme}
         gear={state.gear}
         leftBlinker={state.leftBlinker}
         rightBlinker={state.rightBlinker}

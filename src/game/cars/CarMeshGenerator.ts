@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { BodyType, CarSpecs } from '../types';
 
 export interface CarVisuals {
@@ -165,9 +166,9 @@ export function createCarMesh(spec: CarSpecs, customColor?: string): CarVisuals 
     color: 0x0f172a,
     metalness: 0.2,
     roughness: 0.05,
-    transmission: 0.8,
+    transmission: 0.0,
     transparent: true,
-    opacity: 0.75,
+    opacity: 0.88,
     ior: 1.52,
   });
 
@@ -252,7 +253,7 @@ export function createCarMesh(spec: CarSpecs, customColor?: string): CarVisuals 
 
   // 2. Sculpted Lower Body with Flared Wheel Arches
   const lowerHeight = carHeight * 0.44;
-  const lowerGeo = new THREE.BoxGeometry(carWidth, lowerHeight, carLength);
+  const lowerGeo = new RoundedBoxGeometry(carWidth, lowerHeight, carLength, 3, 0.15);
   const lowerMesh = new THREE.Mesh(lowerGeo, paintMaterial);
   lowerMesh.position.y = groundClearance + lowerHeight / 2;
   lowerMesh.castShadow = true;
@@ -278,7 +279,7 @@ export function createCarMesh(spec: CarSpecs, customColor?: string): CarVisuals 
 
   // Aerodynamic Front Bumper with Fog Lamps & Air Dam
   const frontBumper = new THREE.Mesh(
-    new THREE.BoxGeometry(carWidth + 0.04, lowerHeight * 0.58, 0.42),
+    new RoundedBoxGeometry(carWidth + 0.04, lowerHeight * 0.58, 0.42, 2, 0.1),
     blackPlasticMat
   );
   frontBumper.position.set(0, groundClearance + lowerHeight * 0.28, carLength / 2 + 0.14);
@@ -318,7 +319,7 @@ export function createCarMesh(spec: CarSpecs, customColor?: string): CarVisuals 
 
   // Rear Sculpted Bumper & Diffuser with Dual Exhausts
   const rearBumper = new THREE.Mesh(
-    new THREE.BoxGeometry(carWidth + 0.04, lowerHeight * 0.58, 0.4),
+    new RoundedBoxGeometry(carWidth + 0.04, lowerHeight * 0.58, 0.4, 2, 0.1),
     blackPlasticMat
   );
   rearBumper.position.set(0, groundClearance + lowerHeight * 0.28, -carLength / 2 - 0.14);
@@ -351,9 +352,16 @@ export function createCarMesh(spec: CarSpecs, customColor?: string): CarVisuals 
   }
 
   const cabinMesh = new THREE.Mesh(
-    new THREE.BoxGeometry(cabinWidth, cabinHeight, cabinLength),
+    new RoundedBoxGeometry(cabinWidth, cabinHeight, cabinLength, 3, 0.12),
     paintMaterial
   );
+  const cabinPositions = cabinMesh.geometry.attributes.position;
+  for (let i = 0; i < cabinPositions.count; i++) {
+    const t = Math.max(0, Math.min(1, (cabinPositions.getY(i) + cabinHeight / 2) / cabinHeight));
+    cabinPositions.setX(i, cabinPositions.getX(i) * (1 - t * .09));
+    cabinPositions.setZ(i, cabinPositions.getZ(i) * (1 - t * .23));
+  }
+  cabinMesh.geometry.computeVertexNormals();
   cabinMesh.position.set(0, groundClearance + lowerHeight + cabinHeight / 2, cabinZOffset);
   cabinMesh.castShadow = true;
   bodyGroup.add(cabinMesh);
@@ -373,6 +381,7 @@ export function createCarMesh(spec: CarSpecs, customColor?: string): CarVisuals 
   const rearGlass = new THREE.Mesh(new THREE.PlaneGeometry(windshieldW, windshieldH * 0.86), tintedGlassMat);
   rearGlass.position.set(0, groundClearance + lowerHeight + cabinHeight / 2, cabinZOffset - cabinLength / 2 - 0.035);
   rearGlass.rotation.x = windshieldAngle;
+  rearGlass.rotation.y = Math.PI;
   bodyGroup.add(rearGlass);
 
   // Left & Right Side Windows with Pillars
@@ -393,7 +402,7 @@ export function createCarMesh(spec: CarSpecs, customColor?: string): CarVisuals 
     mirrorStem.position.set(mSide * (cabinWidth / 2 + 0.06), groundClearance + lowerHeight + cabinHeight * 0.38, cabinZOffset + cabinLength * 0.4);
     bodyGroup.add(mirrorStem);
 
-    const mirrorCap = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.14, 0.1), paintMaterial);
+    const mirrorCap = new THREE.Mesh(new RoundedBoxGeometry(0.24, 0.14, 0.1, 2, 0.04), paintMaterial);
     mirrorCap.position.set(mSide * (cabinWidth / 2 + 0.18), groundClearance + lowerHeight + cabinHeight * 0.4, cabinZOffset + cabinLength * 0.4);
     bodyGroup.add(mirrorCap);
 

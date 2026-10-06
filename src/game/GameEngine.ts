@@ -13,6 +13,7 @@ import { TrafficSystem } from './traffic/TrafficSystem';
 import { CameraView, GameMode, HUDState, PlayerSaveData, QualityLevel, Weather } from './types';
 import { getGroundHeight, getNearestRoadInfo, POINTS_OF_INTEREST } from './world/MapData';
 import { WorldBuilder, WorldObjects } from './world/WorldBuilder';
+import { createShowroom } from './world/Showroom';
 
 export class GameEngine {
   public renderer: THREE.WebGLRenderer;
@@ -27,9 +28,11 @@ export class GameEngine {
   public physics: VehiclePhysics;
   public carVisuals: CarVisuals;
   private currentCarId: string = 'alto';
+  private activeWeather: Weather = 'clear';
 
   // Environment & Lighting
   private worldObjects: WorldObjects;
+  private showroom: THREE.Group;
   private dirLight: THREE.DirectionalLight;
   private hemiLight: THREE.HemisphereLight;
   private skyDome: THREE.Mesh;
@@ -90,7 +93,8 @@ export class GameEngine {
     this.renderer.setSize(width, height);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.2;
+    this.renderer.toneMappingExposure = 1.05;
+    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
@@ -124,7 +128,8 @@ export class GameEngine {
     this.dirLight.shadow.camera.right = 38;
     this.dirLight.shadow.camera.top = 38;
     this.dirLight.shadow.camera.bottom = -38;
-    this.dirLight.shadow.bias = -0.00035;
+    this.dirLight.shadow.bias = -0.00015;
+    this.dirLight.shadow.normalBias = 0.035;
     this.scene.add(this.dirLight);
     this.scene.add(this.dirLight.target);
 
@@ -142,6 +147,8 @@ export class GameEngine {
     // 4. City, Highway & World Construction
     this.worldObjects = WorldBuilder.buildWorld();
     this.scene.add(this.worldObjects.group);
+    this.showroom = createShowroom();
+    this.scene.add(this.showroom);
 
     // 5. Player Car Setup
     this.currentCarId = savedData.selectedCarId || 'alto';
@@ -158,7 +165,8 @@ export class GameEngine {
     this.scene.add(this.destinationMarker);
 
     // 7. Dynamic Weather & Particle Systems
-    this.setupEffects(savedData.settings.weather);
+    this.setQuality(savedData.settings.quality);
+    this.setWeather(savedData.settings.weather);
 
     this.inputManager.setCallbacks({
       onPause: () => this.onPauseRequestCallback?.(),
@@ -179,10 +187,10 @@ export class GameEngine {
 
     // Rich sky gradient: zenith deep azure -> horizon warm golden haze -> ground dark warm
     const grad = ctx.createLinearGradient(0, 0, 0, 256);
-    grad.addColorStop(0, '#0284c7');   // Sky Zenith
-    grad.addColorStop(0.45, '#7dd3fc'); // Sky Horizon
-    grad.addColorStop(0.5, '#fef08a');  // Delhi Sun Haze
-    grad.addColorStop(0.56, '#f59e0b'); // Golden Warmth
+    grad.addColorStop(0, '#688ca8');   // Sky Zenith
+    grad.addColorStop(0.45, '#bacbd5'); // Sky Horizon
+    grad.addColorStop(0.5, '#efe3cd');  // Delhi Sun Haze
+    grad.addColorStop(0.56, '#c9aa83'); // Golden Warmth
     grad.addColorStop(0.66, '#334155'); // Ground Horizon
     grad.addColorStop(1, '#0f172a');    // Deep Road Ground
 
@@ -192,7 +200,7 @@ export class GameEngine {
     // Bright sun specular disc
     const sunGrad = ctx.createRadialGradient(256, 120, 2, 256, 120, 48);
     sunGrad.addColorStop(0, '#ffffff');
-    sunGrad.addColorStop(0.35, '#fef08a');
+    sunGrad.addColorStop(0.35, '#efe3cd');
     sunGrad.addColorStop(1, 'rgba(254, 240, 138, 0)');
     ctx.fillStyle = sunGrad;
     ctx.beginPath();
@@ -200,6 +208,7 @@ export class GameEngine {
     ctx.fill();
 
     const tex = new THREE.CanvasTexture(canvas);
+    tex.colorSpace = THREE.SRGBColorSpace;
     tex.mapping = THREE.EquirectangularReflectionMapping;
     const envMap = this.pmremGenerator.fromEquirectangular(tex).texture;
     this.scene.environment = envMap;
@@ -217,10 +226,10 @@ export class GameEngine {
 
     // Rich daylight sky gradient
     const grad = ctx.createLinearGradient(0, 0, 0, 512);
-    grad.addColorStop(0, '#0369a1');
-    grad.addColorStop(0.55, '#38bdf8');
-    grad.addColorStop(0.75, '#fef08a');
-    grad.addColorStop(0.85, '#f59e0b');
+    grad.addColorStop(0, '#567994');
+    grad.addColorStop(0.55, '#a8c2d1');
+    grad.addColorStop(0.75, '#efe3cd');
+    grad.addColorStop(0.85, '#c9aa83');
     grad.addColorStop(1, '#1e293b');
 
     ctx.fillStyle = grad;
@@ -237,7 +246,8 @@ export class GameEngine {
     }
 
     const tex = new THREE.CanvasTexture(canvas);
-    const mat = new THREE.MeshBasicMaterial({ map: tex, depthWrite: false });
+    tex.colorSpace = THREE.SRGBColorSpace;
+    const mat = new THREE.MeshBasicMaterial({ map: tex, depthWrite: false, fog: false });
     return new THREE.Mesh(geo, mat);
   }
 
@@ -320,7 +330,7 @@ export class GameEngine {
 
   public setQuality(quality: QualityLevel) {
     const q = GAME_CONFIG.QUALITY_SETTINGS[quality === 'auto' ? 'med' : quality];
-    this.renderer.setPixelRatio(q.pixelRatio);
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, q.pixelRatio));
     this.renderer.shadowMap.enabled = q.shadows;
     // Honest shadow resolution: apply the tier's shadowMapSize to the light.
     // (low has shadows: false and no shadowMapSize key.)
@@ -336,6 +346,8 @@ export class GameEngine {
       }
     }
     // Honest render distance: the tier's far-plane goes straight on the camera.
+    // Keep the sky inside the quality tier far plane; otherwise low/medium show black.
+    this.skyDome.scale.setScalar(q.renderDistance * 0.8 / 920);
     this.cameraManager.camera.far = q.renderDistance;
     this.cameraManager.camera.updateProjectionMatrix();
     // Honest particles: tier rain density (0 = no rain visuals on low).
@@ -343,6 +355,7 @@ export class GameEngine {
     if (this.rainParticleCount === 0 && this.rainParticles) {
       this.disposeRainParticles();
     }
+    if (this.activeWeather === 'rain' && !this.isGarageMode) this.createRainParticles();
     // NOTE: tier trafficCount (22/42/65) is informational — the live pool size
     // is owned by TrafficSystem.setDensity (24/44/68). Kept in sync by P4-C.
     this.trafficSystem.setDensity(quality === 'low' ? 'low' : quality === 'high' ? 'high' : 'medium');
@@ -360,6 +373,8 @@ export class GameEngine {
   }
 
   public setWeather(weather: Weather) {
+    this.activeWeather = weather;
+    if (this.isGarageMode) return;
     if (weather === 'rain') {
       this.scene.fog = new THREE.FogExp2(0x64748b, 0.0035);
       this.renderer.toneMappingExposure = 1.0;
@@ -371,7 +386,7 @@ export class GameEngine {
       this.audioEngine.setRain(false);
     } else {
       this.scene.fog = new THREE.FogExp2(0xa7c2d9, 0.0013);
-      this.renderer.toneMappingExposure = 1.2;
+      this.renderer.toneMappingExposure = 1.05;
       this.disposeRainParticles();
       this.audioEngine.setRain(false);
     }
@@ -420,6 +435,14 @@ export class GameEngine {
     }
     this.refreshSettings();
     this.isGarageMode = false;
+    this.showroom.visible = false;
+    this.worldObjects.group.visible = true;
+    this.trafficSystem.trafficGroup.visible = true;
+    this.skyDome.visible = true;
+    this.scene.background = null;
+    this.setWeather(this.cachedSave.settings.weather);
+    this.inputManager.resetHeldInputs();
+    this.inputManager.setGear('D');
     this.isPaused = false;
     this.audioEngine.init();
     this.audioEngine.resume();
@@ -443,6 +466,7 @@ export class GameEngine {
       this.destinationMarker.visible = true;
     }
 
+    this.cameraManager.resetTracking();
     if (!this.isRunning) {
       this.startLoop();
     }
@@ -450,6 +474,17 @@ export class GameEngine {
 
   public enterGarage() {
     this.isGarageMode = true;
+    this.showroom.visible = true;
+    this.worldObjects.group.visible = false;
+    this.trafficSystem.trafficGroup.visible = false;
+    this.skyDome.visible = false;
+    this.scene.background = new THREE.Color(0x0b1219);
+    this.dirLight.position.set(55, 90, 55);
+    this.dirLight.target.position.set(0, 0, 0);
+    this.disposeRainParticles();
+    this.scene.fog = new THREE.FogExp2(0x0b1219, 0.025);
+    this.renderer.toneMappingExposure = 1.05;
+    this.inputManager.resetHeldInputs();
     this.isPaused = false;
     this.refreshSettings();
     this.destinationMarker.visible = false;
@@ -464,6 +499,7 @@ export class GameEngine {
 
   public setPaused(paused: boolean) {
     this.isPaused = paused;
+    if (paused) this.inputManager.resetHeldInputs();
   }
 
   public resetCarToRoad() {
@@ -533,17 +569,20 @@ export class GameEngine {
   };
 
   private updateGarage(dt: number) {
-    this.garageRotation += 0.45 * dt;
+    this.garageRotation += 0.08 * Math.min(dt, 0.08);
 
-    const radius = 6.4;
+    const radius = window.innerWidth < 700 ? 7.7 : 7.2;
     const cx = Math.sin(this.garageRotation) * radius;
     const cz = Math.cos(this.garageRotation) * radius;
-    this.cameraManager.camera.position.set(cx, 1.8, cz);
-    this.cameraManager.camera.lookAt(0, 0.75, 0);
+    this.cameraManager.camera.fov = 44;
+    this.cameraManager.camera.updateProjectionMatrix();
+    this.cameraManager.camera.position.set(cx + 4.0, 2.7, cz + 1.5);
+    // Aim left of the car on desktop, making room for the menu.
+    this.cameraManager.camera.lookAt(window.innerWidth < 700 ? 0 : -2.1, 0.7, 0);
 
     this.carVisuals.group.position.set(0, 0.35, 0);
     this.carVisuals.group.rotation.set(0, 0, 0);
-    this.carVisuals.update(0, 0, false, false, false, false, true, 0.15, 0, 0);
+    this.carVisuals.update(0, 0, false, false, false, false, false, 0.15, 0, 0);
   }
 
   private updateSimulation(frameDelta: number) {
@@ -556,7 +595,7 @@ export class GameEngine {
     this.physicsAccumulator += clampedDt;
     let substeps = 0;
 
-    const isRaining = this.cachedSave.settings.weather === 'rain';
+    const isRaining = this.activeWeather === 'rain';
 
     while (this.physicsAccumulator >= fixedDt && substeps < GAME_CONFIG.MAX_SUB_STEPS) {
       this.physics.update(fixedDt, this.inputManager.state, getGroundHeight, isRaining);
@@ -753,10 +792,14 @@ export class GameEngine {
 
     let targetDist = 0;
     let gpsTargetName: string | undefined = undefined;
+    let gpsTargetX: number | undefined;
+    let gpsTargetZ: number | undefined;
 
     if (this.missionManager.currentMode === 'taxi' && this.missionManager.currentTaxiJob) {
       const job = this.missionManager.currentTaxiJob;
       const targetPos = job.isPickedUp ? job.dropLocation : job.pickupLocation;
+      gpsTargetX = targetPos[0];
+      gpsTargetZ = targetPos[2];
       const dx = this.physics.position.x - targetPos[0];
       const dz = this.physics.position.z - targetPos[2];
       targetDist = Math.round(Math.sqrt(dx * dx + dz * dz));
@@ -765,6 +808,8 @@ export class GameEngine {
       this.destinationMarker.visible = true;
     } else if (this.missionManager.currentMode === 'mission' && this.missionManager.currentMission) {
       const m = this.missionManager.currentMission;
+      gpsTargetX = m.targetPos[0];
+      gpsTargetZ = m.targetPos[2];
       const dx = this.physics.position.x - m.targetPos[0];
       const dz = this.physics.position.z - m.targetPos[2];
       targetDist = Math.round(Math.sqrt(dx * dx + dz * dz));
@@ -806,6 +851,8 @@ export class GameEngine {
       notificationMessage: this.discoveryToastTimer > 0 ? this.discoveryToastText : null,
       hasGpsTarget: this.destinationMarker.visible,
       gpsTargetName,
+      gpsTargetX,
+      gpsTargetZ,
     };
 
     this.onHudUpdateCallback(hudState);
@@ -821,6 +868,14 @@ export class GameEngine {
   public destroy() {
     this.isRunning = false;
     window.removeEventListener('resize', this.onResize);
+    this.inputManager.destroy();
+    this.showroom.traverse((object) => {
+      if (object instanceof THREE.Mesh) {
+        object.geometry.dispose();
+        const materials = Array.isArray(object.material) ? object.material : [object.material];
+        materials.forEach((material) => material.dispose());
+      }
+    });
     this.audioEngine.dispose();
     this.pmremGenerator.dispose();
     this.renderer.dispose();
