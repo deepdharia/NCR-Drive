@@ -171,12 +171,12 @@ button:focus-visible,a:focus-visible { outline:2px solid #f8ca74; outline-offset
  .hud-alerts { top:180px; left:auto; right:12px; transform:none; }
  .driving-tools { top:255px; }
  .hud-gauges { bottom:165px; }
- .driving-pedals { left:12px!important; }
- .driving-steering { right:12px!important; }
+
+
 }
 .hud-keys { display:none; }
 @media (hover:hover) and (pointer:fine) {
- .driving-pedals,.driving-steering { display:none; }
+
  .hud-gauges { left:auto; right:24px; bottom:18px; transform:none; }
  .hud-gauges>div { width:140px; height:140px; background:rgba(11,18,25,.8); border-radius:50%; border:1px solid #ffffff18; }
  .hud-keys { display:flex; gap:10px; position:absolute; bottom:20px; left:18px; font:9px system-ui; color:#d8dce2; letter-spacing:.7px; padding:10px 13px; background:#0b1219c9; border-radius:6px; }
@@ -194,4 +194,43 @@ button:focus-visible,a:focus-visible { outline:2px solid #f8ca74; outline-offset
  .mode-button small { display:none; }
  .mode-button strong { font-size:12px; }
  .menu-footer { padding-top:10px; }
+}
+/* Fixed touch targets; only the artwork rotates, not the wheel's hit area. */
+.control-steering,.control-pedals { position:absolute; bottom:max(14px,env(safe-area-inset-bottom)); pointer-events:auto; touch-action:none; }
+.control-steering.control-right,.control-pedals.control-right { right:max(16px,env(safe-area-inset-right)); left:auto; }
+.control-steering.control-left,.control-pedals.control-left { left:max(16px,env(safe-area-inset-left)); right:auto; }
+.control-steering .steering-wheel { position:relative; width:174px; height:174px; cursor:grab; border-radius:50%; touch-action:none; -webkit-tap-highlight-color:transparent; }
+.steering-wheel.held { cursor:grabbing; }
+.wheel-art { width:100%; height:100%; pointer-events:none; filter:drop-shadow(0 5px 6px #0009); transition:transform 240ms cubic-bezier(.2,.7,.2,1); }
+.steering-wheel.held .wheel-art { transition:none; }
+.steering-wheel:focus-visible { outline:2px solid #e9b95c; outline-offset:5px; }
+.wheel-caption { position:absolute; bottom:-3px; width:100%; text-align:center; font:7px system-ui; letter-spacing:1.7px; color:#b4bbc2; pointer-events:none; text-shadow:0 1px 3px #000; }
+.control-pedals { display:flex; align-items:flex-end; gap:10px; }
+.control-pedals .gear-selector { display:flex; flex-direction:column; gap:3px; width:32px; height:auto; padding:4px; border-radius:8px; border:1px solid #8c989640; background:#10161cdd; }
+.gear-selector button { width:24px; height:25px; border-radius:4px; color:#84929e; font:600 12px system-ui; }
+.gear-selector button[aria-pressed=true] { background:#e9b95c; color:#14202b; box-shadow:0 0 7px #e9b95c38; }
+.control-pedals .metal-pedal { position:relative; width:66px; height:104px; border-radius:12px; border:2px solid #737b82; background:linear-gradient(135deg,#c2c8cc,#69737a 40%,#333d45 41%,#7a858d); box-shadow:inset 0 1px 2px #fff7,0 5px 9px #0008; transform:perspective(200px) rotateX(7deg); touch-action:none; color:#ecf0f2; display:flex; flex-direction:column; align-items:center; justify-content:space-between; padding:12px 8px 8px; transition:transform 70ms,filter 70ms; }
+.control-pedals .metal-pedal.gas { width:54px; height:135px; border-radius:17px 17px 10px 10px; }
+.metal-pedal.pressed { transform:perspective(200px) rotateX(19deg) translateY(3px); filter:brightness(.85); }
+.metal-pedal.gas.pressed { border-color:#79cfae; }
+.metal-pedal.brake.pressed { border-color:#ef9b8d; }
+.pedal-grip { display:block; width:100%; flex:1; margin-bottom:10px; background:repeating-linear-gradient(0deg,#10171ce0 0px,#10171ce0 4px,transparent 4px,transparent 12px); border-radius:5px; }
+.metal-pedal>span:last-child { font:700 8px system-ui; letter-spacing:1px; text-shadow:0 1px 2px #000; }
+.control-steering .steering-arrows { display:flex; align-items:center; gap:10px; width:auto; height:auto; }
+.steering-arrows button { display:grid; place-items:center; width:70px; height:70px; border-radius:14px; border:1px solid #79838a; background:linear-gradient(135deg,#46515b,#111820); color:#e9b95c; touch-action:none; box-shadow:0 4px 9px #0007; }
+.steering-arrows button:active { background:#57626b; }
+@media (hover:hover) and (pointer:fine) {
+ .hud-gauges { bottom:194px; right:24px; }
+ .hud-keys { bottom:166px; left:16px; font-size:8px; padding:6px 9px; gap:5px; }
+ .hud-keys span { margin-right:4px; }
+}
+@media (max-height:500px), (max-width:600px) {
+ .control-steering .steering-wheel { width:144px; height:144px; }
+ .control-pedals { gap:8px; }
+ .control-pedals .metal-pedal { width:52px; height:85px; }
+ .control-pedals .metal-pedal.gas { width:46px; height:112px; }
+ .control-pedals .gear-selector { width:29px; padding:3px; }
+ .gear-selector button { width:22px; height:23px; }
+ .steering-arrows button { width:62px; height:62px; }
+ .hud-keys { display:none; }
 }

@@ -15,6 +15,13 @@ export class InputManager {
     resetCar: false,
   };
 
+  private resetListeners = new Set<() => void>();
+
+  public subscribeReset(listener: () => void) {
+    this.resetListeners.add(listener);
+    return () => { this.resetListeners.delete(listener); };
+  }
+
   private keys: Record<string, boolean> = {};
   private touchThrottleVal: number = 0;
   private touchBrakeVal: number = 0;
@@ -46,7 +53,12 @@ export class InputManager {
     window.addEventListener('keydown', this.onKeyDown);
     window.addEventListener('keyup', this.onKeyUp);
     window.addEventListener('blur', this.resetHeldInputs);
+    if (typeof document !== 'undefined') document.addEventListener('visibilitychange', this.onVisibilityChange);
   }
+
+  private onVisibilityChange = () => {
+    if (document.hidden) this.resetHeldInputs();
+  };
 
   private onKeyDown = (e: KeyboardEvent) => {
       // Prevent browser default scrolling on arrow keys or space
@@ -101,13 +113,16 @@ export class InputManager {
     this.touchHandbrakeVal = false;
     this.state.throttle = this.state.brake = this.state.steer = 0;
     this.state.handbrake = this.state.horn = false;
+    this.resetListeners.forEach((listener) => listener());
   };
 
   public destroy() {
     window.removeEventListener("keydown", this.onKeyDown);
     window.removeEventListener("keyup", this.onKeyUp);
     window.removeEventListener("blur", this.resetHeldInputs);
+    if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', this.onVisibilityChange);
     this.resetHeldInputs();
+    this.resetListeners.clear();
   }
 
   public update(currentSpeedKmh: number = 0) {
@@ -122,8 +137,12 @@ export class InputManager {
     let targetBrake = 0;
 
     if (keyUp) {
-      if (this.state.gear === 'P') this.state.gear = 'D';
-      targetThrottle = 1.0;
+      if (this.state.gear === 'R' && currentSpeedKmh >= 1.5) {
+        targetBrake = 1;
+      } else {
+        if (this.state.gear === 'P' || this.state.gear === 'R') this.state.gear = 'D';
+        targetThrottle = 1;
+      }
     }
 
     if (keyDown) {
@@ -136,15 +155,13 @@ export class InputManager {
       } else {
         targetBrake = 1.0;
       }
-    } else if (this.state.gear === 'R' && keyUp && currentSpeedKmh < 1.5) {
-      // Auto-switch back to Drive when pressing forward
-      this.state.gear = 'D';
-      targetThrottle = 1.0;
     }
 
     // Merge Keyboard + Touch (highest priority wins)
     this.state.throttle = Math.max(targetThrottle, this.touchThrottleVal);
     this.state.brake = Math.max(targetBrake, this.touchBrakeVal);
+    // Brake override: a held accelerator cannot fight the brake pedal.
+    if (this.state.brake > 0) this.state.throttle = 0;
 
     // Steering
     let keySteer = 0;
@@ -158,6 +175,7 @@ export class InputManager {
   }
 
   public setTouchThrottle(val: number) {
+    val = Number.isFinite(val) ? Math.max(0, Math.min(1, val)) : 0;
     this.touchThrottleVal = val;
     this.state.throttle = val;
     if (val > 0 && this.state.gear === 'P') {
@@ -166,11 +184,13 @@ export class InputManager {
   }
 
   public setTouchBrake(val: number) {
+    val = Number.isFinite(val) ? Math.max(0, Math.min(1, val)) : 0;
     this.touchBrakeVal = val;
     this.state.brake = val;
   }
 
   public setTouchSteer(val: number) {
+    val = Number.isFinite(val) ? Math.max(-1, Math.min(1, val)) : 0;
     this.touchSteerVal = val;
     this.state.steer = val;
   }

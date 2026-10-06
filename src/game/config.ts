@@ -2,7 +2,7 @@ export const GAME_CONFIG = {
   // Fixed Timestep Physics (120 Hz)
   PHYSICS_HZ: 120,
   PHYSICS_STEP: 1 / 120,
-  MAX_SUB_STEPS: 5,
+  MAX_SUB_STEPS: 12,
   GRAVITY: 9.81,
 
   // HUD Update Rate

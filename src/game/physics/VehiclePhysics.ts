@@ -116,7 +116,7 @@ export class VehiclePhysics {
     // input.steer: -1 (left), +1 (right)
     const targetSteer = input.steer * maxSteer * (1 - this.damagePct * 0.15);
     const steerSpeed = input.steer === 0 ? 18.0 : 15.0;
-    this.steerAngle = THREE.MathUtils.lerp(this.steerAngle, targetSteer, steerSpeed * dt);
+    this.steerAngle = THREE.MathUtils.lerp(this.steerAngle, targetSteer, 1 - Math.exp(-steerSpeed * dt));
 
     // 2. Ground & Suspension Raycasting
     const halfWb = this.spec.wheelbase / 2;
@@ -252,7 +252,8 @@ export class VehiclePhysics {
     // Kinematic Ackermann target yaw rate
     const kinematicYawRate = (this.forwardSpeed / effectiveWheelbase) * Math.tan(this.steerAngle);
     // Yaw rate clamp: full lock at very high speed must not instantly spin the car
-    const clampedYawRate = THREE.MathUtils.clamp(kinematicYawRate, -1.4 * avgSurfaceGrip, 1.4 * avgSurfaceGrip);
+    const maxYawRate = Math.min(1.4 * avgSurfaceGrip, GAME_CONFIG.GRAVITY * 0.85 * avgSurfaceGrip / Math.max(1, Math.abs(this.forwardSpeed)));
+    const clampedYawRate = THREE.MathUtils.clamp(kinematicYawRate, -maxYawRate, maxYawRate);
     // Per-car handling character: >1 nimble (hatchbacks), <1 boaty (heavy SUVs)
     const agility = this.spec.agility ?? 1.0;
 
@@ -265,14 +266,15 @@ export class VehiclePhysics {
       this.isDrifting = false;
       // High-precision smooth yaw tracking: turns naturally and crisply
       const yawResponsiveness = 18.0 * avgSurfaceGrip * agility;
-      this.angularVelocity = THREE.MathUtils.lerp(this.angularVelocity, clampedYawRate, yawResponsiveness * dt);
+      this.angularVelocity = THREE.MathUtils.lerp(this.angularVelocity, clampedYawRate, 1 - Math.exp(-yawResponsiveness * dt));
     }
 
     // Update vehicle heading
     this.heading += this.angularVelocity * dt;
 
     // Integrate forward and lateral velocities
-    const newForwardSpeed = this.forwardSpeed + forwardAcc * dt;
+    let newForwardSpeed = this.forwardSpeed + forwardAcc * dt;
+    if (input.brake > 0 && input.throttle === 0 && Math.sign(newForwardSpeed) !== Math.sign(this.forwardSpeed)) newForwardSpeed = 0;
     // Lateral drift dampening (tyres grip road firmly unless drifting)
     const lateralDamp = this.isDrifting ? 4.0 : 22.0 * avgSurfaceGrip * agility;
     const newLateralSpeed = lateralSpeed * Math.exp(-lateralDamp * dt);

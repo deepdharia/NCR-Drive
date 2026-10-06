@@ -9,7 +9,7 @@ class TestWindow extends EventTarget {
   innerHeight = 720;
 }
 const testWindow = new TestWindow();
-Object.defineProperty(globalThis, 'window', { value: testWindow });
+Object.defineProperty(globalThis, 'window', { value: testWindow, configurable: true });
 function key(type: string, code: string, repeat = false) {
   const event = new Event(type, { cancelable: true });
   Object.assign(event, { code, repeat });
@@ -21,9 +21,9 @@ test('focus loss clears keyboard and touch inputs without changing the gear', ()
   input.setGear('R');
   key('keydown', 'KeyS');
   input.setTouchSteer(.8);
-  input.setTouchBrake(1);
   input.update();
   assert.equal(input.state.throttle, 1);
+  input.setTouchBrake(1);
   testWindow.dispatchEvent(new Event('blur'));
   input.update();
   assert.equal(input.state.throttle, 0);
@@ -57,4 +57,31 @@ test('chase camera starts at the car and resets after a mission teleport', () =>
   const next = new THREE.Vector3(200, .4, 800);
   camera.update(1 / 60, next, 0, 0, 0, 0);
   assert.ok(camera.camera.position.distanceTo(next) < 10);
+});
+
+test('forward input brakes a reversing car before selecting Drive', () => {
+  const input = new InputManager();
+  input.setGear('R');
+  key('keydown', 'KeyW');
+  input.update(12);
+  assert.equal(input.state.gear, 'R');
+  assert.equal(input.state.brake, 1);
+  assert.equal(input.state.throttle, 0);
+  input.update(0);
+  assert.equal(input.state.gear, 'D');
+  assert.equal(input.state.throttle, 1);
+  input.destroy();
+});
+
+test('brakes take priority over held gas and gas resumes after brake release', () => {
+  const input = new InputManager();
+  input.setTouchThrottle(1);
+  input.setTouchBrake(1);
+  input.update(20);
+  assert.equal(input.state.throttle, 0);
+  assert.equal(input.state.brake, 1);
+  input.setTouchBrake(0);
+  input.update(10);
+  assert.equal(input.state.throttle, 1);
+  input.destroy();
 });

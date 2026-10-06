@@ -15,7 +15,7 @@ npm run build
 npm run preview -- --host 0.0.0.0
 ```
 
-Use WASD or arrow keys to drive, C to change camera, R to switch reverse/drive, H for horn and Escape to pause. Touch steering, pedals and the selected control layout work on phones. Landscape gives the clearest view. Saves are stored on the current device.
+Use WASD or arrow keys to drive, C to change camera, R to switch reverse/drive, H for horn and Escape to pause. Drag the steering rim to turn, or drag horizontally across its centre; release to centre the wheel. Hold GAS with another finger, use BRAKE to stop, and select P/R/N/D directly. Wheel-left, wheel-right and arrow layouts work on phones and desktop; brakes override gas. Landscape gives the clearest view. Saves are stored on the current device.
 
 ## Visual and gameplay improvements
 
