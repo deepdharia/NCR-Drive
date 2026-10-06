@@ -105,7 +105,7 @@ export const TouchControls: React.FC<TouchControlsProps> = ({
   return (
     <div className="absolute inset-0 pointer-events-none z-30 select-none">
       {/* Top action row */}
-      <div className="absolute top-3 right-3 flex items-center gap-2 pointer-events-auto">
+      <div className="driving-actions absolute top-3 right-3 flex items-center gap-2 pointer-events-auto">
         <button
           onClick={() => inputManager.toggleHeadlights()}
           className={`p-2.5 rounded-xl border backdrop-blur-md transition-all active:scale-95 ${
@@ -135,7 +135,7 @@ export const TouchControls: React.FC<TouchControlsProps> = ({
       </div>
 
       {/* Middle row: Horn, Handbrake, Blinkers */}
-      <div className={`absolute top-24 ${isWheelRight ? 'left-4' : 'right-4'} flex flex-col gap-3 pointer-events-auto`}>
+      <div className={`driving-tools absolute top-24 ${isWheelRight ? 'left-4' : 'right-4'} flex flex-col gap-3 pointer-events-auto`}>
         <button
           onClick={() => inputManager.triggerHorn()}
           className="w-14 h-14 rounded-2xl bg-amber-500/20 border-2 border-amber-500/60 backdrop-blur-md flex flex-col items-center justify-center text-amber-400 active:scale-90 active:bg-amber-500/40 shadow-xl transition-all"
@@ -185,7 +185,7 @@ export const TouchControls: React.FC<TouchControlsProps> = ({
       </div>
 
       {/* Pedals Section (Left side by default) */}
-      <div className={`absolute bottom-5 ${isWheelRight ? 'left-5' : 'right-5'} flex items-end gap-3 pointer-events-auto`}>
+      <div className={`driving-pedals absolute bottom-5 ${isWheelRight ? 'left-5' : 'right-5'} flex items-end gap-3 pointer-events-auto`}>
         {/* Gear Toggle Button */}
         <button
           onClick={() => inputManager.cycleGear()}
@@ -258,7 +258,7 @@ export const TouchControls: React.FC<TouchControlsProps> = ({
       </div>
 
       {/* Steering Section */}
-      <div className={`absolute bottom-5 ${isWheelRight ? 'right-6' : 'left-6'} pointer-events-auto`}>
+      <div className={`driving-steering absolute bottom-5 ${isWheelRight ? 'right-6' : 'left-6'} pointer-events-auto`}>
         {controlScheme === 'arrows' ? (
           <div className="flex gap-4">
             <button

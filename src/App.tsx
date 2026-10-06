@@ -277,6 +277,7 @@ export default function App() {
           playerX={engineRef.current.physics.position.x}
           playerZ={engineRef.current.physics.position.z}
           playerHeading={engineRef.current.physics.heading}
+          controlScheme={saveData.settings.controlScheme}
           hindiLabels={saveData.settings.hindiLabels}
           onCycleCamera={handleCycleCamera}
           onPause={handlePause}

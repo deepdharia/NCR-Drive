@@ -9,6 +9,12 @@ export class CameraManager {
   private chasePos: THREE.Vector3 = new THREE.Vector3();
   private chaseLookAt: THREE.Vector3 = new THREE.Vector3();
   private currentCameraRoll: number = 0;
+  private needsSnap = true;
+
+  public resetTracking() {
+    this.needsSnap = true;
+    this.currentCameraRoll = 0;
+  }
 
   constructor(preferredView: CameraView = 'chase') {
     this.currentView = preferredView;
@@ -45,7 +51,7 @@ export class CameraManager {
     const speedRatio = Math.min(1.0, speedKmh / 160.0);
     const baseFov = this.currentView === 'cockpit' ? 68 : 62;
     const targetFov = baseFov + speedRatio * 14;
-    this.camera.fov = THREE.MathUtils.lerp(this.camera.fov, targetFov, 6 * dt);
+    this.camera.fov = THREE.MathUtils.lerp(this.camera.fov, targetFov, 1 - Math.exp(-6 * dt));
     this.camera.updateProjectionMatrix();
 
     const forwardX = Math.sin(carHeading);
@@ -79,12 +85,12 @@ export class CameraManager {
       // Commercial Simulation Chase Camera (like Taxi Sim / Gran Turismo)
       // Slight camera banking into turns
       const targetRoll = -carRoll * 0.35;
-      this.currentCameraRoll = THREE.MathUtils.lerp(this.currentCameraRoll, targetRoll, 8 * dt);
+      this.currentCameraRoll = THREE.MathUtils.lerp(this.currentCameraRoll, targetRoll, 1 - Math.exp(-8 * dt));
 
       // Dynamic camera distance: pulls back slightly at high speed for high-speed thrill.
       // (QA: default sat too close — the car's rear filled the frame.)
       const dist = 6.6 + speedRatio * 1.1;
-      const height = 2.35 + speedRatio * 0.3;
+      const height = 2.85 + speedRatio * 0.35;
 
       const idealPos = new THREE.Vector3(
         carPos.x - forwardX * dist,
@@ -100,10 +106,16 @@ export class CameraManager {
         carPos.z + forwardZ * lookAheadDist
       );
 
+      if (this.needsSnap) {
+        this.chasePos.copy(idealPos);
+        this.chaseLookAt.copy(idealLook);
+        this.needsSnap = false;
+      }
+
       // Smooth lag interpolation
       const lag = 9.0;
-      this.chasePos.lerp(idealPos, Math.min(1.0, lag * dt));
-      this.chaseLookAt.lerp(idealLook, Math.min(1.0, (lag + 4.0) * dt));
+      this.chasePos.lerp(idealPos, 1 - Math.exp(-lag * dt));
+      this.chaseLookAt.lerp(idealLook, 1 - Math.exp(-(lag + 4.0) * dt));
 
       this.camera.position.copy(this.chasePos);
       this.camera.lookAt(this.chaseLookAt);

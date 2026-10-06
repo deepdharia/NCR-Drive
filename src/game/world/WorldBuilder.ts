@@ -86,6 +86,8 @@ export class WorldBuilder {
     drawRoadArrow(660, 1600);
 
     const tex = new THREE.CanvasTexture(canvas);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = 4;
     tex.wrapS = THREE.RepeatWrapping;
     tex.wrapT = THREE.RepeatWrapping;
     tex.repeat.set(1, 16);
@@ -112,8 +114,8 @@ export class WorldBuilder {
       mat = new THREE.MeshStandardMaterial({
         color: 0xffffff,
         map: tex,
-        roughness: 0.72,
-        metalness: 0.15,
+        roughness: 0.92,
+        metalness: 0.02,
       });
       this.roadMaterials.set(bucket, mat);
     }
@@ -172,6 +174,8 @@ export class WorldBuilder {
     ctx.fillText(arrow, 540, 145);
 
     const tex = new THREE.CanvasTexture(canvas);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = 4;
     return tex;
   }
 
@@ -185,15 +189,15 @@ export class WorldBuilder {
     const ctx = canvas.getContext('2d')!;
 
     const grad = ctx.createLinearGradient(0, 0, 0, 512);
-    grad.addColorStop(0, '#0369a1');
-    grad.addColorStop(0.4, '#0284c7');
-    grad.addColorStop(0.8, '#0c4a6e');
-    grad.addColorStop(1, '#082f49');
+    grad.addColorStop(0, '#647b8b');
+    grad.addColorStop(0.4, '#708a9a');
+    grad.addColorStop(0.8, '#354753');
+    grad.addColorStop(1, '#26323d');
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, 512, 512);
 
     // High-tech architectural mullions
-    ctx.strokeStyle = '#7dd3fc';
+    ctx.strokeStyle = '#293843';
     ctx.lineWidth = 2.5;
     for (let x = 0; x <= 512; x += 32) {
       ctx.beginPath();
@@ -219,6 +223,8 @@ export class WorldBuilder {
     }
 
     const tex = new THREE.CanvasTexture(canvas);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = 4;
     tex.wrapS = THREE.RepeatWrapping;
     tex.wrapT = THREE.RepeatWrapping;
     tex.repeat.set(2, 6);
@@ -249,9 +255,37 @@ export class WorldBuilder {
       ctx.textBaseline = 'middle';
       ctx.fillText(text, 128, 34);
       tex = new THREE.CanvasTexture(canvas);
+      tex.colorSpace = THREE.SRGBColorSpace;
       this.shopSignTextures.set(key, tex);
     }
     return tex;
+  }
+
+  private static getFacadeTexture(): THREE.CanvasTexture {
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 512;
+    const ctx = canvas.getContext('2d')!;
+    ctx.fillStyle = '#cfbca5';
+    ctx.fillRect(0, 0, 512, 512);
+    for (let row = 0; row < 8; row++) {
+      ctx.fillStyle = '#aa9781';
+      ctx.fillRect(0, row * 64 + 61, 512, 3);
+      for (let col = 0; col < 8; col++) {
+        const x = col * 64 + 17;
+        const y = row * 64 + 14;
+        ctx.fillStyle = '#857762';
+        ctx.fillRect(x - 3, y - 3, 34, 39);
+        ctx.fillStyle = (row + col) % 5 === 0 ? '#8d9290' : '#35424a';
+        ctx.fillRect(x, y, 28, 33);
+        ctx.fillStyle = '#bfb2a0';
+        ctx.fillRect(x + 13, y, 2, 33);
+        ctx.fillRect(x - 5, y + 33, 38, 3);
+      }
+    }
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.anisotropy = 4;
+    return texture;
   }
 
   public static buildWorld(): WorldObjects {
@@ -431,8 +465,10 @@ export class WorldBuilder {
     cpBand.position.y = 12.3;
     cpGroup.add(cpBand);
     // Flat roof lip
-    const cpRoof = new THREE.Mesh(new THREE.CylinderGeometry(cpRadius + 3, cpRadius + 3, 0.6, 48), concreteMat);
+    const cpRoof = new THREE.Mesh(new THREE.RingGeometry(cpRadius - 3, cpRadius + 3, 64), cpBandMat);
+    cpRoof.rotation.x = -Math.PI / 2;
     cpRoof.position.y = 13.9;
+    cpRoof.castShadow = true;
     cpGroup.add(cpRoof);
     worldGroup.add(cpGroup);
 
@@ -443,7 +479,7 @@ export class WorldBuilder {
     const termGlassMat = new THREE.MeshStandardMaterial({
       color: 0x93c5fd,
       emissive: 0x3b82f6,
-      emissiveIntensity: 0.9,
+      emissiveIntensity: 0.12,
       roughness: 0.25,
       metalness: 0.4,
     });
@@ -470,6 +506,8 @@ export class WorldBuilder {
     termGroup.add(atcCab);
     worldGroup.add(termGroup);
 
+    const facadeMat = new THREE.MeshStandardMaterial({ map: this.getFacadeTexture(), roughness: .88 });
+
     // 3d. Delhi Government Precinct — sandstone secretariat-style blocks with
     //     colonnade fronts flanking Kartavya Path (India Gate approach).
     //     Clear of the 14m road (half-width 7), the metro (x=35, z>=-950),
@@ -483,7 +521,7 @@ export class WorldBuilder {
         cx: number, cz: number, w: number, h: number, d: number, faceDir: 1 | -1
       ) => {
         const g = new THREE.Group();
-        const block = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), sandstoneMat);
+        const block = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), facadeMat);
         block.position.y = h / 2;
         block.castShadow = true;
         g.add(block);
@@ -581,7 +619,7 @@ export class WorldBuilder {
         const bz = -800 + Math.sin(a) * 95;
         const h = cpBlockHeights[i];
 
-        const block = new THREE.Mesh(new THREE.BoxGeometry(28, h, 24), concreteMat);
+        const block = new THREE.Mesh(new THREE.BoxGeometry(28, h, 24), facadeMat);
         block.position.set(bx, h / 2, bz);
         block.rotation.y = -a;
         block.castShadow = true;
@@ -591,7 +629,7 @@ export class WorldBuilder {
         const winMat = new THREE.MeshStandardMaterial({
           color: 0x93c5fd,
           emissive: 0x3b82f6,
-          emissiveIntensity: 0.55,
+          emissiveIntensity: 0.08,
           roughness: 0.3,
         });
         const win = new THREE.Mesh(cpWinGeo, winMat);

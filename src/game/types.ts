@@ -121,6 +121,8 @@ export interface HUDState {
   // Route GPS
   hasGpsTarget: boolean;
   gpsTargetName?: string;
+  gpsTargetX?: number;
+  gpsTargetZ?: number;
 }
 
 export interface InputState {

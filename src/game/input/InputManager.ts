@@ -43,7 +43,12 @@ export class InputManager {
   }
 
   private setupKeyboard() {
-    window.addEventListener('keydown', (e) => {
+    window.addEventListener('keydown', this.onKeyDown);
+    window.addEventListener('keyup', this.onKeyUp);
+    window.addEventListener('blur', this.resetHeldInputs);
+  }
+
+  private onKeyDown = (e: KeyboardEvent) => {
       // Prevent browser default scrolling on arrow keys or space
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
         e.preventDefault();
@@ -51,6 +56,7 @@ export class InputManager {
 
       this.keys[e.code] = true;
 
+      if (e.repeat) return;
       if (e.code === 'KeyH') {
         this.state.horn = true;
         this.onHornCallback?.();
@@ -80,14 +86,28 @@ export class InputManager {
       if (e.code === 'KeyP') {
         this.state.gear = this.state.gear === 'P' ? 'D' : 'P';
       }
-    });
+  };
 
-    window.addEventListener('keyup', (e) => {
+  private onKeyUp = (e: KeyboardEvent) => {
       this.keys[e.code] = false;
       if (e.code === 'KeyH') {
         this.state.horn = false;
       }
-    });
+  };
+
+  public resetHeldInputs = () => {
+    this.keys = {};
+    this.touchThrottleVal = this.touchBrakeVal = this.touchSteerVal = 0;
+    this.touchHandbrakeVal = false;
+    this.state.throttle = this.state.brake = this.state.steer = 0;
+    this.state.handbrake = this.state.horn = false;
+  };
+
+  public destroy() {
+    window.removeEventListener("keydown", this.onKeyDown);
+    window.removeEventListener("keyup", this.onKeyUp);
+    window.removeEventListener("blur", this.resetHeldInputs);
+    this.resetHeldInputs();
   }
 
   public update(currentSpeedKmh: number = 0) {
