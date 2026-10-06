@@ -436,6 +436,60 @@ export class WorldBuilder {
     cpGroup.add(cpRoof);
     worldGroup.add(cpGroup);
 
+    // Central Delhi landmark slice: Shivaji Stadium Metro and Bangla Sahib.
+    {
+      const station = new THREE.Group();
+      station.position.set(-102, 0, -812);
+      const stationMat = new THREE.MeshStandardMaterial({ color: 0xb9bec6, roughness: 0.72 });
+      const blueMat = new THREE.MeshStandardMaterial({ color: 0x244b83, roughness: 0.55 });
+      const stationBody = new THREE.Mesh(new THREE.BoxGeometry(40, 9, 18), stationMat);
+      stationBody.position.set(-10, 4.5, 17);
+      stationBody.castShadow = true;
+      station.add(stationBody);
+      const stationBand = new THREE.Mesh(new THREE.BoxGeometry(40.5, 2, 18.5), blueMat);
+      stationBand.position.set(-10, 6.3, 17);
+      station.add(stationBand);
+      for (let i = 0; i < 4; i++) {
+        const auto = new THREE.Group();
+        const lower = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.2, 2.7), new THREE.MeshStandardMaterial({ color: 0x167c3a, roughness: 0.75 }));
+        lower.position.y = 0.75;
+        auto.add(lower);
+        const roof = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.55, 2.2), new THREE.MeshStandardMaterial({ color: 0xf3c51b, roughness: 0.7 }));
+        roof.position.y = 1.55;
+        auto.add(roof);
+        auto.position.set(-22 + i * 5, 0, -8);
+        station.add(auto);
+      }
+      worldGroup.add(station);
+
+      const shrine = new THREE.Group();
+      shrine.position.set(-178, 0, -850);
+      const marble = new THREE.MeshStandardMaterial({ color: 0xf2efe7, roughness: 0.45 });
+      const gold = new THREE.MeshStandardMaterial({ color: 0xd5a21d, roughness: 0.3, metalness: 0.7 });
+      const mainHall = new THREE.Mesh(new THREE.BoxGeometry(42, 14, 28), marble);
+      mainHall.position.set(-23, 7, 24);
+      mainHall.castShadow = true;
+      shrine.add(mainHall);
+      const mainDome = new THREE.Mesh(new THREE.SphereGeometry(7, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2), gold);
+      mainDome.position.set(-23, 14, 24);
+      shrine.add(mainDome);
+      for (const dx of [-37, -9]) {
+        const d = new THREE.Mesh(new THREE.SphereGeometry(3.2, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), gold);
+        d.position.set(dx, 14, 24);
+        shrine.add(d);
+      }
+      const gateL = new THREE.Mesh(new THREE.BoxGeometry(4, 10, 4), marble);
+      gateL.position.set(-8, 5, -3);
+      shrine.add(gateL);
+      const gateR = gateL.clone();
+      gateR.position.x = 8;
+      shrine.add(gateR);
+      const gateTop = new THREE.Mesh(new THREE.BoxGeometry(20, 3, 4), marble);
+      gateTop.position.set(0, 10, -3);
+      shrine.add(gateTop);
+      worldGroup.add(shrine);
+    }
+
     // 3c. IGI Airport Terminal 3 block (Delhi x: -265, z: -560) — the POI had
     //     no geometry at all (P1-C fix). Terminal + concourse wing + ATC tower.
     const termGroup = new THREE.Group();
