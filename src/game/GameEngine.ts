@@ -149,7 +149,7 @@ export class GameEngine {
     const carColor = savedData.carColors[this.currentCarId] || spec.defaultColor;
     const upgrades = savedData.carUpgrades[this.currentCarId];
 
-    this.physics = new VehiclePhysics(spec, upgrades, new THREE.Vector3(0, 0.4, -1120), 0);
+    this.physics = new VehiclePhysics(spec, upgrades, new THREE.Vector3(-55, 0.4, -800), -Math.PI / 2);
     this.carVisuals = createCarMesh(spec, carColor);
     this.scene.add(this.carVisuals.group);
 
@@ -426,7 +426,7 @@ export class GameEngine {
 
     if (mode === 'free_drive') {
       this.missionManager.startFreeDrive();
-      this.physics.reset(new THREE.Vector3(0, 0.4, -1120), 0);
+      this.physics.reset(new THREE.Vector3(-55, 0.4, -800), -Math.PI / 2);
       this.destinationMarker.visible = false;
     } else if (mode === 'taxi') {
       const job = this.missionManager.startTaxiJob();
