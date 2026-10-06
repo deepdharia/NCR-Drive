@@ -7,24 +7,26 @@ import { InputManager } from '../src/game/input/InputManager';
 import { GAME_CONFIG } from '../src/game/config';
 import * as THREE from 'three';
 
-test('grabbing any rim position does not steer; movement has the correct sign', () => {
-  for (const [x,y] of [[0,-70],[70,0],[0,70],[-70,0]]) {
-    const gesture = new SteeringGesture();
-    assert.equal(gesture.begin(1,x,y,70),true);
-    assert.equal(gesture.angle,0);
-    const angle=Math.atan2(y,x)+Math.PI/6;
-    assert.ok(Math.abs(gesture.move(1,Math.cos(angle)*70,Math.sin(angle)*70)!-30)<1e-8);
+test('left/right drags keep their direction at every wheel grab position', () => {
+  for (const [x,y] of [[0,-70],[70,0],[0,70],[-70,0],[0,0]]) {
+    for (const direction of [-1,1]) {
+      const gesture = new SteeringGesture();
+      assert.equal(gesture.begin(1,x,y,70),true);
+      assert.equal(gesture.angle,0);
+      const angle=gesture.move(1,x+direction*35,y)!;
+      assert.equal(angle,direction*67.5);
+      assert.equal(gesture.move(1,x+direction*35,y+50),angle,'vertical movement must not reverse steering');
+    }
   }
 });
 
-test('wheel rotation crosses the polar seam without jumping or accepting a second finger', () => {
+test('an active drag cannot be taken over or released by a second finger', () => {
   const gesture = new SteeringGesture();
-  const point=(deg:number)=>[Math.cos(deg*Math.PI/180)*70,Math.sin(deg*Math.PI/180)*70];
-  gesture.begin(1,...point(175) as [number,number],70);
+  gesture.begin(1,0,70,70);
   assert.equal(gesture.begin(2,0,-70,70),false);
   assert.equal(gesture.move(2,70,0),null);
   assert.equal(gesture.end(2),false);
-  assert.ok(Math.abs(gesture.move(1,...point(-175) as [number,number])!-10)<1e-8);
+  assert.equal(gesture.move(1,-35,70),-67.5);
   gesture.end(1);
   assert.equal(gesture.angle,0);
 });
@@ -53,6 +55,17 @@ test('vehicle turns left/right in forward motion and reverses yaw when backing u
   assert.ok(car(4,-.5).heading<0);
   assert.ok(car(4,.5).heading>0);
   assert.ok(car(4,.5,true).heading<0);
+});
+
+test('dragging the lower rim left/right sends matching steering into the vehicle', () => {
+  for (const direction of [-1,1]) {
+    const gesture=new SteeringGesture();
+    gesture.begin(1,0,70,70);
+    const angle=gesture.move(1,direction*35,70)!;
+    const physics=car(4,angle/SteeringGesture.maxAngle);
+    assert.equal(Math.sign(physics.heading),direction);
+    assert.equal(Math.sign(physics.position.x),direction);
+  }
 });
 
 test('full-lock steering at highway speed stays within available cornering grip', () => {

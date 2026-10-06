@@ -5,7 +5,7 @@ Verified in Chromium with software WebGL, low graphics and a reduced backing-buf
 | Check | Result |
 | --- | --- |
 | TypeScript (`npm run lint`) | Passed |
-| Input, steering, physics and camera regression tests (`npm test`) | 13 passed |
+| Input, steering, physics and camera regression tests (`npm test`) | 14 passed |
 | Production build (`npm run build`) | Passed; Three.js vendor chunk remains above 500 kB uncompressed |
 | Desktop menu, driving and pause | Passed |
 | Taxi offer acceptance and taxi HUD | Passed |
