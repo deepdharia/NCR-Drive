@@ -1,6 +1,7 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Camera, Volume2, ShieldAlert, Disc3, ArrowLeft, ArrowRight, Lightbulb } from 'lucide-react';
 import { InputManager } from '../game/input/InputManager';
+import { turnWheel } from '../game/input/SteeringWheel';
 import { Gear } from '../game/types';
 
 interface TouchControlsProps {
@@ -32,75 +33,73 @@ export const TouchControls: React.FC<TouchControlsProps> = ({
   const [brakePressure, setBrakePressure] = useState(0);
   const [isHandbrakeActive, setIsHandbrakeActive] = useState<boolean>(false);
 
-  // Steering wheel tracking state
-  const isDraggingWheel = useRef<boolean>(false);
-  const wheelCenter = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
-
+  // Accumulate angular deltas across ±180°; grabbing any rim point does not snap.
+  const activePointer = useRef<number | null>(null);
+  const wheelAngle = useRef(0);
+  const previousAngle = useRef<number | null>(null);
+  const returnFrame = useRef(0);
+  const wheelCenter = useRef({ x: 0, y: 0 });
+  const applyWheel = (angle: number) => {
+    wheelAngle.current = angle;
+    setWheelRotation(angle);
+    inputManager.setTouchSteer(angle / 360);
+  };
+  const angleAt = (x: number, y: number) => {
+    const dx = x - wheelCenter.current.x;
+    const dy = y - wheelCenter.current.y;
+    return Math.hypot(dx, dy) < 18 ? null : Math.atan2(dy, dx) * 180 / Math.PI;
+  };
   const handleWheelStart = (e: React.PointerEvent) => {
-    isDraggingWheel.current = true;
+    if (activePointer.current !== null) return;
+    e.preventDefault();
+    cancelAnimationFrame(returnFrame.current);
+    const rect = e.currentTarget.getBoundingClientRect();
+    wheelCenter.current = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+    previousAngle.current = angleAt(e.clientX, e.clientY);
+    activePointer.current = e.pointerId;
     e.currentTarget.setPointerCapture(e.pointerId);
-    if (wheelRef.current) {
-      const rect = wheelRef.current.getBoundingClientRect();
-      wheelCenter.current = {
-        x: rect.left + rect.width / 2,
-        y: rect.top + rect.height / 2,
-      };
-      processSteer(e.clientX, e.clientY);
-    }
   };
-
-  const processSteer = (clientX: number, clientY: number) => {
-    const dx = clientX - wheelCenter.current.x;
-    const dy = clientY - wheelCenter.current.y;
-
-    // Radius of touch point from center
-    const radius = Math.sqrt(dx * dx + dy * dy);
-    if (radius < 8) {
-      inputManager.setTouchSteer(0);
-      setWheelRotation(0);
-      return;
-    }
-
-    const clamp = (val: number, min: number, max: number) => Math.min(Math.max(val, min), max);
-    const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
-
-    // Hybrid calculation: direct horizontal drag ratio + angular circular steering
-    // Gives ultra-responsive feel whether user swipes sideways or turns wheel
-    const horizontalNorm = clamp(dx / 75.0, -1.0, 1.0);
-    const circularAngle = Math.atan2(dx, -dy);
-    const maxCircular = (Math.PI / 180) * 110;
-    const circularNorm = clamp(circularAngle / maxCircular, -1.0, 1.0);
-
-    // Blend for natural intuitive mobile touch
-    const steerRaw = lerp(horizontalNorm, circularNorm, 0.45);
-
-    // Center deadzone & progressive sensitivity curve
-    let steerFinal = 0;
-    const deadzone = 0.04;
-    const absSteer = Math.abs(steerRaw);
-
-    if (absSteer > deadzone) {
-      const scaled = (absSteer - deadzone) / (1 - deadzone);
-      // Progressive curve: smooth small adjustments, sharp full lock
-      steerFinal = Math.sign(steerRaw) * Math.pow(scaled, 1.25);
-    }
-
-    steerFinal = clamp(steerFinal, -1.0, 1.0);
-    inputManager.setTouchSteer(steerFinal);
-    setWheelRotation(steerFinal * 95);
-  };
-
   const handleWheelMove = (e: React.PointerEvent) => {
-    if (!isDraggingWheel.current) return;
-    processSteer(e.clientX, e.clientY);
+    if (activePointer.current !== e.pointerId) return;
+    const angle = angleAt(e.clientX, e.clientY);
+    if (angle !== null && previousAngle.current !== null) {
+      applyWheel(turnWheel(wheelAngle.current, previousAngle.current, angle));
+    }
+    previousAngle.current = angle;
   };
-
   const handleWheelEnd = (e: React.PointerEvent) => {
-    isDraggingWheel.current = false;
-    e.currentTarget.releasePointerCapture?.(e.pointerId);
-    inputManager.setTouchSteer(0);
-    setWheelRotation(0);
+    if (activePointer.current !== e.pointerId) return;
+    activePointer.current = null;
+    previousAngle.current = null;
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
+    let last = performance.now();
+    const center = (now: number) => {
+      const angle = wheelAngle.current * Math.exp(-7 * Math.min((now - last) / 1000, 0.05));
+      last = now;
+      applyWheel(Math.abs(angle) < 0.2 ? 0 : angle);
+      if (wheelAngle.current !== 0) returnFrame.current = requestAnimationFrame(center);
+    };
+    returnFrame.current = requestAnimationFrame(center);
   };
+  useEffect(() => {
+    const reset = () => {
+      cancelAnimationFrame(returnFrame.current);
+      activePointer.current = null;
+      previousAngle.current = null;
+      wheelAngle.current = 0;
+      setWheelRotation(0);
+      setIsPedalGasPressed(false);
+      setIsPedalBrakePressed(false);
+      setIsHandbrakeActive(false);
+      inputManager.resetInputs();
+    };
+    window.addEventListener('blur', reset);
+    return () => {
+      window.removeEventListener('blur', reset);
+      cancelAnimationFrame(returnFrame.current);
+      inputManager.resetInputs();
+    };
+  }, [inputManager, controlScheme]);
 
   const pedalPressure = (e: React.PointerEvent<HTMLElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -194,7 +193,7 @@ export const TouchControls: React.FC<TouchControlsProps> = ({
       </div>
 
       {/* Pedals Section (Left side by default) */}
-      <div className={`absolute bottom-5 ${isWheelRight ? 'left-5' : 'right-5'} flex items-end gap-3 pointer-events-auto`}>
+      <div className={`driving-controls absolute bottom-5 ${isWheelRight ? 'left-5' : 'right-5'} flex items-end gap-3 pointer-events-auto`}>
         {/* Gear Toggle Button */}
         <button
           onClick={() => inputManager.cycleGear()}
@@ -287,21 +286,23 @@ export const TouchControls: React.FC<TouchControlsProps> = ({
       </div>
 
       {/* Steering Section */}
-      <div className={`absolute bottom-5 ${isWheelRight ? 'right-6' : 'left-6'} pointer-events-auto`}>
+      <div className={`driving-controls absolute bottom-5 ${isWheelRight ? 'right-6' : 'left-6'} pointer-events-auto`}>
         {controlScheme === 'arrows' ? (
           <div className="flex gap-4">
             <button
-              onPointerDown={() => inputManager.setTouchSteer(-1.0)}
+              onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); inputManager.setTouchSteer(-1.0); }}
               onPointerUp={() => inputManager.setTouchSteer(0)}
               onPointerCancel={() => inputManager.setTouchSteer(0)}
+              onLostPointerCapture={() => inputManager.setTouchSteer(0)}
               className="w-22 h-22 rounded-2xl bg-neutral-900/90 border-2 border-amber-500/60 flex items-center justify-center active:bg-amber-500/40 active:scale-95 text-amber-400 shadow-2xl"
             >
               <ArrowLeft className="w-10 h-10" />
             </button>
             <button
-              onPointerDown={() => inputManager.setTouchSteer(1.0)}
+              onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); inputManager.setTouchSteer(1.0); }}
               onPointerUp={() => inputManager.setTouchSteer(0)}
               onPointerCancel={() => inputManager.setTouchSteer(0)}
+              onLostPointerCapture={() => inputManager.setTouchSteer(0)}
               className="w-22 h-22 rounded-2xl bg-neutral-900/90 border-2 border-amber-500/60 flex items-center justify-center active:bg-amber-500/40 active:scale-95 text-amber-400 shadow-2xl"
             >
               <ArrowRight className="w-10 h-10" />
@@ -314,7 +315,9 @@ export const TouchControls: React.FC<TouchControlsProps> = ({
             onPointerMove={handleWheelMove}
             onPointerUp={handleWheelEnd}
             onPointerCancel={handleWheelEnd}
-            className="w-42 h-42 rounded-full border-4 border-amber-500/70 bg-neutral-900/90 backdrop-blur-md flex items-center justify-center cursor-grab active:cursor-grabbing shadow-[0_15px_45px_rgba(0,0,0,0.85)] relative transition-transform duration-75"
+            onLostPointerCapture={handleWheelEnd}
+            aria-label="Steering wheel: full turn left or right"
+            className="w-42 h-42 rounded-full border-4 border-amber-500/70 bg-neutral-900/90 backdrop-blur-md flex items-center justify-center cursor-grab active:cursor-grabbing shadow-[0_15px_45px_rgba(0,0,0,0.85)] relative touch-none"
             style={{
               transform: `rotate(${wheelRotation}deg)`,
             }}

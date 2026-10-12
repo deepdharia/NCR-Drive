@@ -114,7 +114,8 @@ export class VehiclePhysics {
     );
 
     // input.steer: -1 (left), +1 (right)
-    const targetSteer = input.steer * maxSteer * (1 - this.damagePct * 0.15);
+    // Camera looks along +Z: screen-right is local -X.
+    const targetSteer = -input.steer * maxSteer * (1 - this.damagePct * 0.15);
     // Steering rack response: deliberate at speed, quicker while parking, with natural self-centering.
     const steerSpeed = input.steer === 0
       ? THREE.MathUtils.lerp(10.0, 16.0, speedRatio)

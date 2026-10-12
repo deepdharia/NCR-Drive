@@ -252,7 +252,7 @@ export default function App() {
       <div ref={containerRef} className="absolute inset-0 w-full h-full z-0" />
 
       {/* In-Game Driving HUD */}
-      {screen === 'game' && engineRef.current && (
+      {screen === 'game' && !showPause && !showSettings && !taxiOffer && !missionResult && engineRef.current && (
         <HUD
           state={{
             ...hudState,
@@ -263,6 +263,7 @@ export default function App() {
           playerX={engineRef.current.physics.position.x}
           playerZ={engineRef.current.physics.position.z}
           playerHeading={engineRef.current.physics.heading}
+          controlScheme={saveData.settings.controlScheme}
           hindiLabels={saveData.settings.hindiLabels}
           onCycleCamera={handleCycleCamera}
           onPause={handlePause}

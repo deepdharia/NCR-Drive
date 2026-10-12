@@ -13,6 +13,7 @@ interface HUDProps {
   playerZ: number;
   playerHeading: number;
   hindiLabels?: boolean;
+  controlScheme?: 'wheel_right' | 'wheel_left' | 'arrows';
   onCycleCamera: () => void;
   onPause: () => void;
 }
@@ -24,6 +25,7 @@ export const HUD: React.FC<HUDProps> = ({
   playerZ,
   playerHeading,
   hindiLabels = false,
+  controlScheme,
   onCycleCamera,
   onPause,
 }) => {
@@ -263,6 +265,7 @@ export const HUD: React.FC<HUDProps> = ({
 
       {/* On-Screen Mobile Driving Controls */}
       <TouchControls
+        controlScheme={controlScheme}
         inputManager={inputManager}
         gear={state.gear}
         leftBlinker={state.leftBlinker}

@@ -407,6 +407,43 @@ export class WorldBuilder {
 
     worldGroup.add(indiaGateGroup);
 
+    // Human-scale Delhi streets: raised pavements and alternating stone kerbs.
+    // Instance repeated kerb blocks to avoid a draw call for every block.
+    const sidewalkMat = new THREE.MeshStandardMaterial({ color: 0xb8ac96, roughness: 0.95 });
+    const kerbMatrices: THREE.Matrix4[] = [];
+    const dummy = new THREE.Object3D();
+    for (const seg of ROAD_SEGMENTS.filter(s => s.zone === 'Delhi' && s.width < 16)) {
+      const dx = seg.end.x - seg.start.x, dz = seg.end.z - seg.start.z;
+      const length = Math.hypot(dx, dz);
+      const yaw = Math.atan2(dx, dz);
+      // Set back from junctions so pavements do not close road entrances.
+      for (const side of [-1, 1]) {
+        const offset = side * (seg.width / 2 + 1.4);
+        const pavement = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.24, Math.max(1, length - 20)), sidewalkMat);
+        pavement.position.set((seg.start.x + seg.end.x) / 2 + Math.cos(yaw) * offset,
+          0.15, (seg.start.z + seg.end.z) / 2 - Math.sin(yaw) * offset);
+        pavement.rotation.y = yaw;
+        pavement.receiveShadow = true;
+        worldGroup.add(pavement);
+        for (let distance = 11; distance < length - 11; distance += 2) {
+          const edge = side * (seg.width / 2 + 0.15);
+          dummy.position.set(seg.start.x + dx * distance / length + Math.cos(yaw) * edge,
+            0.18, seg.start.z + dz * distance / length - Math.sin(yaw) * edge);
+          dummy.rotation.set(0, yaw, 0);
+          dummy.updateMatrix();
+          kerbMatrices.push(dummy.matrix.clone());
+        }
+      }
+    }
+    const kerbs = new THREE.InstancedMesh(new THREE.BoxGeometry(0.3, 0.3, 1.98),
+      new THREE.MeshStandardMaterial({ roughness: 0.9 }), kerbMatrices.length);
+    kerbMatrices.forEach((matrix, i) => {
+      kerbs.setMatrixAt(i, matrix);
+      kerbs.setColorAt(i, new THREE.Color(i % 2 ? 0x343536 : 0xd4b064));
+    });
+    kerbs.receiveShadow = true;
+    worldGroup.add(kerbs);
+
     // 3b. Connaught Place Colonnade Ring (Delhi Z: -800) — cheap density so CP
     //     is no longer an empty label (P1-C fix). Gaps at the four cardinals
     //     where the radial roads cross the ring.
@@ -425,15 +462,24 @@ export class WorldBuilder {
       col.castShadow = true;
       cpGroup.add(col);
     }
-    // Entablature band crowning the colonnade
-    const cpBandMat = new THREE.MeshStandardMaterial({ color: 0xd6cfc2, roughness: 0.8, side: THREE.DoubleSide });
-    const cpBand = new THREE.Mesh(new THREE.CylinderGeometry(cpRadius, cpRadius, 2.6, 48, 1, true), cpBandMat);
-    cpBand.position.y = 12.3;
-    cpGroup.add(cpBand);
-    // Flat roof lip
-    const cpRoof = new THREE.Mesh(new THREE.CylinderGeometry(cpRadius + 3, cpRadius + 3, 0.6, 48), concreteMat);
-    cpRoof.position.y = 13.9;
-    cpGroup.add(cpRoof);
+    // Separate arcade sections keep the centre open to the sky and leave radial gaps.
+    const cpBandMat = new THREE.MeshStandardMaterial({ color: 0xe5dccb, roughness: 0.82 });
+    for (let quadrant = 0; quadrant < 4; quadrant++) {
+      const start = quadrant * Math.PI / 2 + 0.20;
+      const end = (quadrant + 1) * Math.PI / 2 - 0.20;
+      const shape = new THREE.Shape();
+      shape.absarc(0, 0, 59, start, end, false);
+      shape.absarc(0, 0, 52, end, start, true);
+      shape.closePath();
+      const roof = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, {
+        depth: 1.2, bevelEnabled: false, curveSegments: 24,
+      }), cpBandMat);
+      roof.rotation.x = -Math.PI / 2;
+      roof.position.y = 11;
+      roof.castShadow = true;
+      roof.receiveShadow = true;
+      cpGroup.add(roof);
+    }
     worldGroup.add(cpGroup);
 
     // Central Delhi landmark slice: Shivaji Stadium Metro and Bangla Sahib.

@@ -62,3 +62,14 @@
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(245, 158, 11, 0.8);
 }
+
+/* Keep pedals and steering separate on small phones; preserve landscape reach. */
+.driving-controls { touch-action: none; }
+@media (max-width: 600px) and (orientation: portrait) {
+  .driving-controls { transform: scale(.72); transform-origin: bottom left; bottom: max(12px, env(safe-area-inset-bottom)); }
+  .driving-controls[class*="right-"] { transform-origin: bottom right; }
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  .driving-controls { transform: scale(.8); transform-origin: bottom left; }
+  .driving-controls[class*="right-"] { transform-origin: bottom right; }
+}

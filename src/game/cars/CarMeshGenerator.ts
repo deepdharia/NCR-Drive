@@ -29,7 +29,8 @@ export interface CarVisuals {
     headlightsOn: boolean,
     rpmRatio: number,
     speedRatio: number,
-    damagePct: number
+    damagePct: number,
+    steeringInput?: number
   ): void;
   setPaintColor(hex: string): void;
 }
@@ -674,7 +675,8 @@ export function createCarMesh(spec: CarSpecs, customColor?: string): CarVisuals 
     headlightsOn: boolean,
     rpmRatio: number,
     speedRatio: number,
-    damagePct: number
+    damagePct: number,
+    steeringInput?: number
   ) => {
     // Steer front wheels smoothly
     for (const sw of steerWheels) {
@@ -682,7 +684,7 @@ export function createCarMesh(spec: CarSpecs, customColor?: string): CarVisuals 
     }
 
     // Smooth Cockpit Steering Wheel Rotation
-    steeringWheelGroup.rotation.z = -steerAngle * 2.8;
+    steeringWheelGroup.rotation.z = steeringInput !== undefined ? steeringInput * Math.PI * 2 : -steerAngle * 2.8;
 
     // Spin wheels
     totalWheelSpin += speedDelta / wheelRadius;

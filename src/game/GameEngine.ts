@@ -464,6 +464,7 @@ export class GameEngine {
 
   public setPaused(paused: boolean) {
     this.isPaused = paused;
+    if (paused) this.inputManager.resetInputs();
   }
 
   public resetCarToRoad() {
@@ -586,7 +587,8 @@ export class GameEngine {
       this.inputManager.state.headlights,
       rpmRatio,
       speedRatio,
-      this.physics.damagePct
+      this.physics.damagePct,
+      this.inputManager.state.steer
     );
 
     // Shadow light tracks car
@@ -821,6 +823,7 @@ export class GameEngine {
   public destroy() {
     this.isRunning = false;
     window.removeEventListener('resize', this.onResize);
+    this.inputManager.dispose();
     this.audioEngine.dispose();
     this.pmremGenerator.dispose();
     this.renderer.dispose();
