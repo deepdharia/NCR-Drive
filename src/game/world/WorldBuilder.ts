@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { buildDelhiDistrict, roadClearance } from './DelhiDistrict';
 import { GAME_CONFIG } from '../config';
 import { POINTS_OF_INTEREST, ROAD_SEGMENTS, ROAD_WAYPOINTS, getGroundHeight } from './MapData';
 
@@ -6,7 +7,8 @@ export interface WorldObjects {
   group: THREE.Group;
   tollBarriers: THREE.Object3D[];
   metroTrainGroup: THREE.Group;
-  update(dt: number, playerZ: number): void;
+  update(dt: number, playerZ: number, trafficTime: number): void;
+  setEnvironment(night: boolean, wet: boolean): void;
 }
 
 export class WorldBuilder {
@@ -49,46 +51,12 @@ export class WorldBuilder {
     ctx.fillStyle = '#1c1e24';
     ctx.fillRect(620, 950, 180, 240);
 
-    // Solid bright yellow shoulder lane lines
-    ctx.fillStyle = '#f59e0b';
-    ctx.fillRect(55, 0, 18, 2048);
-    ctx.fillRect(1024 - 73, 0, 18, 2048);
-
-    // Dashed white highway lane dividers (3 lanes each way)
-    ctx.fillStyle = '#f8fafc';
-    const dashLength = 220;
-    const dashGap = 160;
-    const period = dashLength + dashGap;
-
-    for (let y = 0; y < 2048; y += period) {
-      // Left lane divider
-      ctx.fillRect(350, y, 14, dashLength);
-      // Right lane divider
-      ctx.fillRect(660, y, 14, dashLength);
-    }
-
-    // Directional forward arrows painted on road
-    const drawRoadArrow = (cx: number, cy: number) => {
-      ctx.fillStyle = '#f8fafc';
-      ctx.beginPath();
-      ctx.moveTo(cx, cy - 80);
-      ctx.lineTo(cx + 35, cy - 20);
-      ctx.lineTo(cx + 15, cy - 20);
-      ctx.lineTo(cx + 15, cy + 60);
-      ctx.lineTo(cx - 15, cy + 60);
-      ctx.lineTo(cx - 15, cy - 20);
-      ctx.lineTo(cx - 35, cy - 20);
-      ctx.closePath();
-      ctx.fill();
-    };
-
-    drawRoadArrow(350, 800);
-    drawRoadArrow(660, 1600);
-
     const tex = new THREE.CanvasTexture(canvas);
     tex.wrapS = THREE.RepeatWrapping;
     tex.wrapT = THREE.RepeatWrapping;
     tex.repeat.set(1, 16);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = 4;
     this.roadTexture = tex;
     return tex;
   }
@@ -112,8 +80,8 @@ export class WorldBuilder {
       mat = new THREE.MeshStandardMaterial({
         color: 0xffffff,
         map: tex,
-        roughness: 0.72,
-        metalness: 0.15,
+        roughness: 0.94,
+        metalness: 0.02,
       });
       this.roadMaterials.set(bucket, mat);
     }
@@ -249,6 +217,7 @@ export class WorldBuilder {
       ctx.textBaseline = 'middle';
       ctx.fillText(text, 128, 34);
       tex = new THREE.CanvasTexture(canvas);
+      tex.colorSpace = THREE.SRGBColorSpace;
       this.shopSignTextures.set(key, tex);
     }
     return tex;
@@ -288,27 +257,37 @@ export class WorldBuilder {
       const midZ = (seg.start.z + seg.end.z) / 2;
 
       // Paved asphalt surface
-      const roadGeo = new THREE.BoxGeometry(seg.width, 0.16, length);
+      const roadGeo = new THREE.PlaneGeometry(seg.width, length, 1, Math.max(2, Math.ceil(length / 3)));
+      roadGeo.rotateX(-Math.PI / 2);
+      const vertices = roadGeo.getAttribute('position') as THREE.BufferAttribute;
+      for (let i = 0; i < vertices.count; i++) {
+        const lx = vertices.getX(i), lz = vertices.getZ(i);
+        const wx = midX + Math.cos(angle) * lx + Math.sin(angle) * lz;
+        const wz = midZ - Math.sin(angle) * lx + Math.cos(angle) * lz;
+        vertices.setY(i, getGroundHeight(wx, wz).height - midY);
+      }
+      roadGeo.computeVertexNormals();
       const roadMesh = new THREE.Mesh(roadGeo, this.getRoadMaterial(length));
-      roadMesh.position.set(midX, midY + 0.06, midZ);
+      roadMesh.position.set(midX, midY + 0.14, midZ);
       roadMesh.rotation.y = angle;
-      roadMesh.rotation.x = -Math.atan2(dy, length);
+
       roadMesh.receiveShadow = true;
       worldGroup.add(roadMesh);
 
       // Median & Steel Guardrails
       if (seg.width >= 16) {
         // Concrete Jersey Barrier in Center Median
-        const jerseyGeo = new THREE.BoxGeometry(1.2, 0.75, length);
+        const jerseyGeo = new THREE.BoxGeometry(1.2, 0.75, Math.max(1, length - 16));
         const jerseyMesh = new THREE.Mesh(jerseyGeo, concreteMat);
         jerseyMesh.position.set(midX, midY + 0.38, midZ);
         jerseyMesh.rotation.y = angle;
         jerseyMesh.rotation.x = -Math.atan2(dy, length);
         jerseyMesh.castShadow = true;
+        jerseyMesh.userData.solid = true;
         worldGroup.add(jerseyMesh);
 
         // Center Green Bougainvillea / Hedge atop Median
-        const hedgeGeo = new THREE.BoxGeometry(0.8, 0.45, length);
+        const hedgeGeo = new THREE.BoxGeometry(0.8, 0.45, Math.max(1, length - 16));
         const hedgeMesh = new THREE.Mesh(hedgeGeo, new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.9 }));
         hedgeMesh.position.set(midX, midY + 0.85, midZ);
         hedgeMesh.rotation.y = angle;
@@ -330,11 +309,12 @@ export class WorldBuilder {
 
         // Steel W-Beam Crash Barriers on outer roadside
         for (const side of [-1, 1]) {
-          const railGeo = new THREE.BoxGeometry(0.12, 0.45, length);
+          const railGeo = new THREE.BoxGeometry(0.12, 0.45, Math.max(1, length - 16));
           const railMesh = new THREE.Mesh(railGeo, steelGuardrailMat);
           const offsetDist = seg.width / 2 + 0.85;
           railMesh.position.set(midX + side * Math.cos(angle) * offsetDist, midY + 0.55, midZ - side * Math.sin(angle) * offsetDist);
           railMesh.rotation.y = angle;
+          railMesh.userData.solid = true;
           worldGroup.add(railMesh);
         }
       }
@@ -457,6 +437,7 @@ export class WorldBuilder {
       if (Math.min(frac, 1 - frac) < 0.12) continue; // road crossing gap
       const cx = Math.cos(a) * cpRadius;
       const cz = Math.sin(a) * cpRadius;
+      if (roadClearance(cx, cz - 800) < 3) continue;
       const col = new THREE.Mesh(new THREE.BoxGeometry(2.2, 11, 2.2), concreteMat);
       col.position.set(cx, 5.5, cz);
       col.castShadow = true;
@@ -1180,10 +1161,23 @@ export class WorldBuilder {
     if (foliageMesh.instanceColor) foliageMesh.instanceColor.needsUpdate = true;
     worldGroup.add(trunkMesh, foliageMesh);
 
+    const district = buildDelhiDistrict((text, bg) => this.getShopSignTexture(text, bg));
+    worldGroup.add(district.group);
+
+    const setEnvironment = (night: boolean, wet: boolean) => {
+      for (const material of this.roadMaterials.values()) {
+        material.roughness = wet ? 0.38 : 0.94;
+        material.metalness = wet ? 0.12 : 0.02;
+      }
+      bulbMat.emissiveIntensity = night ? 4 : 0.15;
+      district.setNight(night);
+    };
+
     // Metro Train Animation loop
     let metroZ = -950;
 
-    const update = (dt: number, playerZ: number) => {
+    const update = (dt: number, playerZ: number, trafficTime: number) => {
+      district.update(trafficTime);
       metroZ += 35.0 * dt;
       if (metroZ > 850) metroZ = -950;
       metroTrainGroup.position.z = metroZ;
@@ -1203,6 +1197,7 @@ export class WorldBuilder {
       tollBarriers,
       metroTrainGroup,
       update,
+      setEnvironment,
     };
   }
 }

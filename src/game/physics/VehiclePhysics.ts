@@ -136,6 +136,7 @@ export class VehiclePhysics {
 
     let totalGroundHeight = 0;
     let surfaceGripTotal = 0;
+    const groundHeights: number[] = [];
     const restLen = GAME_CONFIG.SPRING_REST_LENGTH;
 
     for (let i = 0; i < 4; i++) {
@@ -145,6 +146,7 @@ export class VehiclePhysics {
 
       const gResult = getGround(wx, wz);
       totalGroundHeight += gResult.height;
+      groundHeights.push(gResult.height);
 
       let surfaceGrip = GAME_CONFIG.SURFACE_GRIP[gResult.surfaceType] || 1.0;
       if (isRaining && gResult.surfaceType === 'asphalt_dry') {
@@ -166,11 +168,10 @@ export class VehiclePhysics {
     // 3. Engine & Powertrain
     this.handbrakeEngaged = input.handbrake;
 
-    if (this.fuelRemaining <= 0) {
-      input.throttle = 0;
-    } else if (input.throttle > 0) {
+    const throttle = this.fuelRemaining > 0 ? THREE.MathUtils.clamp(input.throttle, 0, 1) : 0;
+    if (throttle > 0) {
       // Fuel burn scales with throttle and speed: a full tank lasts ~1-2h of mixed driving
-      this.fuelRemaining = Math.max(0, this.fuelRemaining - 0.004 * (0.3 + 0.7 * input.throttle) * (0.5 + Math.abs(this.forwardSpeed) / 45) * dt);
+      this.fuelRemaining = Math.max(0, this.fuelRemaining - 0.004 * (0.3 + 0.7 * throttle) * (0.5 + Math.abs(this.forwardSpeed) / 45) * dt);
     }
 
     const wheelRadius = this.spec.wheelRadiusM ?? 0.32;
@@ -187,7 +188,7 @@ export class VehiclePhysics {
 
       const gearRatio = GAME_CONFIG.GEAR_RATIOS[this.currentGear - 1] || 1.0;
       const roadRpm = (speed / (wheelRadius * 2 * Math.PI)) * 60 * gearRatio * GAME_CONFIG.FINAL_DRIVE;
-      const throttleRpmBoost = input.throttle * 2800;
+      const throttleRpmBoost = throttle * 2800;
       const targetRpm = Math.max(GAME_CONFIG.IDLE_RPM + throttleRpmBoost, roadRpm);
       this.rpm = THREE.MathUtils.lerp(this.rpm, targetRpm, 15.0 * dt);
 
@@ -200,24 +201,24 @@ export class VehiclePhysics {
 
       const launchBoost = speed < 9 ? (1.5 - (speed / 9) * 0.5) : 1.0;
       const driveTorque = baseTorque * rpmTorqueFactor * gearRatio * (GAME_CONFIG.FINAL_DRIVE * 0.88) * launchBoost;
-      tractionForce = input.throttle * (driveTorque / wheelRadius);
+      tractionForce = throttle * (driveTorque / wheelRadius);
 
     } else if (this.gearMode === 'R') {
       this.currentGear = 1;
       const gearRatio = GAME_CONFIG.REVERSE_RATIO;
       const speed = Math.abs(this.forwardSpeed);
       const roadRpm = (speed / (wheelRadius * 2 * Math.PI)) * 60 * gearRatio * GAME_CONFIG.FINAL_DRIVE;
-      const throttleRpmBoost = input.throttle * 2500;
+      const throttleRpmBoost = throttle * 2500;
       this.rpm = THREE.MathUtils.lerp(this.rpm, Math.max(GAME_CONFIG.IDLE_RPM + throttleRpmBoost, roadRpm), 15.0 * dt);
 
       const driveTorque = baseTorque * 0.92 * gearRatio * (GAME_CONFIG.FINAL_DRIVE * 0.88);
-      tractionForce = -input.throttle * (driveTorque / wheelRadius);
+      tractionForce = -throttle * (driveTorque / wheelRadius);
       // Reverse is speed-capped: no 150 km/h backing-up
       if (this.forwardSpeed < -12) tractionForce = Math.max(0, tractionForce);
 
     } else {
       // Park or Neutral
-      const throttleRpmBoost = input.throttle * 4200;
+      const throttleRpmBoost = throttle * 4200;
       this.rpm = THREE.MathUtils.lerp(this.rpm, GAME_CONFIG.IDLE_RPM + throttleRpmBoost, 12.0 * dt);
       tractionForce = 0;
     }
@@ -229,19 +230,20 @@ export class VehiclePhysics {
       tractionForce *= Math.max(0, 1 - (this.speedKmh - this.spec.topSpeedKmH) / 25);
     }
 
+    // Grip limits launch force; the existing powertrain stays intact.
+    tractionForce = THREE.MathUtils.clamp(tractionForce, -avgSurfaceGrip * this.spec.mass * GAME_CONFIG.GRAVITY * 0.65, avgSurfaceGrip * this.spec.mass * GAME_CONFIG.GRAVITY * 0.65);
+
     // 4. Braking & Longitudinal Forces
     let brakeForceTotal = 0;
-    if (input.brake > 0) {
-      const maxBrake = this.spec.brakeForce * brakeMult * 1.35;
-      // Progressive pedal curve gives fine low-pressure control and strong braking near full press.
-      const brakePressure = 0.18 * input.brake + 0.82 * input.brake * input.brake;
-      brakeForceTotal = brakePressure * maxBrake * (this.forwardSpeed > 0 ? 1 : -1);
-      // Grip-limited braking: wet/dirt surfaces mean longer stopping distances
-      brakeForceTotal *= (0.55 + 0.45 * avgSurfaceGrip);
+    if (input.brake > 0 || this.handbrakeEngaged || this.gearMode === 'P') {
+      const pressure = this.gearMode === 'P' ? 1 : Math.max(input.brake, this.handbrakeEngaged ? 0.65 : 0);
+      const brakePressure = 0.18 * pressure + 0.82 * pressure * pressure;
+      const maxBrake = Math.min(this.spec.brakeForce * brakeMult * 1.35, avgSurfaceGrip * this.spec.mass * GAME_CONFIG.GRAVITY);
+      brakeForceTotal = brakePressure * maxBrake * Math.sign(this.forwardSpeed);
     }
 
     // Engine braking when off throttle
-    if (input.throttle === 0 && Math.abs(this.forwardSpeed) > 0.5) {
+    if (throttle === 0 && (this.gearMode === 'D' || this.gearMode === 'R') && Math.abs(this.forwardSpeed) > 0.5) {
       tractionForce -= Math.sign(this.forwardSpeed) * (this.spec.mass * 0.4);
     }
 
@@ -259,7 +261,8 @@ export class VehiclePhysics {
     // Kinematic Ackermann target yaw rate
     const kinematicYawRate = (this.forwardSpeed / effectiveWheelbase) * Math.tan(this.steerAngle);
     // Yaw rate clamp: full lock at very high speed must not instantly spin the car
-    const clampedYawRate = THREE.MathUtils.clamp(kinematicYawRate, -1.4 * avgSurfaceGrip, 1.4 * avgSurfaceGrip);
+    const gripYawLimit = Math.min(1.4, avgSurfaceGrip * GAME_CONFIG.GRAVITY / Math.max(2, Math.abs(this.forwardSpeed)));
+    const clampedYawRate = THREE.MathUtils.clamp(kinematicYawRate, -gripYawLimit, gripYawLimit);
     // Per-car handling character: >1 nimble (hatchbacks), <1 boaty (heavy SUVs)
     const agility = this.spec.agility ?? 1.0;
 
@@ -267,25 +270,28 @@ export class VehiclePhysics {
       // Handbrake drift: allows high yaw velocity and rear slip
       this.isDrifting = true;
       const driftBoost = 1.6;
-      this.angularVelocity = THREE.MathUtils.lerp(this.angularVelocity, kinematicYawRate * driftBoost, 10.0 * dt);
+      this.angularVelocity = THREE.MathUtils.lerp(this.angularVelocity, THREE.MathUtils.clamp(kinematicYawRate * driftBoost, -1.8, 1.8), 1 - Math.exp(-10 * dt));
     } else {
       this.isDrifting = false;
       // High-precision smooth yaw tracking: turns naturally and crisply
       const yawResponsiveness = 18.0 * avgSurfaceGrip * agility;
-      this.angularVelocity = THREE.MathUtils.lerp(this.angularVelocity, clampedYawRate, yawResponsiveness * dt);
+      this.angularVelocity = THREE.MathUtils.lerp(this.angularVelocity, clampedYawRate, 1 - Math.exp(-yawResponsiveness * dt));
     }
 
     // Update vehicle heading
     this.heading += this.angularVelocity * dt;
 
     // Integrate forward and lateral velocities
-    const newForwardSpeed = this.forwardSpeed + forwardAcc * dt;
+    let newForwardSpeed = this.forwardSpeed + forwardAcc * dt;
+    // Brakes/drag may stop the vehicle, but cannot push it into reverse.
+    if (this.forwardSpeed * newForwardSpeed < 0 && tractionForce * newForwardSpeed <= 0) newForwardSpeed = 0;
+    if (this.gearMode === 'P' && Math.abs(newForwardSpeed) < 0.3) newForwardSpeed = 0;
     // Lateral drift dampening (tyres grip road firmly unless drifting)
     const lateralDamp = this.isDrifting ? 4.0 : 22.0 * avgSurfaceGrip * agility;
     const newLateralSpeed = lateralSpeed * Math.exp(-lateralDamp * dt);
 
     // Stop completely when braked to a halt
-    if (Math.abs(newForwardSpeed) < 0.25 && input.throttle === 0 && (input.brake > 0 || this.gearMode === 'P')) {
+    if (Math.abs(newForwardSpeed) < 0.25 && throttle === 0 && (input.brake > 0 || this.gearMode === 'P')) {
       this.velocity.set(0, 0, 0);
       this.forwardSpeed = 0;
     } else {
@@ -304,15 +310,19 @@ export class VehiclePhysics {
     this.position.z += this.velocity.z * dt;
 
     // 6. Dynamic Body Weight Transfer (Pitch dive & Roll lean)
-    const targetPitch = (-forwardAcc / GAME_CONFIG.GRAVITY) * GAME_CONFIG.WEIGHT_TRANSFER_PITCH;
+    const roadPitch = -Math.atan2((groundHeights[0] + groundHeights[1] - groundHeights[2] - groundHeights[3]) / 2, this.spec.wheelbase);
+    const targetPitch = roadPitch + (-forwardAcc / GAME_CONFIG.GRAVITY) * GAME_CONFIG.WEIGHT_TRANSFER_PITCH;
     const lateralG = (this.forwardSpeed * this.angularVelocity) / GAME_CONFIG.GRAVITY;
     const targetRoll = lateralG * GAME_CONFIG.WEIGHT_TRANSFER_ROLL * (this.spec.comHeight / 0.42);
 
-    this.pitch = THREE.MathUtils.lerp(this.pitch, targetPitch, 14 * dt);
-    this.roll = THREE.MathUtils.lerp(this.roll, targetRoll, 12 * dt);
+    const suspensionResponse = 9 + this.upgrades.suspension * 2;
+    this.pitch = THREE.MathUtils.lerp(this.pitch, targetPitch, 1 - Math.exp(-suspensionResponse * dt));
+    this.roll = THREE.MathUtils.lerp(this.roll, targetRoll, 1 - Math.exp(-suspensionResponse * dt));
 
     this.pitch = THREE.MathUtils.clamp(this.pitch, -0.22, 0.22);
     this.roll = THREE.MathUtils.clamp(this.roll, -0.26, 0.26);
+
+    this.speedKmh = Math.abs(this.forwardSpeed) * 3.6;
 
     // Guard against NaN
     if (isNaN(this.position.x) || isNaN(this.position.z)) {

@@ -396,32 +396,32 @@ export function findGpsRoute(startPos: [number, number, number], targetPos: [num
     return [startNode, targetNode];
   }
 
-  // Simple graph traversal for road chain
-  const visited = new Set<RoadWaypoint>();
-  const queue: { wp: RoadWaypoint; path: RoadWaypoint[] }[] = [{ wp: startNode, path: [startNode] }];
-
-  while (queue.length > 0) {
-    const curr = queue.shift()!;
-    if (curr.wp === targetNode) {
-      return curr.path;
+  // Dijkstra uses road lengths: a route with fewer junctions is not necessarily shorter.
+  const distances = new Map<RoadWaypoint, number>([[startNode, 0]]);
+  const previous = new Map<RoadWaypoint, RoadWaypoint>();
+  const pending = new Set<RoadWaypoint>(ROAD_WAYPOINTS);
+  while (pending.size) {
+    let current: RoadWaypoint | undefined;
+    let best = Infinity;
+    for (const node of pending) {
+      const distance = distances.get(node) ?? Infinity;
+      if (distance < best) { best = distance; current = node; }
     }
-
-    visited.add(curr.wp);
-
-    // Find neighboring segments
-    for (const seg of ROAD_SEGMENTS) {
-      let neighbor: RoadWaypoint | null = null;
-      if (seg.start === curr.wp) neighbor = seg.end;
-      else if (seg.end === curr.wp && !seg.oneWay) neighbor = seg.start;
-
-      if (neighbor && !visited.has(neighbor)) {
-        queue.push({
-          wp: neighbor,
-          path: [...curr.path, neighbor]
-        });
+    if (!current) break;
+    pending.delete(current);
+    if (current === targetNode) {
+      const path = [current];
+      while (previous.has(path[0])) path.unshift(previous.get(path[0])!);
+      return path;
+    }
+    for (const segment of ROAD_SEGMENTS) {
+      const neighbor = segment.start === current ? segment.end : segment.end === current && !segment.oneWay ? segment.start : null;
+      if (!neighbor || !pending.has(neighbor)) continue;
+      const candidate = best + Math.hypot(segment.end.x - segment.start.x, segment.end.z - segment.start.z);
+      if (candidate < (distances.get(neighbor) ?? Infinity)) {
+        distances.set(neighbor, candidate); previous.set(neighbor, current);
       }
     }
   }
-
-  return [startNode, targetNode];
+  return [];
 }

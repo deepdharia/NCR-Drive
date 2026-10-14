@@ -22,18 +22,18 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   const hindi = saveData.settings.hindiLabels;
 
   return (
-    <div className="absolute inset-0 bg-neutral-950/75 backdrop-blur-md z-40 flex flex-col justify-between p-8 select-none font-display text-neutral-100">
+    <div className="absolute inset-0 bg-gradient-to-r from-neutral-950/95 via-neutral-950/65 to-neutral-950/20 z-40 flex flex-col justify-between p-4 sm:p-8 overflow-y-auto select-none font-display text-neutral-100">
       {/* Top Bar */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <div className="w-3 h-10 bg-amber-500 rounded-full" />
           <div>
-            <div className="text-[11px] text-amber-400 font-bold uppercase tracking-widest">
+            <div className="text-[9px] sm:text-[11px] text-amber-400 font-bold uppercase tracking-widest">
               {hindi ? 'राष्ट्रीय राजधानी क्षेत्र' : 'NATIONAL CAPITAL REGION'}
             </div>
-            <h1 className="text-3xl font-extrabold tracking-tight text-neutral-100 flex items-center gap-2">
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-neutral-100 flex items-center gap-2">
               NCR DRIVE
-              <span className="text-xs px-2.5 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-400/40">
+              <span className="hidden sm:inline-block text-xs px-2.5 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-400/40">
                 OPEN WORLD
               </span>
             </h1>
@@ -41,10 +41,10 @@ export const MainMenu: React.FC<MainMenuProps> = ({
         </div>
 
         {/* Player Cash & Selected Car */}
-        <div className="flex items-center gap-4">
-          <div className="hud-glass-saffron px-4 py-2 rounded-2xl border border-amber-500/50 flex items-center gap-2 shadow-xl">
-            <IndianRupee className="w-5 h-5 text-amber-400" />
-            <span className="text-2xl font-gauge font-bold text-amber-300">
+        <div className="flex items-center gap-2 sm:gap-4">
+          <div className="hud-glass-saffron px-2 sm:px-4 py-2 rounded-2xl border border-amber-500/50 flex items-center gap-2 shadow-xl">
+            <IndianRupee className="hidden sm:block w-5 h-5 text-amber-400" />
+            <span className="text-lg sm:text-2xl font-gauge font-bold text-amber-300">
               {saveData.cash.toLocaleString('en-IN')}
             </span>
           </div>
@@ -59,8 +59,13 @@ export const MainMenu: React.FC<MainMenuProps> = ({
         </div>
       </div>
 
+      <div className="mt-5 hidden sm:block">
+        <div className="text-[10px] uppercase tracking-[0.3em] text-neutral-400">Central Delhi district</div>
+        <p className="mt-2 text-sm text-neutral-200">Connaught Place · Shivaji Stadium · Bangla Sahib</p>
+      </div>
+
       {/* Core game loop: taxi career, free roam, garage */}
-      <div className="max-w-md space-y-3.5 my-auto">
+      <div className="max-w-md space-y-3 my-auto py-5">
         {/* Taxi Career Mode */}
         <button
           onClick={onStartTaxi}
@@ -126,16 +131,16 @@ export const MainMenu: React.FC<MainMenuProps> = ({
       </div>
 
       {/* Bottom Bar: Quick Active Car Details */}
-      <div className="flex items-center justify-between pt-4 border-t border-neutral-800">
-        <div className="flex items-center gap-4 text-xs text-neutral-400">
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-neutral-800">
+        <div className="flex flex-wrap items-center gap-2 text-[10px] text-neutral-400">
           <div className="flex items-center gap-1.5">
             <MapPin className="w-4 h-4 text-amber-400" />
-            <span>Open Connected World: 8 km</span>
+            <span>Delhi-inspired connected roads</span>
           </div>
           <span>•</span>
           <span>Left-Hand Traffic (RHD)</span>
           <span>•</span>
-          <span>Procedural Delhi & Gurgaon 3D Engine</span>
+          <span>Central Delhi district upgrade</span>
         </div>
 
         <div className="flex items-center gap-3">

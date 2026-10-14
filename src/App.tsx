@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { GameEngine } from './game/GameEngine';
+import { WorldCollision } from './game/physics/WorldCollision';
 import { SaveManager } from './game/save/SaveManager';
 import { GameMode, GameScreen, HUDState, PlayerSaveData, QualityLevel, Weather } from './game/types';
 import { HUD } from './components/HUD';
@@ -38,6 +39,8 @@ export default function App() {
   // Last run context so Retry / Next Fare can restart the exact same mode.
   const lastRunRef = useRef<{ mode: GameMode; missionId?: string }>({ mode: 'free_drive' });
 
+  const [startup, setStartup] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [startupMessage, setStartupMessage] = useState('Preparing Delhi streets and collision physics…');
   const [screen, setScreen] = useState<GameScreen>('main_menu');
   const [saveData, setSaveData] = useState<PlayerSaveData>(() => SaveManager.load());
   const [hudState, setHudState] = useState<HUDState>(INITIAL_HUD);
@@ -74,26 +77,34 @@ export default function App() {
   useEffect(() => {
     if (!containerRef.current || engineRef.current) return;
 
-    const engine = new GameEngine(containerRef.current);
-    engineRef.current = engine;
-
-    engine.setCallbacks({
-      onHudUpdate: (hud) => {
-        setHudState(hud);
-      },
-      onMissionEnd: (res) => {
-        setMissionResult(res);
-        setSaveData(SaveManager.load());
-        setTaxiMeta(null);
-      },
-      onPauseRequest: () => pauseToggleRef.current(),
+    let cancelled = false;
+    let instance: GameEngine | null = null;
+    WorldCollision.initialize().then(() => {
+      if (cancelled || !containerRef.current) return;
+      const engine = new GameEngine(containerRef.current);
+      instance = engine;
+      engineRef.current = engine;
+      engine.setCallbacks({
+        onHudUpdate: setHudState,
+        onMissionEnd: res => {
+          setMissionResult(res);
+          setSaveData(SaveManager.load());
+          setTaxiMeta(null);
+          engine.setPaused(true);
+        },
+        onPauseRequest: () => pauseToggleRef.current(),
+      });
+      engine.enterGarage();
+      setStartup('ready');
+    }).catch(error => {
+      if (cancelled) return;
+      console.error('NCR Drive startup failed', error);
+      setStartupMessage('Unable to start the 3D engine. Check your connection and enable graphics acceleration, then reload.');
+      setStartup('error');
     });
-
-    // Start menu preview mode initially
-    engine.enterGarage();
-
     return () => {
-      engine.destroy();
+      cancelled = true;
+      instance?.destroy();
       engineRef.current = null;
     };
   }, []);
@@ -268,6 +279,16 @@ export default function App() {
           onCycleCamera={handleCycleCamera}
           onPause={handlePause}
         />
+      )}
+
+      {startup !== 'ready' && (
+        <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center gap-5 bg-[#0a0e17] px-8 text-center text-neutral-100" role="status">
+          <div className="text-xs tracking-[0.35em] text-amber-400">NATIONAL CAPITAL REGION</div>
+          <h1 className="text-4xl font-extrabold">NCR DRIVE</h1>
+          {startup === 'loading' && <div className="h-1 w-48 animate-pulse rounded-full bg-amber-400" />}
+          <p className="max-w-sm text-sm text-neutral-400">{startupMessage}</p>
+          {startup === 'error' && <button onClick={() => window.location.reload()} className="rounded-xl bg-amber-400 px-6 py-3 font-bold text-black">Reload game</button>}
+        </div>
       )}
 
       {/* Main Menu Screen */}

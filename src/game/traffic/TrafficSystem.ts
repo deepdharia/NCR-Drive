@@ -3,6 +3,7 @@ import { GAME_CONFIG } from '../config';
 import { getGroundHeight, ROAD_SEGMENTS } from '../world/MapData';
 import type { RoadSegment } from '../types';
 import type { AudioEngine } from '../audio/AudioEngine';
+import { advanceRoad, footprintsOverlap, roadEnd, roadLength, sampleLane, signalAllows, type RoadCursor } from './RoadNetwork';
 
 export type TrafficVehicleType = 'car' | 'taxi' | 'auto_rickshaw' | 'e_rickshaw' | 'police_van' | 'bus' | 'truck' | 'bike' | 'cow';
 
@@ -16,7 +17,9 @@ export interface TrafficVehicle {
   speed: number;
   targetSpeed: number;
   lane: number;
-  direction: 1 | -1; // 1 = +Z, -1 = -Z
+  direction: 1 | -1; // direction along the current road segment
+  cursor: RoadCursor;
+  heading: number;
   length: number;
   width: number;
   mass: number;
@@ -202,7 +205,7 @@ function nearestRoadSegment(x: number, z: number): RoadSegment {
 }
 
 function lanesPerDirection(seg: RoadSegment): number {
-  return Math.min(3, Math.max(1, Math.round(seg.lanes)));
+  return Math.max(1, Math.min(3, Math.round(seg.lanes)));
 }
 
 /** Lateral offset of a lane centre from the road centreline. */
@@ -240,6 +243,7 @@ export class TrafficSystem {
   private audioEngine?: AudioEngine;
   // --- P4-C runtime perf state ---
   private frameCount: number = 0;
+  public elapsedSeconds = 0;
   private shadowTimer: number = 1; // start >= interval so the first update() selects casters
 
   constructor(density: 'low' | 'medium' | 'high' = 'medium') {
@@ -285,6 +289,8 @@ export class TrafficSystem {
     if (density === 'low') this.vehiclePoolSize = 22;
     else if (density === 'medium') this.vehiclePoolSize = 42;
     else this.vehiclePoolSize = 65;
+    this.initPool();
+    this.vehicles.forEach((v, i) => { v.mesh.visible = i < this.vehiclePoolSize; });
   }
 
   private createVehicleMesh(type: TrafficVehicleType): {
@@ -634,7 +640,7 @@ export class TrafficSystem {
   }
 
   private initPool() {
-    for (let i = 0; i < this.vehiclePoolSize; i++) {
+    for (let i = this.vehicles.length; i < this.vehiclePoolSize; i++) {
       const type = this.pickSpawnType();
       const { mesh, length, width, mass, brakeLightMat, lightbarMats, shadowMeshes } = this.createVehicleMesh(type);
 
@@ -673,6 +679,8 @@ export class TrafficSystem {
         targetSpeed,
         lane: laneIndex,
         direction,
+        cursor: { segment: seg, direction, distance: roadLength(seg) * 0.5, lane: laneIndex },
+        heading: direction === 1 ? 0 : Math.PI,
         length,
         width,
         mass,
@@ -683,6 +691,7 @@ export class TrafficSystem {
         wasColliding: false,
       };
 
+      this.placeVehicle(tv, new THREE.Vector3(-55, 0, -800));
       this.vehicles.push(tv);
       this.trafficGroup.add(mesh);
     }
@@ -694,192 +703,118 @@ export class TrafficSystem {
     }
   }
 
-  public update(dt: number, playerPos: THREE.Vector3, playerVelocity: THREE.Vector3): {
-    collided: boolean;
-    hitVehicle: TrafficVehicle | null;
-    hitSpeed: number;
+  private eligibleRoad(type: TrafficVehicleType, segment: RoadSegment): boolean {
+    if (type === 'cow') return segment.zone === 'Haryana';
+    if (type === 'e_rickshaw' || type === 'auto_rickshaw') return segment.zone === 'Delhi' || segment.zone === 'Gurgaon';
+    return true;
+  }
+
+  private placeVehicle(v: TrafficVehicle, player: THREE.Vector3): void {
+    const roads = ROAD_SEGMENTS.filter(s => this.eligibleRoad(v.type, s));
+    const nearby = roads.filter(s => Math.hypot((s.start.x + s.end.x) / 2 - player.x, (s.start.z + s.end.z) / 2 - player.z) < 260);
+    const choices = nearby.length ? nearby : roads;
+    let cursor = v.cursor;
+    let pose = sampleLane(cursor);
+    for (let attempt = 0; attempt < 20; attempt++) {
+      const segment = choices[Math.floor(Math.random() * choices.length)];
+      const direction: 1 | -1 = segment.oneWay || Math.random() > 0.5 ? 1 : -1;
+      cursor = { segment, direction, distance: roadLength(segment) * (0.1 + Math.random() * 0.8), lane: Math.floor(Math.random() * lanesPerDirection(segment)) };
+      pose = sampleLane(cursor);
+      const clearOfPlayer = Math.hypot(pose.x - player.x, pose.z - player.z) > 42;
+      const clearOfTraffic = this.vehicles.every(other => other === v || Math.hypot(pose.x - other.position.x, pose.z - other.position.z) > (v.length + other.length) / 2 + 7);
+      if (clearOfPlayer && clearOfTraffic) break;
+    }
+    v.cursor = cursor;
+    v.direction = cursor.direction;
+    v.heading = pose.heading;
+    v.position.set(pose.x, getGroundHeight(pose.x, pose.z).height, pose.z);
+    v.mesh.position.copy(v.position);
+    v.mesh.rotation.y = pose.heading;
+    v.wasColliding = false;
+    v.speed = Math.min(v.targetSpeed, cursor.segment.speedLimit / 3.6 * 0.85);
+    v.brakeHoldTime = 0;
+  }
+
+  public update(dt: number, playerPos: THREE.Vector3, playerVelocity: THREE.Vector3, playerHeading = 0, playerWidth = 2, playerLength = 4.2): {
+    collided: boolean; hitVehicle: TrafficVehicle | null; hitSpeed: number;
   } {
-    let collided = false;
-    let hitVehicle: TrafficVehicle | null = null;
-    let hitSpeed = 0;
-
-    const activeRange = 280;
+    let collided = false, hitVehicle: TrafficVehicle | null = null, hitSpeed = 0;
+    this.elapsedSeconds += dt;
     this.frameCount++;
-    const nowMs = performance.now(); // hoisted: was evaluated per e-rickshaw
-
-    // P4-C: shadow caster selection ~2x/sec.
     this.shadowTimer += dt;
     if (this.shadowTimer >= 0.5) {
       this.shadowTimer = 0;
       this.refreshShadowCasters(playerPos);
     }
-
-    let vi = 0;
-    for (const v of this.vehicles) {
-      const idx = vi++;
-
-      // Recycle out of range
-      const dz = v.position.z - playerPos.z;
-      if (Math.abs(dz) > activeRange) {
-        let newZ = playerPos.z + (v.direction === 1 ? -activeRange * 0.9 : activeRange * 0.9);
-        if (v.type === 'cow' && newZ <= 1300) {
-          // Keep cows on rural Haryana roads; they stay dormant until the player drives there.
-          newZ = 1300 + Math.random() * 600;
-        }
-        if (v.type === 'e_rickshaw' && (newZ > 1300 || (newZ > -450 && newZ < 650))) {
-          // E-rickshaws belong in the city — never the fast expressway or Haryana.
-          newZ = newZ > 325 ? 650 + Math.random() * 300 : -950 + Math.random() * 500;
-        }
-        v.position.z = newZ;
-        const seg = nearestRoadSegment(v.position.x, newZ);
-        const laneIndex = Math.floor(Math.random() * lanesPerDirection(seg));
-        v.lane = laneIndex;
-        v.position.x = sideSign(v.direction) * laneOffsetForLane(seg, laneIndex);
-        v.position.y = getGroundHeight(v.position.x, newZ).height;
-        v.speed = v.targetSpeed;
-        v.wasColliding = false;
-        v.brakeHoldTime = 0;
-        v.honkCooldown = 0;
-        v.pairBlocked = false;
-        v.pairBlockerDist = Infinity;
-        v.mesh.position.copy(v.position);
+    const active = this.vehicles.slice(0, this.vehiclePoolSize);
+    for (const v of active) {
+      if (Math.hypot(v.position.x - playerPos.x, v.position.z - playerPos.z) > 340 && ROAD_SEGMENTS.some(s => this.eligibleRoad(v.type, s) && Math.hypot((s.start.x + s.end.x) / 2 - playerPos.x, (s.start.z + s.end.z) / 2 - playerPos.z) < 260)) this.placeVehicle(v, playerPos);
+      const distance = Math.hypot(v.position.x - playerPos.x, v.position.z - playerPos.z);
+      const visible = distance < 340;
+      v.mesh.visible = visible;
+      if (!visible) continue;
+      const pose = sampleLane(v.cursor);
+      const segment = v.cursor.segment;
+      const remaining = v.cursor.direction === 1 ? roadLength(segment) - v.cursor.distance : v.cursor.distance;
+      let target = Math.min(v.targetSpeed, segment.speedLimit / 3.6 * 0.88);
+      // Slow before junctions, especially for a turn or a large vehicle.
+      if (remaining < 20 && v.type !== 'cow') target = Math.min(target, 5.5 + remaining * 0.3);
+      let blocker = Infinity;
+      const aheadOf = (x: number, z: number, width: number, length: number) => {
+        const dx = x - v.position.x, dz = z - v.position.z;
+        const ahead = dx * pose.forwardX + dz * pose.forwardZ;
+        const lateral = Math.abs(dx * pose.forwardZ - dz * pose.forwardX);
+        const gap = ahead - (v.length + length) / 2;
+        if (ahead > 0 && lateral < (v.width + width) / 2 + 0.25 && gap < 5 + v.speed * 1.25) blocker = Math.min(blocker, Math.max(0, gap));
+      };
+      aheadOf(playerPos.x, playerPos.z, playerWidth, playerLength);
+      for (const other of active) {
+        if (other !== v && other.mesh.visible) aheadOf(other.position.x, other.position.z, other.width, other.length);
       }
-
-      // P4-C: dormant vehicles (>400m, past the fog) advance logically but skip
-      // every visual/per-frame cost. |dz| dominates: the world is a Z corridor.
-      const dormant = Math.abs(v.position.z - playerPos.z) > 400;
-
-      // Player obstacle check — every frame (cheap).
-      let shouldBrake = false;
-      let blockerDist = Infinity;
-      if (!dormant) {
-        const distToPlayerZ = (playerPos.z - v.position.z) * v.direction;
-        const distToPlayerX = Math.abs(playerPos.x - v.position.x);
-        if (distToPlayerZ > 0 && distToPlayerZ < 20 && distToPlayerX < 2.6) {
-          shouldBrake = true;
-          blockerDist = distToPlayerZ;
-        }
-      }
-
-      // P4-C: pair check staggered — each vehicle re-checks every 3rd frame
-      // (~20 Hz). The result persists between checks so braking stays smooth.
-      // Dormant vehicles skip it entirely (invisible; recycle resets state).
-      if (!dormant && (this.frameCount + idx) % 3 === 0) {
-        v.pairBlocked = false;
-        v.pairBlockerDist = Infinity;
-        for (const other of this.vehicles) {
-          if (other === v || other.direction !== v.direction) continue;
-          const diffZ = (other.position.z - v.position.z) * v.direction;
-          const diffX = Math.abs(other.position.x - v.position.x);
-          if (diffZ > 0 && diffZ < (v.length + 9) && diffX < 2.2) {
-            v.pairBlocked = true;
-            v.pairBlockerDist = diffZ;
-            break;
-          }
-        }
-      }
-      if (!dormant && v.pairBlocked) {
-        shouldBrake = true;
-        blockerDist = Math.min(blockerDist, v.pairBlockerDist);
-      }
-
-      if (shouldBrake) {
-        // Brake toward a crawl (cows never speed up to brake).
-        v.speed = THREE.MathUtils.lerp(v.speed, Math.min(2.0, v.targetSpeed), 6.0 * dt);
-        v.isBraking = true;
-        v.brakeHoldTime += dt;
-      } else {
-        v.speed = THREE.MathUtils.lerp(v.speed, v.targetSpeed, 2.8 * dt);
-        v.isBraking = false;
-        v.brakeHoldTime = 0;
-      }
-
-      // Impatient honk: brake-held behind an obstacle for a while -> pip-pip.
-      // Cows never honk. Cooldown + proximity guard prevents honk storms.
-      v.honkCooldown = Math.max(0, v.honkCooldown - dt);
-      if (
-        !dormant &&
-        v.type !== 'cow' &&
-        v.isBraking &&
-        v.brakeHoldTime > 2.5 &&
-        v.honkCooldown <= 0 &&
-        blockerDist < 12 &&
-        this.audioEngine
-      ) {
-        this.audioEngine.playHorn();
-        v.honkCooldown = 8;
-      }
-
-      // Live brake light visual response — change-detected so setHex runs
-      // only on transitions, not 68x/frame.
-      if (!dormant && v.brakeLightMat && v.brakeVisualOn !== v.isBraking) {
+      if (!signalAllows(v.cursor, this.elapsedSeconds)) blocker = Math.min(blocker, Math.max(0, remaining - v.length / 2 - 3));
+      if (blocker < Infinity) target = Math.min(target, Math.max(0, (blocker - 2) / 1.25));
+      v.isBraking = target < v.speed - 0.4;
+      // Bounded acceleration/deceleration instead of asymptotic crawling into obstacles.
+      const acceleration = target < v.speed ? 7 : 2.2;
+      v.speed += THREE.MathUtils.clamp(target - v.speed, -acceleration * dt, acceleration * dt);
+      const travel = Math.min(v.speed * dt, Math.max(0, blocker - 0.1));
+      const oldX = v.position.x, oldZ = v.position.z;
+      v.cursor = advanceRoad(v.cursor, travel, road => this.eligibleRoad(v.type, road));
+      v.direction = v.cursor.direction;
+      const next = sampleLane(v.cursor);
+      v.position.set(next.x, getGroundHeight(next.x, next.z).height, next.z);
+      v.velocity.set((next.x - oldX) / Math.max(dt, 0.001), 0, (next.z - oldZ) / Math.max(dt, 0.001));
+      const angleDelta = Math.atan2(Math.sin(next.heading - v.heading), Math.cos(next.heading - v.heading));
+      v.heading += angleDelta * (1 - Math.exp(-9 * dt));
+      v.mesh.position.copy(v.position);
+      v.mesh.rotation.y = v.heading;
+      if (v.type === 'e_rickshaw') v.mesh.rotation.z = Math.sin(this.elapsedSeconds * 4 + v.id) * 0.01 * Math.min(1, v.speed / 8);
+      if (v.brakeLightMat && v.brakeVisualOn !== v.isBraking) {
         v.brakeVisualOn = v.isBraking;
-        if (v.isBraking) {
-          v.brakeLightMat.emissive.setHex(0xff0000);
-          v.brakeLightMat.emissiveIntensity = 2.4;
-        } else {
-          v.brakeLightMat.emissive.setHex(0x450a0a);
-          v.brakeLightMat.emissiveIntensity = 0.35;
-        }
+        v.brakeLightMat.emissive.setHex(v.isBraking ? 0xff0000 : 0x450a0a);
+        v.brakeLightMat.emissiveIntensity = v.isBraking ? 2.4 : 0.35;
       }
-
-      // Police lightbar: cheap alternating red/blue flash.
-      if (!dormant && v.lightbarMats) {
-        v.lightbarTimer = (v.lightbarTimer ?? 0) + dt;
-        const phase = Math.floor(v.lightbarTimer / 0.35) % 2;
+      if (v.lightbarMats) {
+        const phase = Math.floor(this.elapsedSeconds / 0.35) % 2;
         v.lightbarMats[0].emissiveIntensity = phase === 0 ? 3.2 : 0.15;
         v.lightbarMats[1].emissiveIntensity = phase === 1 ? 3.2 : 0.15;
       }
-
-      // Advance. Ground height is re-sampled ONLY inside the flyover band —
-      // the rest of the world is flat (recycle() sets y correctly), which
-      // kills ~60 Vector3+object allocations per frame: getGroundHeight()
-      // allocates per call and we only need .height.
-      v.position.z += v.direction * v.speed * dt;
-      v.velocity.set(0, 0, v.direction * v.speed);
-      if (!dormant) {
-        const nz = v.position.z;
-        if (nz > -540 && nz < -260) {
-          v.position.y = getGroundHeight(v.position.x, nz).height;
-        }
-        v.mesh.position.z = v.position.z;
-        v.mesh.position.y = v.position.y;
-        // E-rickshaws wobble faintly at speed — cheap street life, physics untouched.
-        v.mesh.position.x =
-          v.position.x +
-          (v.type === 'e_rickshaw'
-            ? Math.sin(nowMs * 0.004 + v.id * 1.7) * 0.06 * Math.min(1, v.speed / 8)
-            : 0);
+      v.brakeHoldTime = v.isBraking ? v.brakeHoldTime + dt : 0;
+      v.honkCooldown = Math.max(0, v.honkCooldown - dt);
+      if (v.type !== 'cow' && v.brakeHoldTime > 3 && v.honkCooldown === 0 && distance < 55 && signalAllows(v.cursor, this.elapsedSeconds)) {
+        this.audioEngine?.playHorn(); v.honkCooldown = 10 + v.id % 4;
       }
-
-      // OBB collision with player — every frame, never staggered.
-      // (Dormant vehicles are 400m+ away; overlap is impossible.)
-      let isOverlapping = false;
-      if (!dormant) {
-        const pDx = Math.abs(playerPos.x - v.position.x);
-        const pDz = Math.abs(playerPos.z - v.position.z);
-        const combinedHalfWidth = 1.0 + v.width / 2;
-        const combinedHalfLength = 2.1 + v.length / 2;
-
-        isOverlapping = pDx < combinedHalfWidth && pDz < combinedHalfLength;
-        if (isOverlapping) {
-          // Physical separation runs every frame, but the collision EVENT fires
-          // only on the rising edge — GameEngine applies damage/sound per event.
-          if (!v.wasColliding) {
-            collided = true;
-            hitVehicle = v;
-            hitSpeed = Math.abs(playerVelocity.length() * 3.6 - v.speed * 3.6);
-          }
-          if (playerPos.z > v.position.z) {
-            v.position.z -= 0.6 * v.direction;
-          } else {
-            v.position.z += 0.6 * v.direction;
-          }
-        }
+      const overlap = Math.abs(v.position.y - playerPos.y) < 2 && footprintsOverlap(
+        { x: playerPos.x, z: playerPos.z, heading: playerHeading, width: playerWidth, length: playerLength },
+        { x: v.position.x, z: v.position.z, heading: v.heading, width: v.width, length: v.length }
+      );
+      if (overlap && !v.wasColliding) {
+        collided = true; hitVehicle = v;
+        hitSpeed = Math.hypot(playerVelocity.x - v.velocity.x, playerVelocity.z - v.velocity.z); // m/s, same unit as player physics
+        v.speed = 0;
       }
-      v.wasColliding = isOverlapping;
+      v.wasColliding = overlap;
     }
-
     return { collided, hitVehicle, hitSpeed };
   }
 }

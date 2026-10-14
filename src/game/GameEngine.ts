@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { ScenePresentation } from './ScenePresentation';
 import { AudioEngine } from './audio/AudioEngine';
 import { CameraManager } from './camera/CameraManager';
 import { CAR_CATALOG, getCarById } from './cars/CarCatalog';
@@ -8,6 +9,7 @@ import { InputManager } from './input/InputManager';
 import { MissionManager } from './missions/MissionManager';
 import type { MissionDef } from './missions/MissionPacks';
 import { VehiclePhysics } from './physics/VehiclePhysics';
+import { WorldCollision } from './physics/WorldCollision';
 import { SaveManager } from './save/SaveManager';
 import { TrafficSystem } from './traffic/TrafficSystem';
 import { CameraView, GameMode, HUDState, PlayerSaveData, QualityLevel, Weather } from './types';
@@ -17,6 +19,9 @@ import { WorldBuilder, WorldObjects } from './world/WorldBuilder';
 export class GameEngine {
   public renderer: THREE.WebGLRenderer;
   public scene: THREE.Scene;
+  private presentation: ScenePresentation;
+  private environmentTarget: THREE.WebGLRenderTarget | null = null;
+  private activeWeather: Weather = 'clear';
   public cameraManager: CameraManager;
   public inputManager: InputManager;
   public audioEngine: AudioEngine;
@@ -30,11 +35,14 @@ export class GameEngine {
 
   // Environment & Lighting
   private worldObjects: WorldObjects;
+  private worldCollision: WorldCollision;
+  private previousPhysicsPosition = new THREE.Vector3();
+  private worldCollisionCooldown = 0;
   private dirLight: THREE.DirectionalLight;
   private hemiLight: THREE.HemisphereLight;
   private skyDome: THREE.Mesh;
   private destinationMarker: THREE.Group;
-  private rainParticles: THREE.Points | null = null;
+  private rainParticles: THREE.LineSegments | null = null;
   // Rain density follows the active quality tier (1500 on med/high, 0 on low).
   private rainParticleCount: number = 1500;
   private pmremGenerator: THREE.PMREMGenerator;
@@ -142,6 +150,7 @@ export class GameEngine {
     // 4. City, Highway & World Construction
     this.worldObjects = WorldBuilder.buildWorld();
     this.scene.add(this.worldObjects.group);
+    this.worldCollision = new WorldCollision(this.worldObjects.group);
 
     // 5. Player Car Setup
     this.currentCarId = savedData.selectedCarId || 'alto';
@@ -158,7 +167,9 @@ export class GameEngine {
     this.scene.add(this.destinationMarker);
 
     // 7. Dynamic Weather & Particle Systems
-    this.setupEffects(savedData.settings.weather);
+    this.presentation = new ScenePresentation(this.renderer, this.scene, this.cameraManager.camera);
+    this.setQuality(savedData.settings.quality);
+    this.setWeather(savedData.settings.weather);
 
     this.inputManager.setCallbacks({
       onPause: () => this.onPauseRequestCallback?.(),
@@ -170,75 +181,71 @@ export class GameEngine {
     window.addEventListener('resize', this.onResize);
   }
 
-  // Generates high-dynamic range sky gradient canvas and bakes PMREM reflections
-  private setupEnvironmentMap() {
-    const canvas = document.createElement('canvas');
-    canvas.width = 512;
-    canvas.height = 256;
+  private skyPalette(): { top: string; horizon: string; ground: string; night: boolean } {
+    const hour = this.cachedSave?.settings.timeOfDay ?? SaveManager.load().settings.timeOfDay;
+    const night = hour < 6 || hour >= 19;
+    if (night) return { top: '#060e21', horizon: '#26364f', ground: '#10121b', night };
+    if (this.activeWeather === 'rain') return { top: '#344656', horizon: '#96a6ad', ground: '#30383b', night };
+    if (this.activeWeather === 'smog') return { top: '#88847b', horizon: '#c1b69d', ground: '#45443d', night };
+    if (hour < 8 || hour >= 16.5) return { top: '#527796', horizon: '#eac69d', ground: '#37342c', night };
+    return { top: '#477cac', horizon: '#c7d7dc', ground: '#41453e', night };
+  }
+
+  private paintSky(canvas: HTMLCanvasElement): void {
     const ctx = canvas.getContext('2d')!;
+    const { top, horizon, ground, night } = this.skyPalette();
+    const w = canvas.width, h = canvas.height;
+    const gradient = ctx.createLinearGradient(0, 0, 0, h);
+    gradient.addColorStop(0, top); gradient.addColorStop(0.48, horizon);
+    gradient.addColorStop(0.53, ground); gradient.addColorStop(1, ground);
+    ctx.fillStyle = gradient; ctx.fillRect(0, 0, w, h);
+    if (night) {
+      ctx.fillStyle = '#b4c6dd';
+      for (let i = 0; i < 65; i++) ctx.fillRect((i * 137.5) % w, (i * 73.7) % (h * 0.42), 1.2, 1.2);
+    } else {
+      ctx.fillStyle = 'rgba(230,237,238,0.16)';
+      for (let i = 0; i < 18; i++) {
+        ctx.beginPath(); ctx.ellipse((i * 91) % w, h * (0.25 + Math.sin(i * 3) * 0.08), w * 0.06, h * 0.014, 0, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+  }
 
-    // Rich sky gradient: zenith deep azure -> horizon warm golden haze -> ground dark warm
-    const grad = ctx.createLinearGradient(0, 0, 0, 256);
-    grad.addColorStop(0, '#0284c7');   // Sky Zenith
-    grad.addColorStop(0.45, '#7dd3fc'); // Sky Horizon
-    grad.addColorStop(0.5, '#fef08a');  // Delhi Sun Haze
-    grad.addColorStop(0.56, '#f59e0b'); // Golden Warmth
-    grad.addColorStop(0.66, '#334155'); // Ground Horizon
-    grad.addColorStop(1, '#0f172a');    // Deep Road Ground
-
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, 512, 256);
-
-    // Bright sun specular disc
-    const sunGrad = ctx.createRadialGradient(256, 120, 2, 256, 120, 48);
-    sunGrad.addColorStop(0, '#ffffff');
-    sunGrad.addColorStop(0.35, '#fef08a');
-    sunGrad.addColorStop(1, 'rgba(254, 240, 138, 0)');
-    ctx.fillStyle = sunGrad;
-    ctx.beginPath();
-    ctx.arc(256, 120, 48, 0, Math.PI * 2);
-    ctx.fill();
-
-    const tex = new THREE.CanvasTexture(canvas);
+  private setupEnvironmentMap(): void {
+    const canvas = document.createElement('canvas'); canvas.width = 512; canvas.height = 256;
+    this.paintSky(canvas);
+    const tex = new THREE.CanvasTexture(canvas); tex.colorSpace = THREE.SRGBColorSpace;
     tex.mapping = THREE.EquirectangularReflectionMapping;
-    const envMap = this.pmremGenerator.fromEquirectangular(tex).texture;
-    this.scene.environment = envMap;
+    this.environmentTarget?.dispose();
+    this.environmentTarget = this.pmremGenerator.fromEquirectangular(tex);
+    this.scene.environment = this.environmentTarget.texture;
     tex.dispose();
   }
 
   private createSkyDome(): THREE.Mesh {
-    const geo = new THREE.SphereGeometry(920, 32, 16);
-    geo.scale(-1, 1, 1);
+    const geo = new THREE.SphereGeometry(920, 24, 12); geo.scale(-1, 1, 1);
+    const canvas = document.createElement('canvas'); canvas.width = 1024; canvas.height = 512;
+    this.paintSky(canvas);
+    const tex = new THREE.CanvasTexture(canvas); tex.colorSpace = THREE.SRGBColorSpace;
+    return new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: tex, depthWrite: false, fog: false, toneMapped: false }));
+  }
 
-    const canvas = document.createElement('canvas');
-    canvas.width = 1024;
-    canvas.height = 512;
-    const ctx = canvas.getContext('2d')!;
-
-    // Rich daylight sky gradient
-    const grad = ctx.createLinearGradient(0, 0, 0, 512);
-    grad.addColorStop(0, '#0369a1');
-    grad.addColorStop(0.55, '#38bdf8');
-    grad.addColorStop(0.75, '#fef08a');
-    grad.addColorStop(0.85, '#f59e0b');
-    grad.addColorStop(1, '#1e293b');
-
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, 1024, 512);
-
-    // Procedural soft cloud puffs across horizon
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.28)';
-    for (let i = 0; i < 28; i++) {
-      const cx = (i * 70) % 1024;
-      const cy = 200 + (Math.sin(i) * 50);
-      ctx.beginPath();
-      ctx.ellipse(cx, cy, 80 + Math.sin(i) * 30, 24, 0, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    const tex = new THREE.CanvasTexture(canvas);
-    const mat = new THREE.MeshBasicMaterial({ map: tex, depthWrite: false });
-    return new THREE.Mesh(geo, mat);
+  private applyAtmosphere(): void {
+    const hour = this.cachedSave.settings.timeOfDay;
+    const palette = this.skyPalette();
+    const daylight = Math.max(0, Math.sin((hour - 6) / 12 * Math.PI));
+    const wet = this.activeWeather === 'rain';
+    this.hemiLight.intensity = palette.night ? 0.3 : wet ? 0.75 : 0.7 + daylight * 0.25;
+    this.hemiLight.color.set(palette.night ? '#8aa7d1' : palette.horizon);
+    this.dirLight.intensity = palette.night ? 0.35 : wet ? 0.6 : 1.2 + daylight * 1.4;
+    this.dirLight.color.set(palette.night ? '#a5bde0' : hour >= 16.5 || hour < 8 ? '#ffd3a1' : '#fff1d9');
+    this.renderer.toneMappingExposure = palette.night ? 0.85 : wet ? 1 : 1.08;
+    this.scene.fog = new THREE.FogExp2(palette.horizon, this.activeWeather === 'smog' ? 0.0045 : wet ? 0.003 : 0.0018);
+    this.scene.environmentIntensity = palette.night ? 0.35 : 0.75;
+    this.setupEnvironmentMap();
+    const material = this.skyDome.material as THREE.MeshBasicMaterial;
+    this.paintSky(material.map!.image as HTMLCanvasElement); material.map!.needsUpdate = true;
+    this.worldObjects.setEnvironment(palette.night, wet);
+    this.inputManager.state.headlights = palette.night;
   }
 
   private createDestinationMarker(): THREE.Group {
@@ -281,20 +288,18 @@ export class GameEngine {
     }
     const rainCount = this.rainParticleCount;
     const rainGeo = new THREE.BufferGeometry();
-    const rainPos = new Float32Array(rainCount * 3);
+    const rainPos = new Float32Array(rainCount * 6);
     for (let i = 0; i < rainCount; i++) {
-      rainPos[i * 3] = (Math.random() - 0.5) * 95;
-      rainPos[i * 3 + 1] = Math.random() * 50;
-      rainPos[i * 3 + 2] = (Math.random() - 0.5) * 95;
+      const x = (Math.random() - 0.5) * 95, y = Math.random() * 50, z = (Math.random() - 0.5) * 95;
+      rainPos.set([x, y, z, x + 0.12, y - 0.9, z], i * 6);
     }
     rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos, 3));
-    const rainMat = new THREE.PointsMaterial({
+    const rainMat = new THREE.LineBasicMaterial({
       color: 0x93c5fd,
-      size: 0.5,
       transparent: true,
-      opacity: 0.75,
+      opacity: 0.35,
     });
-    this.rainParticles = new THREE.Points(rainGeo, rainMat);
+    this.rainParticles = new THREE.LineSegments(rainGeo, rainMat);
     this.scene.add(this.rainParticles);
     this.audioEngine.setRain(true);
   }
@@ -320,7 +325,8 @@ export class GameEngine {
 
   public setQuality(quality: QualityLevel) {
     const q = GAME_CONFIG.QUALITY_SETTINGS[quality === 'auto' ? 'med' : quality];
-    this.renderer.setPixelRatio(q.pixelRatio);
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, q.pixelRatio));
+    this.presentation?.setQuality(quality === 'auto' ? 'med' : quality);
     this.renderer.shadowMap.enabled = q.shadows;
     // Honest shadow resolution: apply the tier's shadowMapSize to the light.
     // (low has shadows: false and no shadowMapSize key.)
@@ -345,7 +351,7 @@ export class GameEngine {
     }
     // NOTE: tier trafficCount (22/42/65) is informational — the live pool size
     // is owned by TrafficSystem.setDensity (24/44/68). Kept in sync by P4-C.
-    this.trafficSystem.setDensity(quality === 'low' ? 'low' : quality === 'high' ? 'high' : 'medium');
+    this.applyTrafficDensity(quality === 'auto' ? this.autoQualityTier : quality);
     if (quality === 'auto') {
       // User re-armed auto mode: restart from the med tier.
       this.autoQualityTier = 'med';
@@ -356,25 +362,22 @@ export class GameEngine {
 
   /** Re-read save data (settings/cash) into the engine cache. Call after any SettingsModal change. */
   public refreshSettings() {
+    const previous = this.cachedSave.settings;
     this.cachedSave = SaveManager.load();
+    if (previous.timeOfDay !== this.cachedSave.settings.timeOfDay) this.applyAtmosphere();
+    this.applyTrafficDensity(this.cachedSave.settings.quality === 'auto' ? this.autoQualityTier : this.cachedSave.settings.quality);
+  }
+
+  private applyTrafficDensity(quality: 'low' | 'med' | 'high'): void {
+    const requested = this.cachedSave.settings.trafficDensity;
+    this.trafficSystem.setDensity(quality === 'low' ? 'low' : requested);
   }
 
   public setWeather(weather: Weather) {
-    if (weather === 'rain') {
-      this.scene.fog = new THREE.FogExp2(0x64748b, 0.0035);
-      this.renderer.toneMappingExposure = 1.0;
-      this.createRainParticles();
-    } else if (weather === 'smog') {
-      this.scene.fog = new THREE.FogExp2(0x78716c, 0.0045);
-      this.renderer.toneMappingExposure = 1.05;
-      this.disposeRainParticles();
-      this.audioEngine.setRain(false);
-    } else {
-      this.scene.fog = new THREE.FogExp2(0xa7c2d9, 0.0013);
-      this.renderer.toneMappingExposure = 1.2;
-      this.disposeRainParticles();
-      this.audioEngine.setRain(false);
-    }
+    this.activeWeather = weather;
+    this.applyAtmosphere();
+    if (weather === 'rain') this.createRainParticles();
+    else { this.disposeRainParticles(); this.audioEngine.setRain(false); }
   }
 
   public switchCar(carId: string) {
@@ -419,6 +422,9 @@ export class GameEngine {
       mode = 'free_drive';
     }
     this.refreshSettings();
+    this.physicsAccumulator = 0;
+    this.inputManager.resetInputs();
+    this.setWeather(this.cachedSave.settings.weather);
     this.isGarageMode = false;
     this.isPaused = false;
     this.audioEngine.init();
@@ -529,7 +535,7 @@ export class GameEngine {
       }
     }
 
-    this.renderer.render(this.scene, this.cameraManager.camera);
+    this.presentation.render();
     requestAnimationFrame(this.renderLoop);
   };
 
@@ -548,19 +554,28 @@ export class GameEngine {
   }
 
   private updateSimulation(frameDelta: number) {
-    const clampedDt = Math.min(frameDelta, 0.08);
+    const clampedDt = Math.min(frameDelta, 0.1);
 
     this.inputManager.update(this.physics.speedKmh);
 
     // 120 Hz Fixed Timestep Physics
     const fixedDt = GAME_CONFIG.PHYSICS_STEP;
-    this.physicsAccumulator += clampedDt;
+    this.physicsAccumulator = Math.min(this.physicsAccumulator + clampedDt, fixedDt * GAME_CONFIG.MAX_SUB_STEPS);
     let substeps = 0;
 
-    const isRaining = this.cachedSave.settings.weather === 'rain';
+    const isRaining = this.activeWeather === 'rain';
 
     while (this.physicsAccumulator >= fixedDt && substeps < GAME_CONFIG.MAX_SUB_STEPS) {
+      this.previousPhysicsPosition.copy(this.physics.position);
       this.physics.update(fixedDt, this.inputManager.state, getGroundHeight, isRaining);
+      const wallImpact = this.worldCollision.resolve(this.physics, this.previousPhysicsPosition);
+      this.worldCollisionCooldown = Math.max(0, this.worldCollisionCooldown - fixedDt);
+      if (wallImpact > 1.5 && this.worldCollisionCooldown === 0) {
+        this.physics.damagePct = Math.min(1, this.physics.damagePct + wallImpact / 250);
+        this.missionManager.onCollision();
+        this.audioEngine.playCollisionThud(wallImpact / 20);
+        this.worldCollisionCooldown = 0.5;
+      }
       this.physicsAccumulator -= fixedDt;
       substeps++;
     }
@@ -592,9 +607,10 @@ export class GameEngine {
     );
 
     // Shadow light tracks car
+    const sunAngle = (this.cachedSave.settings.timeOfDay - 6) / 12 * Math.PI;
     this.dirLight.position.set(
-      this.physics.position.x + 55,
-      this.physics.position.y + 90,
+      this.physics.position.x + Math.cos(sunAngle) * 80,
+      this.physics.position.y + Math.max(25, Math.sin(sunAngle) * 90),
       this.physics.position.z + 55
     );
     this.dirLight.target.position.copy(this.physics.position);
@@ -603,7 +619,7 @@ export class GameEngine {
     this.skyDome.position.copy(this.physics.position);
 
     // Traffic AI
-    const trafficResult = this.trafficSystem.update(clampedDt, this.physics.position, this.physics.velocity);
+    const trafficResult = this.trafficSystem.update(clampedDt, this.physics.position, this.physics.velocity, this.physics.heading, this.physics.halfWidth * 2, this.physics.halfLength * 2);
     if (trafficResult.collided && trafficResult.hitVehicle) {
       const hitNormal = new THREE.Vector3()
         .subVectors(this.physics.position, trafficResult.hitVehicle.position)
@@ -614,7 +630,7 @@ export class GameEngine {
     }
 
     // World animation (Metro train, Toll barriers)
-    this.worldObjects.update(clampedDt, this.physics.position.z);
+    this.worldObjects.update(clampedDt, this.physics.position.z, this.trafficSystem.elapsedSeconds);
 
     // FASTag Toll check (Z: 150)
     const distToToll = Math.abs(this.physics.position.z - 150);
@@ -688,6 +704,18 @@ export class GameEngine {
       this.destinationMarker.rotation.y += 1.8 * clampedDt;
       const s = 1.0 + Math.sin(performance.now() * 0.005) * 0.15;
       this.destinationMarker.scale.set(s, 1.0, s);
+    }
+
+    if (this.rainParticles) {
+      this.rainParticles.position.copy(this.physics.position);
+      const attribute = this.rainParticles.geometry.getAttribute('position') as THREE.BufferAttribute;
+      for (let i = 0; i < attribute.count; i += 2) {
+        let y = attribute.getY(i) - clampedDt * 26;
+        if (y < 0) y += 50;
+        attribute.setY(i, y);
+        attribute.setY(i + 1, y - 0.9);
+      }
+      attribute.needsUpdate = true;
     }
 
     // Camera update with banking roll
@@ -817,6 +845,7 @@ export class GameEngine {
     const w = window.innerWidth;
     const h = window.innerHeight;
     this.renderer.setSize(w, h);
+    this.presentation.resize();
     this.cameraManager.resize(w, h);
   };
 
@@ -826,6 +855,10 @@ export class GameEngine {
     this.inputManager.dispose();
     this.audioEngine.dispose();
     this.pmremGenerator.dispose();
+    this.worldCollision.dispose();
+    this.presentation.dispose();
+    this.environmentTarget?.dispose();
+    this.disposeRainParticles();
     this.renderer.dispose();
   }
 }

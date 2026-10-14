@@ -74,6 +74,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </h2>
           <button
             onClick={onClose}
+            aria-label="Close settings"
             className="p-2 rounded-xl bg-neutral-900 border border-neutral-700 text-neutral-300 hover:border-neutral-500"
           >
             <X className="w-5 h-5" />
@@ -204,6 +205,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   }`}
                 >
                   {w.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <div className="text-neutral-400 font-bold mb-2">TIME OF DAY</div>
+            <div className="grid grid-cols-3 gap-2">
+              {[{ hour: 8, label: 'Morning' }, { hour: 17.5, label: 'Golden hour' }, { hour: 22, label: 'Night drive' }].map(option => (
+                <button key={option.hour} onClick={() => updateSetting('timeOfDay', option.hour)} aria-pressed={settings.timeOfDay === option.hour}
+                  className={`py-2 rounded-xl font-bold transition-all ${settings.timeOfDay === option.hour ? 'bg-amber-500 text-black' : 'bg-neutral-900 border border-neutral-800 text-neutral-400'}`}>
+                  {option.label}
                 </button>
               ))}
             </div>
