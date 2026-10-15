@@ -15,6 +15,10 @@ export class InputManager {
     resetCar: false,
   };
 
+  private touchMove = { x: 0, z: 0 };
+  private jumpRequested = false;
+  private onInteractCallback?: () => void;
+  private onPhoneCallback?: () => void;
   private keys: Record<string, boolean> = {};
   private touchThrottleVal: number = 0;
   private touchBrakeVal: number = 0;
@@ -31,11 +35,15 @@ export class InputManager {
   }
 
   public setCallbacks(callbacks: {
+    onInteract?: () => void;
+    onPhone?: () => void;
     onPause?: () => void;
     onHorn?: () => void;
     onIndicator?: () => void;
     onCameraToggle?: () => void;
   }) {
+    this.onInteractCallback = callbacks.onInteract;
+    this.onPhoneCallback = callbacks.onPhone;
     this.onPauseCallback = callbacks.onPause;
     this.onHornCallback = callbacks.onHorn;
     this.onIndicatorCallback = callbacks.onIndicator;
@@ -50,13 +58,16 @@ export class InputManager {
 
   private onKeyDown = (e: KeyboardEvent) => {
       // Prevent browser default scrolling on arrow keys or space
-      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Tab'].includes(e.code)) {
         e.preventDefault();
       }
 
       this.keys[e.code] = true;
 
       if (e.repeat) return;
+      if (e.code === 'KeyF') this.onInteractCallback?.();
+      if (e.code === 'Tab') this.onPhoneCallback?.();
+      if (e.code === 'Space') this.jumpRequested = true;
       if (e.code === 'KeyH') {
         this.state.horn = true;
         this.onHornCallback?.();
@@ -97,6 +108,8 @@ export class InputManager {
 
   public resetInputs = () => {
     this.keys = {};
+    this.touchMove = { x: 0, z: 0 };
+    this.jumpRequested = false;
     this.touchThrottleVal = this.touchBrakeVal = this.touchSteerVal = 0;
     this.touchHandbrakeVal = false;
     this.state.throttle = this.state.brake = this.state.steer = 0;
@@ -121,25 +134,12 @@ export class InputManager {
     let targetThrottle = 0;
     let targetBrake = 0;
 
-    if (keyUp) {
-      if (this.state.gear === 'P') this.state.gear = 'D';
-      targetThrottle = 1.0;
-    }
-
-    if (keyDown) {
-      if (this.state.gear === 'R') {
-        targetThrottle = 1.0;
-      } else if (currentSpeedKmh < 1.5 && !keyUp) {
-        // Auto-reverse when stopped and holding S/Down
-        this.state.gear = 'R';
-        targetThrottle = 1.0;
-      } else {
-        targetBrake = 1.0;
-      }
-    } else if (this.state.gear === 'R' && keyUp && currentSpeedKmh < 1.5) {
-      // Auto-switch back to Drive when pressing forward
-      this.state.gear = 'D';
-      targetThrottle = 1.0;
+    if (keyUp && !keyDown) {
+      if (this.state.gear === 'R' && currentSpeedKmh >= 1.5) targetBrake = 1;
+      else { this.state.gear = 'D'; targetThrottle = 1; }
+    } else if (keyDown && !keyUp) {
+      if (this.state.gear !== 'R' && currentSpeedKmh >= 1.5) targetBrake = 1;
+      else { this.state.gear = 'R'; targetThrottle = 1; }
     }
 
     // Merge Keyboard + Touch (highest priority wins)
@@ -155,6 +155,22 @@ export class InputManager {
 
     // Handbrake
     this.state.handbrake = Boolean(keySpace || this.touchHandbrakeVal);
+  }
+
+  public setJoystick(x: number, z: number): void {
+    const length = Math.max(1, Math.hypot(x, z));
+    this.touchMove = { x: x / length, z: z / length };
+    this.setTouchSteer(this.touchMove.x);
+  }
+
+  public requestJump(): void { this.jumpRequested = true; }
+
+  public characterInput() {
+    const x = Number(!!(this.keys.KeyD || this.keys.ArrowRight)) - Number(!!(this.keys.KeyA || this.keys.ArrowLeft));
+    const z = Number(!!(this.keys.KeyS || this.keys.ArrowDown)) - Number(!!(this.keys.KeyW || this.keys.ArrowUp));
+    const jump = this.jumpRequested; this.jumpRequested = false;
+    return { x: x || this.touchMove.x, z: z || this.touchMove.z,
+      sprint: !!(this.keys.ShiftLeft || this.keys.ShiftRight), jump };
   }
 
   public setTouchThrottle(val: number) {

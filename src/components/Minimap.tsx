@@ -1,7 +1,9 @@
+import { CP_ROAD_RADII } from '../game/world/ConnaughtPlace';
 import React, { useMemo } from 'react';
 import { ROAD_WAYPOINTS, ROAD_SEGMENTS, POINTS_OF_INTEREST } from '../game/world/MapData';
 
 interface MinimapProps {
+  zoom?: number;
   playerX: number;
   playerZ: number;
   playerHeading: number;
@@ -21,6 +23,7 @@ const POI_SHORT_LABELS: Record<string, string> = {
 };
 
 export const Minimap: React.FC<MinimapProps> = ({
+  zoom = 0.08,
   playerX,
   playerZ,
   playerHeading,
@@ -29,7 +32,6 @@ export const Minimap: React.FC<MinimapProps> = ({
   hasTarget,
 }) => {
   const mapSize = 130;
-  const zoom = 0.08; // scale factor (pixels per meter)
 
   // Transform coordinates to radar view centered on player.
   // +X world -> screen right, +Z world -> screen down (north-up: Delhi at top).
@@ -90,6 +92,11 @@ export const Minimap: React.FC<MinimapProps> = ({
 
       {/* SVG roads, POIs, target */}
       <svg className="absolute inset-0 w-full h-full pointer-events-none">
+        <circle cx={transform(0, -800).x} cy={transform(0, -800).y} r={30 * zoom} fill="#3b6146" opacity={0.6} />
+        {CP_ROAD_RADII.map(radius => {
+          const centre = transform(0, -800);
+          return <circle key={radius} cx={centre.x} cy={centre.y} r={radius * zoom} fill="none" stroke="#94a3b8" strokeWidth={2} />;
+        })}
         {/* Road network polylines */}
         {segmentLines.map((seg) => {
           const a = transform(seg.x1, seg.z1);

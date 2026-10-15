@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { OpenWorldSession, COURIER_DESTINATION } from './openworld/OpenWorldSession';
 import { ScenePresentation } from './ScenePresentation';
 import { AudioEngine } from './audio/AudioEngine';
 import { CameraManager } from './camera/CameraManager';
@@ -17,6 +18,7 @@ import { getGroundHeight, getNearestRoadInfo, POINTS_OF_INTEREST } from './world
 import { WorldBuilder, WorldObjects } from './world/WorldBuilder';
 
 export class GameEngine {
+  public readonly openWorld = new OpenWorldSession();
   public renderer: THREE.WebGLRenderer;
   public scene: THREE.Scene;
   private presentation: ScenePresentation;
@@ -161,6 +163,7 @@ export class GameEngine {
     this.physics = new VehiclePhysics(spec, upgrades, new THREE.Vector3(-55, 0.4, -800), -Math.PI / 2);
     this.carVisuals = createCarMesh(spec, carColor);
     this.scene.add(this.carVisuals.group);
+    this.scene.add(this.openWorld.player.mesh);
 
     // 6. Floating 3D Destination Marker
     this.destinationMarker = this.createDestinationMarker();
@@ -172,12 +175,16 @@ export class GameEngine {
     this.setWeather(savedData.settings.weather);
 
     this.inputManager.setCallbacks({
+      onInteract: () => this.interact(),
+      onPhone: () => this.setPhoneOpen(!this.openWorld.phoneOpen),
       onPause: () => this.onPauseRequestCallback?.(),
       onHorn: () => this.audioEngine.playHorn(),
       onIndicator: () => this.audioEngine.playIndicatorTick(),
       onCameraToggle: () => this.cycleCamera(),
     });
 
+    this.cameraManager.bindOrbit(this.renderer.domElement, () => !this.isGarageMode && !this.isPaused && !this.openWorld.phoneOpen, () => this.openWorld.mode === 'driving');
+    this.renderer.domElement.addEventListener('click', this.onCarTap);
     window.addEventListener('resize', this.onResize);
   }
 
@@ -222,11 +229,11 @@ export class GameEngine {
   }
 
   private createSkyDome(): THREE.Mesh {
-    const geo = new THREE.SphereGeometry(920, 24, 12); geo.scale(-1, 1, 1);
+    const geo = new THREE.SphereGeometry(920, 24, 12);
     const canvas = document.createElement('canvas'); canvas.width = 1024; canvas.height = 512;
     this.paintSky(canvas);
     const tex = new THREE.CanvasTexture(canvas); tex.colorSpace = THREE.SRGBColorSpace;
-    return new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: tex, depthWrite: false, fog: false, toneMapped: false }));
+    return new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: tex, side: THREE.BackSide, depthWrite: false, fog: false, toneMapped: false }));
   }
 
   private applyAtmosphere(): void {
@@ -239,6 +246,7 @@ export class GameEngine {
     this.dirLight.intensity = palette.night ? 0.35 : wet ? 0.6 : 1.2 + daylight * 1.4;
     this.dirLight.color.set(palette.night ? '#a5bde0' : hour >= 16.5 || hour < 8 ? '#ffd3a1' : '#fff1d9');
     this.renderer.toneMappingExposure = palette.night ? 0.85 : wet ? 1 : 1.08;
+    this.scene.background = new THREE.Color(palette.horizon);
     this.scene.fog = new THREE.FogExp2(palette.horizon, this.activeWeather === 'smog' ? 0.0045 : wet ? 0.003 : 0.0018);
     this.scene.environmentIntensity = palette.night ? 0.35 : 0.75;
     this.setupEnvironmentMap();
@@ -408,6 +416,36 @@ export class GameEngine {
     this.scene.add(this.carVisuals.group);
   }
 
+  public interact(): void {
+    if (this.isGarageMode || this.isPaused) return;
+    if (this.openWorld.interact(this.physics, this.worldCollision)) {
+      this.inputManager.resetInputs(); this.inputManager.setGear(this.physics.gearMode);
+      this.cameraManager.setView('chase'); this.cameraManager.resetFollow();
+      this.cameraManager.snapChase(this.physics.position, this.physics.heading);
+    }
+    this.dispatchHud();
+  }
+
+  private onCarTap = (event: MouseEvent): void => {
+    if (this.isGarageMode || this.isPaused || this.openWorld.mode !== 'on_foot' || this.cameraManager.orbitWasDragged) return;
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    const pointer = new THREE.Vector2((event.clientX - rect.left) / rect.width * 2 - 1, -(event.clientY - rect.top) / rect.height * 2 + 1);
+    const ray = new THREE.Raycaster(); ray.setFromCamera(pointer, this.cameraManager.camera);
+    if (ray.intersectObject(this.carVisuals.group, true).length) this.interact();
+  };
+
+  public setPhoneOpen(open: boolean): void {
+    if (this.isGarageMode || this.isPaused) return;
+    this.openWorld.phoneOpen = open; this.inputManager.resetInputs(); this.dispatchHud();
+  }
+
+  public acceptCourier(): void {
+    if (this.isGarageMode || this.missionManager.currentMode !== 'free_drive' || this.openWorld.courier !== 'available') return;
+    this.openWorld.acceptCourier();
+    this.destinationMarker.position.copy(COURIER_DESTINATION); this.destinationMarker.visible = true;
+    this.dispatchHud();
+  }
+
   public cycleCamera(): CameraView {
     const newView = this.cameraManager.cycleView();
     const saved = SaveManager.load();
@@ -432,7 +470,7 @@ export class GameEngine {
 
     if (mode === 'free_drive') {
       this.missionManager.startFreeDrive();
-      this.physics.reset(new THREE.Vector3(-55, 0.4, -800), -Math.PI / 2);
+      this.physics.reset(new THREE.Vector3(-43, 0.4, -795), -Math.PI / 2);
       this.destinationMarker.visible = false;
     } else if (mode === 'taxi') {
       const job = this.missionManager.startTaxiJob();
@@ -449,6 +487,18 @@ export class GameEngine {
       this.destinationMarker.visible = true;
     }
 
+    this.openWorld.start(this.physics, mode === 'free_drive');
+    this.inputManager.setGear(this.physics.gearMode);
+    this.cameraManager.setView('chase'); this.cameraManager.resetFollow();
+    this.cameraManager.snapChase(this.physics.position, this.physics.heading);
+    if (mode === 'free_drive') {
+      // Use warm Delhi evening lighting for the CP prototype.
+      this.cachedSave.settings.timeOfDay = 17.5; this.applyAtmosphere();
+      if (this.openWorld.courier === 'active') {
+        this.destinationMarker.position.copy(COURIER_DESTINATION); this.destinationMarker.visible = true;
+      }
+    }
+    this.dispatchHud();
     if (!this.isRunning) {
       this.startLoop();
     }
@@ -456,6 +506,9 @@ export class GameEngine {
 
   public enterGarage() {
     this.isGarageMode = true;
+    this.openWorld.phoneOpen = false;
+    this.openWorld.player.setActive(false);
+    this.inputManager.resetInputs();
     this.isPaused = false;
     this.refreshSettings();
     this.destinationMarker.visible = false;
@@ -470,7 +523,7 @@ export class GameEngine {
 
   public setPaused(paused: boolean) {
     this.isPaused = paused;
-    if (paused) this.inputManager.resetInputs();
+    if (paused) { this.inputManager.resetInputs(); this.openWorld.phoneOpen = false; }
   }
 
   public resetCarToRoad() {
@@ -479,6 +532,8 @@ export class GameEngine {
       new THREE.Vector3(roadInfo.nearestWaypoint.x - 3.6, roadInfo.nearestWaypoint.y + 0.4, roadInfo.nearestWaypoint.z),
       0
     );
+    this.openWorld.start(this.physics, this.openWorld.mode === 'on_foot');
+    this.cameraManager.resetFollow();
   }
 
   public startLoop() {
@@ -493,6 +548,13 @@ export class GameEngine {
 
     const frameDelta = (time - this.lastTime) / 1000;
     this.lastTime = time;
+
+    // Keep DelhiOS responsive even on devices where a 3D frame is expensive.
+    // The phone pauses the world and retains the last rendered scene underneath.
+    if (this.openWorld.phoneOpen) {
+      this.lastFpsCalcTime = time; this.frameCount = 0;
+      requestAnimationFrame(this.renderLoop); return;
+    }
 
     this.frameCount++;
     if (time - this.lastFpsCalcTime >= 1000) {
@@ -557,6 +619,11 @@ export class GameEngine {
     const clampedDt = Math.min(frameDelta, 0.1);
 
     this.inputManager.update(this.physics.speedKmh);
+    if (this.openWorld.phoneOpen) this.inputManager.resetInputs();
+    if (this.openWorld.mode === 'on_foot') {
+      this.inputManager.state.gear = 'P';
+      this.inputManager.state.throttle = 0; this.inputManager.state.brake = 1;
+    }
 
     // 120 Hz Fixed Timestep Physics
     const fixedDt = GAME_CONFIG.PHYSICS_STEP;
@@ -566,6 +633,9 @@ export class GameEngine {
     const isRaining = this.activeWeather === 'rain';
 
     while (this.physicsAccumulator >= fixedDt && substeps < GAME_CONFIG.MAX_SUB_STEPS) {
+      if (this.openWorld.mode === 'on_foot') {
+        this.openWorld.player.update(fixedDt, this.inputManager.characterInput(), this.cameraManager.orbitYaw, getGroundHeight, this.worldCollision, this.physics);
+      }
       this.previousPhysicsPosition.copy(this.physics.position);
       this.physics.update(fixedDt, this.inputManager.state, getGroundHeight, isRaining);
       const wallImpact = this.worldCollision.resolve(this.physics, this.previousPhysicsPosition);
@@ -606,17 +676,18 @@ export class GameEngine {
       this.inputManager.state.steer
     );
 
-    // Shadow light tracks car
+    const focus = this.openWorld.mode === 'on_foot' ? this.openWorld.player.position : this.physics.position;
+    // Shadow light follows the controlled actor.
     const sunAngle = (this.cachedSave.settings.timeOfDay - 6) / 12 * Math.PI;
     this.dirLight.position.set(
-      this.physics.position.x + Math.cos(sunAngle) * 80,
-      this.physics.position.y + Math.max(25, Math.sin(sunAngle) * 90),
-      this.physics.position.z + 55
+      focus.x + Math.cos(sunAngle) * 80,
+      focus.y + Math.max(25, Math.sin(sunAngle) * 90),
+      focus.z + 55
     );
-    this.dirLight.target.position.copy(this.physics.position);
+    this.dirLight.target.position.copy(focus);
 
     // Sky dome follows camera position
-    this.skyDome.position.copy(this.physics.position);
+    this.skyDome.position.copy(focus);
 
     // Traffic AI
     const trafficResult = this.trafficSystem.update(clampedDt, this.physics.position, this.physics.velocity, this.physics.heading, this.physics.halfWidth * 2, this.physics.halfLength * 2);
@@ -718,8 +789,13 @@ export class GameEngine {
       attribute.needsUpdate = true;
     }
 
+    if (this.openWorld.updateCourier(this.physics)) {
+      this.cachedSave.cash = SaveManager.addCash(750); this.destinationMarker.visible = false;
+    }
+
     // Camera update with banking roll
-    this.cameraManager.update(
+    if (this.openWorld.mode === 'on_foot') this.cameraManager.updateOnFoot(clampedDt, this.openWorld.player.position, this.worldObjects.group);
+    else this.cameraManager.update(
       clampedDt,
       this.physics.position,
       this.physics.heading,
@@ -733,7 +809,7 @@ export class GameEngine {
     // Engine Audio
     this.audioEngine.updateEngine(
       this.physics.rpm,
-      this.inputManager.state.throttle,
+      this.openWorld.mode === 'driving' ? this.inputManager.state.throttle : 0,
       this.physics.speedKmh,
       this.physics.isDrifting,
       this.physics.spec.isDiesel
@@ -778,7 +854,8 @@ export class GameEngine {
   private dispatchHud() {
     if (!this.onHudUpdateCallback) return;
 
-    const roadInfo = getNearestRoadInfo(this.physics.position.x, this.physics.position.z);
+    const location = this.openWorld.mode === 'on_foot' ? this.openWorld.player.position : this.physics.position;
+    const roadInfo = getNearestRoadInfo(location.x, location.z);
     const saved = this.cachedSave;
 
     let targetDist = 0;
@@ -804,6 +881,7 @@ export class GameEngine {
     const isOverSpeed = this.physics.speedKmh > (roadInfo.speedLimit + 5);
 
     const hudState: HUDState = {
+      openWorld: this.openWorld.snapshot(this.physics),
       speedKmH: Math.round(this.physics.speedKmh),
       rpm: Math.round(this.physics.rpm),
       maxRpm: GAME_CONFIG.REDLINE_RPM,
@@ -852,6 +930,8 @@ export class GameEngine {
   public destroy() {
     this.isRunning = false;
     window.removeEventListener('resize', this.onResize);
+    this.renderer.domElement.removeEventListener('click', this.onCarTap);
+    this.cameraManager.dispose(); this.openWorld.player.dispose();
     this.inputManager.dispose();
     this.audioEngine.dispose();
     this.pmremGenerator.dispose();

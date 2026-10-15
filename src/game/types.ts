@@ -89,6 +89,7 @@ export interface PlayerSaveData {
 }
 
 export interface HUDState {
+  openWorld?: import('./openworld/OpenWorldSession').OpenWorldState;
   speedKmH: number;
   rpm: number;
   maxRpm: number;

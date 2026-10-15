@@ -322,6 +322,9 @@ export function getGroundHeight(x: number, z: number): GroundHeightResult {
     return { height, normal, surfaceType };
   }
 
+  const cpRadius = Math.hypot(x, z + 800);
+  if (Math.abs(cpRadius - 42) <= 5 || Math.abs(cpRadius - 80) <= 5) return { height, normal, surfaceType: 'asphalt_dry' };
+
   // Shoulder dirt: compare against the actual half-width of the nearest road
   // segment (P1-C fix — was a hardcoded |x| > 16 that misclassified paved
   // shoulders on narrow 12 m segments and dirt on the 26 m toll plaza)

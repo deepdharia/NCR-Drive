@@ -98,10 +98,10 @@ export const MainMenu: React.FC<MainMenuProps> = ({
             </div>
             <div className="text-left">
               <div className="text-lg leading-tight text-neutral-200">
-                {hindi ? 'फ्री ड्राइव' : 'OPEN WORLD DRIVE'}
+                {hindi ? 'फ्री ड्राइव' : 'EXPLORE CONNAUGHT PLACE'}
               </div>
               <div className="text-xs font-normal text-neutral-400">
-                Drive anywhere. No mission, no timer — just the road
+                Walk, drive, and find your first Delhi hustle
               </div>
             </div>
           </div>

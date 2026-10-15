@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { buildConnaughtPlace } from './ConnaughtPlace';
 import { buildDelhiDistrict, roadClearance } from './DelhiDistrict';
 import { GAME_CONFIG } from '../config';
 import { POINTS_OF_INTEREST, ROAD_SEGMENTS, ROAD_WAYPOINTS, getGroundHeight } from './MapData';
@@ -1162,7 +1163,7 @@ export class WorldBuilder {
     worldGroup.add(trunkMesh, foliageMesh);
 
     const district = buildDelhiDistrict((text, bg) => this.getShopSignTexture(text, bg));
-    worldGroup.add(district.group);
+    worldGroup.add(district.group, buildConnaughtPlace());
 
     const setEnvironment = (night: boolean, wet: boolean) => {
       for (const material of this.roadMaterials.values()) {

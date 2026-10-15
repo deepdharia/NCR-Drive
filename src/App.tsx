@@ -3,7 +3,7 @@ import { GameEngine } from './game/GameEngine';
 import { WorldCollision } from './game/physics/WorldCollision';
 import { SaveManager } from './game/save/SaveManager';
 import { GameMode, GameScreen, HUDState, PlayerSaveData, QualityLevel, Weather } from './game/types';
-import { HUD } from './components/HUD';
+import { OpenWorldHUD } from './components/OpenWorldHUD';
 import { MainMenu } from './components/MainMenu';
 import { GarageModal } from './components/GarageModal';
 import { SettingsModal } from './components/SettingsModal';
@@ -264,21 +264,7 @@ export default function App() {
 
       {/* In-Game Driving HUD */}
       {screen === 'game' && !showPause && !showSettings && !taxiOffer && !missionResult && engineRef.current && (
-        <HUD
-          state={{
-            ...hudState,
-            taxiArchetype: taxiMeta?.archetype,
-            taxiTipHint: taxiMeta?.tipHint,
-          }}
-          inputManager={engineRef.current.inputManager}
-          playerX={engineRef.current.physics.position.x}
-          playerZ={engineRef.current.physics.position.z}
-          playerHeading={engineRef.current.physics.heading}
-          controlScheme={saveData.settings.controlScheme}
-          hindiLabels={saveData.settings.hindiLabels}
-          onCycleCamera={handleCycleCamera}
-          onPause={handlePause}
-        />
+        <OpenWorldHUD state={hudState} engine={engineRef.current} onPause={handlePause} />
       )}
 
       {startup !== 'ready' && (

@@ -73,3 +73,21 @@ test('central Delhi driving lanes and free-drive spawn are clear of solid archit
   collision.dispose();
   assert.deepEqual(blocked, [], `Blocked road samples: ${blocked.join(', ')}`);
 });
+
+test('CP circular lanes and new player/car spawn remain clear of static solids', async () => {
+  await WorldCollision.initialize();
+  const world = WorldBuilder.buildWorld(), collision = new WorldCollision(world.group);
+  const car = new VehiclePhysics(CAR_CATALOG[0]); const blocked: string[] = [];
+  for (const radius of [40, 44, 78, 82]) for (let i = 0; i < 72; i++) {
+    const angle = i / 72 * Math.PI * 2;
+    car.position.set(Math.cos(angle) * radius, 0.23, -800 + Math.sin(angle) * radius);
+    car.heading = -angle; car.velocity.set(0, 0, 0);
+    const before = car.position.clone(); collision.resolve(car, before);
+    if (before.distanceTo(car.position) > 0.05) blocked.push(`${radius}m at ${i * 5}deg`);
+  }
+  car.position.set(-43, 0.23, -795); car.heading = -Math.PI / 2;
+  const before = car.position.clone(); collision.resolve(car, before);
+  assert.ok(before.distanceTo(car.position) < 0.05, 'new Parvaaz spawn clear');
+  assert.ok(collision.isCharacterClear(new THREE.Vector3(-43.35, 0.16, -796.7)), 'on-foot door spawn clear');
+  collision.dispose(); assert.deepEqual(blocked, []);
+});

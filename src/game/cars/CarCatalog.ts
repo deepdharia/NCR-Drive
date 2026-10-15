@@ -3,8 +3,8 @@ import { CarSpecs } from '../types';
 export const CAR_CATALOG: CarSpecs[] = [
   {
     id: 'alto',
-    name: 'Alto 800',
-    hindiName: 'ऑल्टो ८००',
+    name: 'The Parvaaz',
+    hindiName: 'परवाज़',
     bodyType: 'hatchback',
     price: 0,
     unlocked: true,

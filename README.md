@@ -1,8 +1,44 @@
 # NCR Drive
 
-A browser-based Delhi-NCR taxi and driving game, built with React, TypeScript,
+A browser-based Delhi-NCR third-person exploration, taxi and driving game, built with React, TypeScript,
 Three.js and Rapier. The world is a hand-authored, compressed Delhi-inspired
 layout, not a geographically accurate digital twin.
+
+## Delhi open-world prototype
+
+Choose **Explore Connaught Place** to start on foot beside your selected car.
+New saves start with **The Parvaaz**, a compact Indian hatchback. CP has two drivable concentric roads, zebra crossings,
+open white heritage arches, and central park quadrants. Free roam starts in warm
+evening light. Existing saves, garage purchases, and taxi career remain available.
+
+| Action | Desktop | Touch |
+| --- | --- | --- |
+| Walk / steer | WASD or arrows | Left joystick |
+| Sprint | Shift while walking | — |
+| Jump | Space on foot | Jump |
+| Accelerate / reverse | W / S (brakes before reversing) | Accelerate; Reverse toggles D/R |
+| Handbrake | Space while driving | Brake (also applies service brakes) |
+| Orbit camera | Drag the scene | Drag the scene outside controls |
+| Enter / exit | F near the driver's door | Tap car or Drive / Exit |
+| DelhiOS phone | Tab | Top-right phone icon |
+
+Exiting requires speed **below 15 km/h** and a clear driver door. The parked
+vehicle and city walls block walking; camera obstructions shorten the orbit arm.
+Touch controls release on cancellation, loss of pointer capture, blur, or unmount.
+
+DelhiOS pauses the world while open and shows the live wallet (₹15,000 for a new save), local GPS, and **Hustle**.
+Accept **Shivaji Stadium Courier Run** to collect a parcel and reveal the gold
+GPS/beacon destination near the stadium metro. Exit the car and walk within 4 m
+to deliver it for ₹750. The gig runs once per session, has no time limit, and
+cannot be accepted during a taxi fare. Existing landmark discovery rewards may
+also increase your balance. No API keys or external fonts are required.
+
+`npm test` includes player movement/jumping, static capsule collision, door
+handoffs and speed limits, blocked exits, input cancellation, courier completion,
+and CP circular lane clearance. Browser smoke checks cover desktop and emulated
+touch input against the production build. Real-device performance and touch feel
+still need hardware testing. Background traffic follows the existing connected
+street graph; the new circular lanes are available for player free driving.
 
 ## Central Delhi upgrade
 

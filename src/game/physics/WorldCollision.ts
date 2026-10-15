@@ -92,5 +92,27 @@ export class WorldCollision {
     return impact;
   }
 
+  public isCharacterClear(feet: THREE.Vector3): boolean {
+    const R = WorldCollision.rapier;
+    const capsule = new R.Capsule(0.6, 0.3);
+    const centre = { x: feet.x, y: feet.y + 0.9, z: feet.z };
+    return this.world.intersectionWithShape(centre, { x: 0, y: 0, z: 0, w: 1 }, capsule) === null;
+  }
+
+  public moveCharacter(position: THREE.Vector3, previous: THREE.Vector3): void {
+    const R = WorldCollision.rapier;
+    const capsule = new R.Capsule(0.6, 0.3);
+    const rotation = { x: 0, y: 0, z: 0, w: 1 };
+    // Sweep axes separately to slide along walls rather than sticking diagonally.
+    const cursor = previous.clone();
+    for (const axis of ['x', 'z'] as const) {
+      const movement = { x: 0, y: 0, z: 0 };
+      movement[axis] = position[axis] - cursor[axis];
+      const hit = this.world.castShape({ x: cursor.x, y: position.y + 0.9, z: cursor.z }, rotation, movement, capsule, 0.02, 1, true);
+      cursor[axis] += movement[axis] * (hit ? Math.max(0, hit.time_of_impact - 0.01) : 1);
+      position[axis] = cursor[axis];
+    }
+  }
+
   public dispose(): void { this.world.free(); }
 }
