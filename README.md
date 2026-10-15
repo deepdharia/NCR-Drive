@@ -1,73 +1,103 @@
 # NCR Drive
 
-A browser-based Delhi-NCR taxi and driving game, built with React, TypeScript,
-Three.js and Rapier. The world is a hand-authored, compressed Delhi-inspired
-layout, not a geographically accurate digital twin.
+A unified Web 3D Delhi open-world game, built with **Three.js, strict TypeScript,
+and Vite**. Walk Connaught Place's arcades, drive **The Parvaaz**, and take a courier
+gig through the DelhiOS phone. All geometry, materials, sky and signs are generated
+locally. There are no external assets, font requests, API keys or backend services.
 
-## Central Delhi upgrade
+## Run and deploy
 
-- Connected road-following traffic with left-hand lanes, junction turns,
-  timed traffic signals and speed-dependent following distances.
-- Rapier swept collision queries for solid buildings, median barriers and
-  guardrails. Existing custom vehicle handling and taxi progression are retained.
-- Grip-limited braking and cornering, functional handbrake and Park, and
-  suspension pitch that follows flyover slopes.
-- Morning, golden-hour and night presets, weather-dependent sky/reflections,
-  animated rain streaks and wet-road material changes.
-- Connaught Place arcade façades, storefront signs, canopy trees and a
-  Shivaji Stadium transit shelter. Road corridors are checked for clearance.
-- Official Three.js bloom, output colour management and FXAA on medium/high;
-  low quality renders directly. Automatic quality reduces effects and traffic.
-- The 120 Hz physics loop supports up to twelve substeps per frame. Extremely
-  long stalls discard excess time rather than accumulating a simulation backlog.
-- Existing cars, garage, taxi jobs and `ncr_drive_save_v1` saves are preserved.
-
-## Run
-
-Node.js 24 is the deployment runtime.
+Use Node.js **22.12+** (Node 24 recommended).
 
 ```sh
 npm ci
 npm run dev
 ```
 
-The development server uses port 3000. No API key is needed for gameplay.
+Select **Explore Connaught Place** to start on foot beside the driver's door.
 
 ```sh
 npm run lint
 npm test
 npm run build
+npm run preview
 ```
 
-The production build is in `dist/`; the Vercel project uses the Vite preset.
-Rapier's WebAssembly is loaded in its own chunk, so the first startup downloads
-more data than the previous lightweight prototype. Subsequent visits can reuse
-the cached asset.
+`build` runs strict TypeScript checking before Vite. Output is in `dist/`. On
+Vercel select the **Vite** framework preset, `npm run build`, and `dist` as the
+output directory. No environment variables or custom server are required. The
+app uses one static page and needs no client-route rewrites. Three.js shader
+strings are split from engine code for separate caching and smaller chunks.
 
-## Verification scope
+## Controls
 
-Automated tests exercise steering, wet-road stopping, braking/reverse behaviour,
-traffic routes, density changes, mutually exclusive signals, GPS connectivity,
-rotated vehicle footprints, high-speed wall contacts, instanced colliders,
-flyover surface consistency and central Delhi road clearance. World-construction
-tests stub Canvas2D drawing only; they run the actual Three.js geometry and Rapier
-queries. They do not verify pixels, touch hardware or device frame rates.
+| Action | Desktop | Mobile |
+| --- | --- | --- |
+| Walk / steer | WASD or arrows | Left joystick |
+| Sprint | Shift | Hold Sprint on foot |
+| Jump | Space on foot | Jump |
+| Accelerate / reverse | W / S; opposite input brakes first | Accelerate; Reverse toggles direction |
+| Handbrake | Space while driving | Brake (service brake and handbrake) |
+| Enter / exit | F at the driver's door | Tap car, prompt, or Drive / Exit button |
+| Orbit camera | Drag the scene | Drag the scene outside controls |
+| DelhiOS phone | Tab | Top-right phone icon |
+| Pause / resume | Escape | Pause / Back to the city |
 
-## Open-source components
+Exiting requires speed **below 15 km/h** and a clear door. The character disappears
+and stops colliding while driving; exiting restores the character next to the
+right-hand driver's door. The camera smoothly follows both modes, with pitch
+limits and obstruction handling. Touch capture, cancellation, blur, visibility
+changes and teardown release controls. Portrait and landscape layouts are supported.
 
-- [Three.js](https://github.com/mrdoob/three.js): MIT. Rendering, geometry and
-  official post-processing addons.
-- [Rapier](https://github.com/dimforge/rapier): Apache-2.0. The official
-  `@dimforge/rapier3d-compat` package supplies world-collision queries.
-- React, Vite and the project's other dependencies retain their own licences.
+## District and first hustle
 
-No Google Maps imagery, scanned landmarks, proprietary car meshes or third-party
-game assets were imported in this upgrade. City details are generated from code.
+The compressed CP-inspired district has a 44 m radius inner-circle road, six
+radial approaches, road markings, zebra crossings, a full central green park,
+white heritage arches, and a Shivaji Stadium frontage. Warm directional light is
+set to **28° elevation**, with long shadows and Delhi evening haze. This is a
+stylized blockout rather than a geographically accurate reconstruction.
 
-## Further development
+Open **DelhiOS** to see your **₹15,000** starting balance and the live **DelhiNav**
+map. In **Hustle**, accept **Shivaji Stadium Courier Run**. A parcel is included;
+follow the gold map marker/beacon to the west of CP. Get out and walk within 3.5 m
+of the delivery marker to earn **₹750**. The gig rewards once per session and has
+no timer. Refreshing starts a fresh session; no old prototype saves are read.
+The phone and pause menu suspend simulation while keeping the scene visible.
 
-The next art pass should replace selected procedural models with reviewed,
-optimised GLB assets and improve vehicle interiors and audio. Surveyed map data
-needs a coordinate/scale migration and its own attribution; it should not be
-silently mixed into the current compressed mission map. Benchmark on actual
-phones before committing to a mobile performance target.
+## Architecture
+
+| Directory | Responsibility |
+| --- | --- |
+| `src/core` | Application lifecycle, fixed 120 Hz simulation, shared math and swept collision |
+| `src/player` | Kinematic character and animated procedural character view |
+| `src/vehicle` | Arcade bicycle dynamics, speed-sensitive steering, body lean and hatchback view |
+| `src/camera` | Orbit/chase camera, pitch clamp, smoothing and obstruction checks |
+| `src/input` | Unified keyboard, pointer and touch input |
+| `src/world` | Shared deterministic district layout, collision shapes and instanced rendering |
+| `src/systems` | Enter/exit handoff and courier progression |
+| `src/ui` | DOM/CSS overlays and Canvas 2D DelhiNav map |
+| `tests` | Physics, collision, camera, input, interaction, mission and district-clearance tests |
+
+Geometry and analytic collision use the same layout. Characters sweep circles
+against rotated solids and land on low obstacles. Vehicles sweep oriented boxes
+through translation and rotation. The vehicle model uses signed speed, smooth
+acceleration, braking-before-reverse, grip-limited yaw, handbraking and suspension
+pitch/roll. It is an arcade approximation for this flat district, not a rigid-body
+or tire simulation. Static scenery uses instancing; no traffic or legacy taxi,
+garage, Godot or AI experiments are included.
+
+## Validation scope
+
+`npm test` covers actual controller behavior, thin-wall sweeps, platform landing,
+vehicle direction changes and stopping, high-speed steering, parking, repeated
+enter/exit, the 15 km/h exit boundary, obstructed doors, single-award delivery,
+input reset/disposal, orbit limits, camera interpolation, and clearance of all
+circular lanes and radial roads. The build enforces strict types and unused-code
+checks. Browser checks against the production build exercise desktop driving,
+full courier delivery, mobile joystick cancellation, enter/exit, phone bounds,
+native phone scrolling and console errors. Device performance and handling feel
+still need testing on real phones; software-rendered browser tests are not a
+frame-rate benchmark.
+
+Three.js is MIT licensed; its package includes its license. No third-party game
+assets or proprietary map imagery are bundled.
