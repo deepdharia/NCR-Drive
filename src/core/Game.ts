@@ -41,7 +41,7 @@ export class Game {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, mobile ? 1.25 : 1.5));
     this.renderer.setSize(root.clientWidth, root.clientHeight);
-    this.renderer.toneMapping = THREE.ACESFilmicToneMapping; this.renderer.toneMappingExposure = 1.1;
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping; this.renderer.toneMappingExposure = 1.25;
     this.renderer.shadowMap.enabled = true; this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.domElement.className = 'game-canvas'; this.renderer.domElement.setAttribute('aria-label', 'NCR Drive 3D district');
     const overlay = document.createElement('div'); overlay.className = 'overlay';
@@ -107,7 +107,8 @@ export class Game {
     this.ui.update(this.player, this.car, this.interaction, this.mission);
   }
   private updateViews(dt: number): void {
-    this.playerView.update(this.player); this.carView.update(this.car); this.camera.update(dt, this.player, this.car, this.world);
+    this.playerView.update(this.player, dt); this.carView.update(this.car);
+    this.district.update(this.car.driving ? this.car.position : this.player.position); this.camera.update(dt, this.player, this.car, this.world);
   }
   private frame = (time: number): void => {
     const dt = Math.min(0.1, (time - this.lastTime) / 1000); this.lastTime = time;
@@ -140,13 +141,16 @@ export class Game {
     this.scene.traverse(object => {
       if (object instanceof THREE.Mesh) {
         geometries.add(object.geometry);
+      }
+      if (object instanceof THREE.Mesh || object instanceof THREE.Sprite) {
         for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
           materials.add(material);
           for (const value of Object.values(material)) if (value instanceof THREE.Texture) textures.add(value);
         }
-        if (object instanceof THREE.InstancedMesh) object.dispose();
       }
+      if (object instanceof THREE.InstancedMesh) object.dispose();
     });
+    if (this.scene.environment instanceof THREE.Texture) textures.add(this.scene.environment);
     geometries.forEach(g => g.dispose()); materials.forEach(m => m.dispose()); textures.forEach(t => t.dispose());
     this.district.sun.shadow.map?.dispose(); this.renderer.dispose(); this.root.replaceChildren();
   }

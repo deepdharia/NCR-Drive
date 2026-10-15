@@ -4,7 +4,7 @@ import type { Solid } from '../core/CollisionWorld';
 
 export const ROAD_RADIUS = 44;
 export const ROAD_WIDTH = 12;
-export const SUN_ELEVATION = 28;
+export const SUN_ELEVATION = 25;
 export interface Building extends Solid { angle: number }
 export interface DistrictLayout { buildings: Building[]; columns: Solid[]; trees: Point[]; lamps: Point[]; solids: Solid[] }
 

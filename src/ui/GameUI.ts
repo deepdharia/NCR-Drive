@@ -18,7 +18,7 @@ export class GameUI {
       <section class="welcome" aria-label="Welcome to NCR Drive">
         <div class="welcome-top"><span class="brand-mark">N</span><span>NCR DRIVE <small>NEW DELHI, INDIA</small></span><span class="edition">OPEN WORLD / 01</span></div>
         <div class="welcome-copy"><span class="eyebrow">A CITY WITH A THOUSAND STORIES</span><h1>Your evening.<br>Your <em>Delhi.</em></h1><p>Walk beneath the arcades. Take the Parvaaz for a spin.<br>Find a little hustle in the heart of Connaught Place.</p><button class="primary" data-action="start">Explore Connaught Place <span>↗</span></button><div class="welcome-note">NO DOWNLOADS. NO KEYS. JUST THE CITY.</div></div>
-        <div class="welcome-bottom"><span>28° golden hour · Connaught Place</span><span>WALK / DRIVE / HUSTLE</span></div>
+        <div class="welcome-bottom"><span>25° golden hour · Connaught Place</span><span>WALK / DRIVE / HUSTLE</span></div>
       </section>
       <section class="game-ui" hidden aria-label="Game controls">
         <header class="location"><span class="eyebrow">NCR DRIVE / FREE ROAM</span><h1>Connaught Place <small>नई दिल्ली</small></h1><p><span class="live-dot"></span> Inner Circle <span>· A Delhi evening</span></p></header>
