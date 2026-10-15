@@ -6,3 +6,6 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Godot editor cache
+.godot/
