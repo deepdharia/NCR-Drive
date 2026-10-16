@@ -111,7 +111,10 @@ Publication blocked: automatic approval review rejected `git push -u origin
 improve/m1-driving-recovery` because sending the code to GitHub requires explicit
 user authorization in trusted conversation content. No push or PR creation
 occurred; do not bypass the rejection through the connector. The tested code is
-committed locally and supplied as a source archive/patch for review.
+committed locally. Source archive, patch and browser evidence are retained under
+`/workspace/work/ncr-drive-review/`. The designated chat output directory under
+`/codex/browser/projectless/` could not be created in this worker (permission
+denied), so no downloadable chat attachment is claimed.
 
 After explicit user approval, push only this branch and open a draft PR targeting
 `improve/open-world-foundation` to keep the M1 diff separate from PR #4. Merge
