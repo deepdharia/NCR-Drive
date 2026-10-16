@@ -1,7 +1,7 @@
 # NCR Drive
 
 A unified Web 3D Delhi open-world game, built with **Three.js, strict TypeScript,
-and Vite**. Walk Connaught Place's arcades, drive **The Parvaaz**, and take a courier
+and Vite**. Walk Connaught Place's arcades, drive **The Parvaaz**, and build a taxi career or take a courier
 gig through the DelhiOS phone. All geometry, materials, sky and signs are generated
 locally. There are no external assets, font requests, API keys or backend services.
 
@@ -60,9 +60,36 @@ stylized blockout rather than a geographically accurate reconstruction.
 Open **DelhiOS** to see your **₹15,000** starting balance and the live **DelhiNav**
 map. In **Hustle**, accept **Shivaji Stadium Courier Run**. A parcel is included;
 follow the gold map marker/beacon to the west of CP. Get out and walk within 3.5 m
-of the delivery marker to earn **₹750**. The gig rewards once per session and has
-no timer. Refreshing starts a fresh session; no old prototype saves are read.
+of the delivery marker to earn **₹750**. The courier gig rewards once per saved career and has
+no timer. Earnings, completed taxi fares and courier completion are saved locally
+on this browser. Active jobs and vehicle positions restart after a reload. If
+storage is unavailable, play continues and DelhiOS shows a session-only notice.
+No old prototype saves are read.
 The phone and pause menu suspend simulation while keeping the scene visible.
+
+## Delhi Cabs career
+
+Open **DelhiOS → Delhi Cabs → Accept passenger**. The phone closes and a blue
+pickup marker appears, with a waiting passenger. Enter the Parvaaz and stop
+inside the marker (within 5 m, below 2 km/h) for two continuous seconds. The
+passenger boards and the marker turns gold. Follow DelhiNav to the drop-off and
+stop again while driving to collect the fare. Getting out or moving away resets
+the stop countdown; menus pause it along with the simulation.
+
+Four rotating trips connect the Inner Circle stand and three radial approaches.
+These are fictional stops in the existing CP-inspired district. Fares depend on
+endpoint distance, with a **₹150 clean-drive bonus** if there are no impacts above
+7.2 km/h while carrying a passenger. Minor contacts do not count. Next pickup
+starts at the last destination, so the loop remains playable. DelhiOS tracks ride
+count and driver rank (New driver, City driver at 3, CP regular at 10). You can
+cancel an active fare without payment. Courier and taxi jobs are mutually
+exclusive, and the courier reward cannot be collected repeatedly by reloading.
+
+DelhiNav draws a shortest-circle route using the district's ring and radial
+roads, with a connector back to the network if the player leaves it. HUD distance
+uses that suggested route. It is not real-world navigation or an obstacle-aware
+pathfinder for arbitrary off-road positions. Notifications dismiss after 5.5
+seconds. Local saves are per-browser/device and disappear if site data is cleared.
 
 ## Architecture
 
@@ -75,7 +102,7 @@ The phone and pause menu suspend simulation while keeping the scene visible.
 | `src/rendering` | Canvas PBR textures, road UVs and static mesh batching |
 | `src/input` | Unified keyboard, pointer and touch input |
 | `src/world` | Shared deterministic district layout, collision shapes and instanced rendering |
-| `src/systems` | Enter/exit handoff and courier progression |
+| `src/systems` | Enter/exit handoff, courier and taxi progression, local saves and road guidance |
 | `src/ui` | DOM/CSS overlays and Canvas 2D DelhiNav map |
 | `tests` | Physics, collision, camera, input, interaction, mission and district-clearance tests |
 
@@ -84,12 +111,12 @@ against rotated solids and land on low obstacles. Vehicles sweep oriented boxes
 through translation and rotation. The vehicle model uses signed speed, smooth
 acceleration, braking-before-reverse, grip-limited yaw, handbraking and suspension
 pitch/roll. It is an arcade approximation for this flat district, not a rigid-body
-or tire simulation. Static scenery uses instancing; no traffic or legacy taxi,
+or tire simulation. Static scenery uses instancing; no traffic or legacy prototype taxi,
 garage, Godot or AI experiments are included.
 
 ## Dusk visual treatment
 
-The renderer uses ACES filmic tone mapping at **1.25 exposure**, PCF soft shadows,
+The renderer uses ACES filmic tone mapping at **1.25 exposure**, PCF shadows,
 and warm `FogExp2(0xd6a472, 0.008)` haze. A 25° directional sun and amber/dusty
 hemisphere light illuminate matte off-white plaster. A procedural environment map
 provides filtered reflections for the metallic mustard paint and tinted glass.
@@ -118,7 +145,9 @@ released with the rest of the scene during teardown.
 
 ## Validation scope
 
-`npm test` covers actual controller behavior, thin-wall sweeps, platform landing,
+`npm test` additionally covers taxi stop conditions, single payouts, cancellation,
+clean-drive bonuses, save validation/storage failures and clearance along every
+stop-to-stop GPS route. It covers actual controller behavior, thin-wall sweeps, platform landing,
 vehicle direction changes and stopping, high-speed steering, parking, repeated
 enter/exit, the 15 km/h exit boundary, obstructed doors, single-award delivery,
 input reset/disposal, orbit limits, camera interpolation, and clearance of all
@@ -132,3 +161,12 @@ frame-rate benchmark.
 
 Three.js is MIT licensed; its package includes its license. No third-party game
 assets or proprietary map imagery are bundled.
+
+## Career upgrade checks
+
+The taxi upgrade passed 19 automated tests and a local Chromium browser smoke
+check: DelhiOS fare acceptance, entering by keyboard, timed pickup, drop-off with
+controlled test placement, wallet credit and restoration after reload. A 390 × 844
+touch viewport check covered phone bounds, scrolling, fare acceptance and entering
+the car. No browser console errors were reported. Software rendering is not a
+phone performance benchmark or a full manual driving playtest.

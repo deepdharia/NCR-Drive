@@ -1,5 +1,4 @@
 import type { Point } from '../core/math';
-import { COURIER_TARGET } from '../systems/CourierMission';
 
 export class Minimap {
   private context: CanvasRenderingContext2D;
@@ -8,7 +7,7 @@ export class Minimap {
     const context = canvas.getContext('2d'); if (!context) throw new Error('DelhiNav needs Canvas 2D support.');
     this.context = context;
   }
-  draw(position: Point, yaw: number, car: Point, delivery: boolean): void {
+  draw(position: Point, yaw: number, car: Point, target?: Point, route: Point[] = [], pickup = false): void {
     const ctx = this.context, scale = 1.75, centre = 240;
     const project = (p: Point): Point => ({ x: centre + p.x * scale, z: centre + p.z * scale });
     ctx.fillStyle = '#203b35'; ctx.fillRect(0, 0, 480, 480);
@@ -27,9 +26,13 @@ export class Minimap {
     ctx.fillStyle = '#c5d2bd'; ctx.font = '15px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('CENTRAL PARK', 240, 235);
     ctx.fillStyle = '#e8d8b5'; ctx.font = '16px sans-serif'; ctx.fillText('N', 240, 30);
     const parked = project(car); ctx.fillStyle = '#d3d9c5'; ctx.fillRect(parked.x - 4, parked.z - 7, 8, 14);
-    if (delivery) {
-      const target = project(COURIER_TARGET); ctx.fillStyle = '#edbc71'; ctx.beginPath(); ctx.arc(target.x, target.z, 9, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#e0c995'; ctx.font = '13px sans-serif'; ctx.textAlign = 'left'; ctx.fillText('SHIVAJI', target.x + 13, target.z);
+    if (route.length) {
+      ctx.strokeStyle = pickup ? '#71cce5' : '#f1c369'; ctx.lineWidth = 4; ctx.lineJoin = 'round'; ctx.beginPath();
+      route.forEach((p, i) => { const q = project(p); if (i === 0) ctx.moveTo(q.x, q.z); else ctx.lineTo(q.x, q.z); }); ctx.stroke();
+    }
+    if (target) {
+      const marker = project(target); ctx.fillStyle = pickup ? '#71cce5' : '#edbc71'; ctx.beginPath(); ctx.arc(marker.x, marker.z, 9, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#e0c995'; ctx.font = '13px sans-serif'; ctx.textAlign = marker.x > 330 ? 'right' : 'left'; ctx.fillText(pickup ? 'PICKUP' : 'DROP-OFF', marker.x + (marker.x > 330 ? -13 : 13), marker.z);
     }
     const player = project(position);
     ctx.save(); ctx.translate(player.x, player.z); ctx.rotate(Math.PI - yaw);

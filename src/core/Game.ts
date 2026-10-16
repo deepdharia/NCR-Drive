@@ -7,7 +7,9 @@ import { VehicleView } from '../vehicle/VehicleView';
 import { CameraRig } from '../camera/CameraRig';
 import { InputController } from '../input/InputController';
 import { InteractionSystem } from '../systems/InteractionSystem';
-import { CourierMission } from '../systems/CourierMission';
+import { CourierMission, COURIER_TARGET } from '../systems/CourierMission';
+import { TaxiMission } from '../systems/TaxiMission';
+import { readProgress, writeProgress } from '../systems/ProgressStore';
 import { createDistrictLayout } from '../world/DistrictLayout';
 import { DistrictView } from '../world/DistrictView';
 import { GameUI } from '../ui/GameUI';
@@ -26,6 +28,8 @@ export class Game {
   private input: InputController;
   private interaction: InteractionSystem;
   private mission = new CourierMission();
+  private taxi = new TaxiMission();
+  private saveAvailable = true;
   private ui: GameUI;
   private started = false;
   private paused = false;
@@ -37,12 +41,19 @@ export class Game {
   private abort = new AbortController();
 
   constructor(private root: HTMLElement) {
+    try {
+      const saved = readProgress(localStorage);
+      this.mission.cash = saved.cash;
+      this.mission.state = saved.courierCompleted ? 'completed' : 'available';
+      this.taxi = new TaxiMission(saved.rides);
+      this.saveProgress();
+    } catch { this.saveAvailable = false; }
     const mobile = matchMedia('(pointer: coarse)').matches;
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, mobile ? 1.25 : 1.5));
     this.renderer.setSize(root.clientWidth, root.clientHeight);
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping; this.renderer.toneMappingExposure = 1.25;
-    this.renderer.shadowMap.enabled = true; this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.enabled = true; this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this.renderer.domElement.className = 'game-canvas'; this.renderer.domElement.setAttribute('aria-label', 'NCR Drive 3D district');
     const overlay = document.createElement('div'); overlay.className = 'overlay';
     root.replaceChildren(this.renderer.domElement, overlay);
@@ -59,7 +70,13 @@ export class Game {
     this.ui = new GameUI(overlay, this.input, {
       start: () => { this.started = true; this.syncScreen(); }, phone: () => this.togglePhone(),
       pause: () => this.togglePause(), interact: () => this.interact(),
-      accept: () => { this.mission.accept(); this.refreshUI(); },
+      accept: () => {
+        if (!this.taxi.active && this.mission.accept()) { this.phone = false; this.syncScreen(); this.ui.toast('Parcel collected. Follow DelhiNav and deliver on foot.'); }
+      },
+      taxi: () => {
+        if (this.mission.state !== 'active' && this.taxi.accept()) { this.phone = false; this.syncScreen(); this.ui.toast('Fare accepted. Stop at the blue pickup marker for 2 seconds.'); }
+      },
+      cancelTaxi: () => { this.taxi.cancel(); this.refreshUI(); this.ui.toast('Fare cancelled. No payment taken.'); },
     });
     this.syncScreen(); this.updateViews(1); this.renderer.render(this.scene, this.camera.camera);
     window.addEventListener('resize', this.resize, { signal: this.abort.signal });
@@ -103,8 +120,11 @@ export class Game {
     if (ray.intersectObject(this.carView.group, true).length) this.interact();
   }
   private refreshUI(): void {
-    this.district.delivery.visible = this.mission.state === 'active';
-    this.ui.update(this.player, this.car, this.interaction, this.mission);
+    const target = this.taxi.active ? this.taxi.target : COURIER_TARGET;
+    this.district.delivery.visible = this.taxi.active || this.mission.state === 'active';
+    this.district.delivery.position.set(target.x, 0, target.z);
+    this.district.setPickup(this.taxi.state === 'pickup');
+    this.ui.update(this.player, this.car, this.interaction, this.mission, this.taxi, this.saveAvailable);
   }
   private updateViews(dt: number): void {
     this.playerView.update(this.player, dt); this.carView.update(this.car);
@@ -121,7 +141,13 @@ export class Game {
       if (!this.car.driving) this.player.update(step, this.input.foot(), this.camera.yaw, this.world, this.car.collider);
       this.car.update(step, this.input.drive(), this.world);
       if (this.mission.update(this.car.driving ? this.car.position : this.player.position, !this.car.driving)) {
-        this.ui.toast('Parcel delivered. ₹750 added to your Delhi Wallet.'); this.refreshUI();
+        this.saveProgress(); this.ui.toast('Parcel delivered. ₹750 added to your Delhi Wallet.'); this.refreshUI();
+      }
+      const event = this.taxi.update(step, this.car.position, this.car.driving, this.car.kmh, this.car.impact);
+      if (event === 'boarded') { this.ui.toast('Passenger aboard. Follow the gold marker to drop-off.'); this.refreshUI(); }
+      if (event === 'delivered') {
+        this.mission.cash += this.taxi.lastReward; this.saveProgress();
+        this.ui.toast(`Fare complete. ₹${this.taxi.lastReward} earned. Open DelhiOS for your next passenger.`); this.refreshUI();
       }
       this.accumulator -= step;
     }
@@ -129,6 +155,11 @@ export class Game {
     this.uiElapsed += dt;
     if (this.uiElapsed > 0.1) { this.uiElapsed = 0; this.refreshUI(); }
   };
+  private saveProgress(): void {
+    try {
+      this.saveAvailable = writeProgress(localStorage, { version: 1, cash: this.mission.cash, rides: this.taxi.completed, courierCompleted: this.mission.state === 'completed' });
+    } catch { this.saveAvailable = false; }
+  }
   private resize = (): void => {
     const width = this.root.clientWidth, height = this.root.clientHeight;
     if (!width || !height) return;

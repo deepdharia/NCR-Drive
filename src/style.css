@@ -163,3 +163,18 @@ kbd { font-family: inherit; font-size: 9px; border: 1px solid #dfc79d77; border-
   .touch-actions button { min-height: 48px; }
 }
 @media (prefers-reduced-motion:reduce) { .phone { animation: none; } }
+
+/* Fare cards share the phone's compact layout and native scroll surface. */
+.taxi-card { border: 1px solid #71cce54d; background: #71cce509; border-radius: 17px; padding: 17px; }
+.taxi-tag { font-size: 7px; letter-spacing: .18em; color: #8dd8e9; }
+.taxi-card h3 { font-size: 19px; font-weight: 400; line-height: 1.35; margin: 10px 0; }
+.taxi-card p { font-size: 10px; line-height: 1.7; color: #b9cbb8; }
+.taxi-card .primary { width: 100%; font-size: 11px; padding: 13px; }
+.cancel-fare { margin-top: 10px; width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 10px; background: transparent; font-size: 11px; }
+.phone-balance small + small { display: block; margin-top: 8px; color: #e7c392; }
+.gig-tracker { max-width: 310px; }
+.gig-tracker strong { line-height: 1.4; }
+@media (max-width:600px) { .gig-tracker { width: calc(100vw - 155px); } }
+
+.gig-tracker { pointer-events: auto; text-align: left; color: inherit; font: inherit; }
+.phone-open .gig-tracker { visibility: hidden; }

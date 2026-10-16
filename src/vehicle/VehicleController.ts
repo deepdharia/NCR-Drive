@@ -16,6 +16,8 @@ export class VehicleController {
   wheelTravel = 0;
   driving = false;
   braking = false;
+  impact = false;
+  private touching = false;
   readonly width = 1.72;
   readonly length = 3.85;
   get kmh(): number { return Math.abs(this.speed) * 3.6; }
@@ -26,6 +28,7 @@ export class VehicleController {
   }
 
   update(dt: number, input: DriveInput, world: CollisionWorld): void {
+    this.impact = false;
     if (!this.driving) {
       this.pitch *= 1 - blend(10, dt); this.roll *= 1 - blend(10, dt); return;
     }
@@ -49,6 +52,8 @@ export class VehicleController {
     const motion = { x: Math.sin(heading) * this.speed * dt, z: Math.cos(heading) * this.speed * dt };
     const contact = world.moveBox({ ...this.position, yaw: this.yaw }, motion, yawRate * dt, this.width, this.length);
     this.position = { x: contact.pose.x, z: contact.pose.z }; this.yaw = contact.pose.yaw;
+    this.impact = contact.hit && !this.touching && Math.abs(this.speed) > 2;
+    this.touching = contact.hit;
     if (contact.hit) { this.speed = 0; this.acceleration = 0; }
     this.wheelTravel += this.speed * dt;
     this.pitch += (clamp(-this.acceleration * 0.018, -0.15, 0.15) - this.pitch) * blend(8, dt);
