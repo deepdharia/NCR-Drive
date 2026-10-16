@@ -14,6 +14,7 @@ Updated: 17 October 2026 (Asia/Kolkata). Integration owner: this task's primary 
   Connector-retrieved files and commit objects matched their Git hashes; later
   shell fetch also succeeded in the approved network execution context.
 - Current working branch: `improve/m1-driving-recovery`, directly based on PR #4.
+  Tested implementation commit: `f78b058` (recovery/settings, code, tests and docs).
   The delivery commit containing this file is the session checkpoint; use the PR
   head/Git log for its exact SHA (a commit cannot embed its own SHA).
 - No AGENTS.md or prior HANDOFF.md existed in the inspected baseline.
@@ -104,8 +105,17 @@ Do not infer device performance from headless Chromium.
 No merge or production deployment performed. PR #4 remains the required base
 until merged. Its Vercel status reports a successful preview. Read-only Vercel
 project inspection returned HTTP 403 for `deep-07f0`; no Vercel CLI is installed,
-so the live production source remains unverified. Publish as a draft PR targeting
+so the live production source remains unverified.
+
+Publication blocked: automatic approval review rejected `git push -u origin
+improve/m1-driving-recovery` because sending the code to GitHub requires explicit
+user authorization in trusted conversation content. No push or PR creation
+occurred; do not bypass the rejection through the connector. The tested code is
+committed locally and supplied as a source archive/patch for review.
+
+After explicit user approval, push only this branch and open a draft PR targeting
 `improve/open-world-foundation` to keep the M1 diff separate from PR #4. Merge
-PR #4 first, then retarget this task's PR to main and rerun checks. Creating the
-review branch may trigger the existing Vercel preview integration; it does not
-promote a production release.
+PR #4 first, then retarget the task PR to main and rerun checks. Creating the
+review branch may trigger existing preview automation; no production promotion
+is authorized or performed here. Implement audio only after preserving this
+checkpoint and resolving review publication.
