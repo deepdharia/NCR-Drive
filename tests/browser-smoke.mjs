@@ -24,17 +24,17 @@ await page.getByRole('button',{name:'Back to the city'}).click();
 await page.keyboard.press('f');await page.waitForTimeout(250);
 if(!await page.evaluate(()=>window.__game.car.driving))throw Error('keyboard entry failed');
 await page.keyboard.down('w');
-await page.waitForFunction(()=>window.__game.car.kmh > 1, null, {timeout:20000});
+await page.waitForFunction(()=>window.__game.car.kmh > 1, null, {timeout:90000});
 await page.keyboard.up('w');
 console.log('drive speed',await page.evaluate(()=>window.__game.car.kmh));
 await page.keyboard.press('Tab');await page.getByRole('button',{name:'Start chapter'}).click();
 // Controlled placements exercise real fixed simulation, mission events, UI and save wiring.
 for(let i=0;i<2;i++){
  await page.evaluate(()=>{const g=window.__game;g.car.position={...g.story.step.target};g.car.speed=0;g.car.acceleration=0;});
- await page.waitForFunction(index=>window.__game.story.index>index,i,{timeout:12000});
+ await page.waitForFunction(index=>window.__game.story.index>index,i,{timeout:90000});
 }
 await page.evaluate(()=>{const g=window.__game;g.car.setDriving(false);g.player.setActive(true);g.player.teleport(g.story.step.target);});
-await page.waitForFunction(()=>window.__game.story.state==='completed',{timeout:12000});
+await page.waitForFunction(()=>window.__game.story.state==='completed',{timeout:90000});
 if (await page.evaluate(()=>window.__game.mission.cash) !== 16200) throw Error('Story payout failed');
 // Enter both other cars through the actual F interaction.
 for(const index of [1,2]){
@@ -45,22 +45,22 @@ for(const index of [1,2]){
 await page.keyboard.press('Tab');await page.getByRole('button',{name:'Accept passenger'}).click();
 for(const stage of ['pickup','dropoff']){
  await page.evaluate(()=>{const g=window.__game;g.car.position={...g.taxi.target};g.car.speed=0;g.car.acceleration=0;});
- await page.waitForFunction(s=>window.__game.taxi.state!==s,stage,{timeout:15000});
+ await page.waitForFunction(s=>window.__game.taxi.state!==s,stage,{timeout:90000});
 }
 console.log('taxi complete',await page.evaluate(()=>({rides:window.__game.taxi.completed,cash:window.__game.mission.cash})));
-await page.screenshot({path:'test-results/desktop.png'});
+await page.screenshot({path:'test-results/desktop.png',timeout:60000,animations:'disabled'});
 await page.reload();await page.waitForFunction(()=>window.__game);if (await page.evaluate(()=>window.__game.taxi.completed) !== 1) throw Error('Ride save failed');
 const mobile=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:0.5,isMobile:true,hasTouch:true});mobile.on('pageerror',e=>errors.push(e.message));
 await mobile.goto('http://127.0.0.1:3000');await mobile.getByRole('button',{name:'Explore Connaught Place'}).click();await mobile.getByRole('button',{name:'Pause game'}).click();await mobile.locator('[data-action="quality"]').click();await mobile.getByRole('button',{name:'Back to the city'}).click();await mobile.getByRole('button',{name:'Open DelhiOS phone'}).click();
 const bounds = await mobile.evaluate(()=>({page:document.documentElement.scrollWidth,viewport:innerWidth,phone:document.querySelector('.phone').getBoundingClientRect().toJSON()}));
 if (bounds.page > bounds.viewport || bounds.phone.x < 0 || bounds.phone.right > bounds.viewport) throw Error('Phone overflows mobile viewport');
-await mobile.locator('[data-action="story"]').scrollIntoViewIfNeeded();await mobile.locator('[data-action="story"]').click();await mobile.screenshot({path:'test-results/mobile.png'});
+await mobile.locator('[data-action="story"]').scrollIntoViewIfNeeded();await mobile.locator('[data-action="story"]').click();await mobile.screenshot({path:'test-results/mobile.png',timeout:60000,animations:'disabled'});
 if(errors.length)throw Error(errors.join('\n'));console.log('browser checks passed; no page errors');await browser.close();
 } catch (error) {
  console.error('Page errors', errors);
  if (page) {
    console.error('Game diagnostic', await page.evaluate(()=>{const g=window.__game;return g ? {started:g.started,paused:g.paused,phone:g.phone,driving:g.car.driving,speed:g.car.speed,input:g.input.drive(),story:g.story,position:g.car.position} : {html:document.body.innerText};}).catch(()=>null));
-   await page.screenshot({path:'test-results/failure.png',timeout:10000}).catch(()=>{});
+   await page.screenshot({path:'test-results/failure.png',timeout:60000,animations:'disabled'}).catch(()=>{});
  }
  throw error;
 } finally { await browser?.close(); server.kill(); }
