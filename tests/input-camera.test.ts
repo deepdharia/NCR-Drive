@@ -51,3 +51,22 @@ test('orbit pitch clamps and mode changes interpolate into chase view', () => {
   for (let i = 0; i < 240; i++) camera.update(1 / 120, player, car, world);
   assert.ok(camera.camera.position.z < car.position.z - 5);
 });
+
+test('steering sensitivity affects keyboard and simultaneous touch throttle/steering; reset releases controls', () => {
+  const input = new InputController(new Canvas() as unknown as HTMLCanvasElement, { interact() {}, phone() {}, pause() {}, rotate() {}, tap() {} });
+  input.enabled = true; input.steeringSensitivity = 0.5;
+  key('KeyD', true); assert.equal(input.drive().steer, 0.5); key('KeyD', false);
+  input.setJoystick(-0.8, 0); input.reverse = true; input.setGas(true);
+  assert.equal(input.drive().steer, -0.4); assert.equal(input.drive().throttle, -1);
+  input.reset(); assert.deepEqual(input.drive(), { throttle: 0, steer: 0, brake: false, handbrake: false });
+  input.steeringSensitivity = 1.5; input.setJoystick(1, 0); assert.equal(input.drive().steer, 1);
+  input.dispose();
+});
+
+test('native slider arrow keys remain usable while the game is paused', () => {
+  const input = new InputController(new Canvas() as unknown as HTMLCanvasElement, { interact() {}, phone() {}, pause() {}, rotate() {}, tap() {} });
+  const event = new Event('keydown', { cancelable: true });
+  Object.defineProperties(event, { code: { value: 'ArrowRight' }, target: { value: { tagName: 'INPUT' } } });
+  target.dispatchEvent(event); assert.equal(event.defaultPrevented, false);
+  input.dispose();
+});

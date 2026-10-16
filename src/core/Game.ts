@@ -13,7 +13,8 @@ import { InputController } from '../input/InputController';
 import { InteractionSystem } from '../systems/InteractionSystem';
 import { CourierMission, COURIER_TARGET } from '../systems/CourierMission';
 import { TaxiMission } from '../systems/TaxiMission';
-import { readProgress, writeProgress } from '../systems/ProgressStore';
+import { defaultSettings, loadProgress, writeProgress } from '../systems/ProgressStore';
+import { recoverToRoad } from '../systems/RecoverySystem';
 import { createDistrictLayout } from '../world/DistrictLayout';
 import { DistrictView } from '../world/DistrictView';
 import { GameUI } from '../ui/GameUI';
@@ -39,11 +40,12 @@ export class Game {
   private mission = new CourierMission();
   private taxi = new TaxiMission();
   private saveAvailable = true;
+  private saveWritable = true;
+  private settings = defaultSettings();
   private ui: GameUI;
   private started = false;
   private paused = false;
   private phone = false;
-  private performanceMode = false;
   private accumulator = 0;
   private uiElapsed = 0;
   private lastTime = performance.now();
@@ -52,12 +54,15 @@ export class Game {
 
   constructor(private root: HTMLElement) {
     try {
-      const saved = readProgress(localStorage);
+      const loaded = loadProgress(localStorage), saved = loaded.progress;
+      this.saveWritable = loaded.writable;
+      this.saveAvailable = loaded.writable;
+      this.settings = saved.settings;
       this.mission.cash = saved.cash;
       this.mission.state = saved.courierCompleted ? 'completed' : 'available';
       this.taxi = new TaxiMission(saved.rides);
       this.saveProgress();
-    } catch { this.saveAvailable = false; }
+    } catch { this.saveAvailable = this.saveWritable = false; }
     const mobile = matchMedia('(pointer: coarse)').matches;
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, mobile ? 1.25 : 1.5));
@@ -77,18 +82,21 @@ export class Game {
     this.player.teleport({ x: this.interaction.door.x - 0.45, z: this.interaction.door.z });
     this.input = new InputController(this.renderer.domElement, {
       interact: () => this.interact(), phone: () => this.togglePhone(), pause: () => this.togglePause(),
-      rotate: (dx, dy) => this.camera.rotate(dx, dy, this.car.driving), tap: (x, y) => this.tapCar(x, y),
+      rotate: (dx, dy) => this.camera.rotate(dx * this.settings.cameraSensitivity, dy * this.settings.cameraSensitivity, this.car.driving), tap: (x, y) => this.tapCar(x, y),
     });
     this.ui = new GameUI(overlay, this.input, {
       start: () => { this.started = true; this.syncScreen(); }, phone: () => this.togglePhone(),
       pause: () => this.togglePause(), interact: () => this.interact(),
       quality: () => {
-        this.performanceMode = !this.performanceMode;
-        this.renderer.shadowMap.enabled = !this.performanceMode;
-        this.renderer.setPixelRatio(Math.min(devicePixelRatio, this.performanceMode ? 0.75 : mobile ? 1.25 : 1.5));
-        this.ui.setQuality(this.performanceMode);
+        this.settings.performanceMode = !this.settings.performanceMode;
+        this.applySettings(); this.saveProgress(); this.refreshUI();
         this.renderer.render(this.scene, this.camera.camera);
       },
+      sensitivity: (kind, value) => {
+        if (!Number.isFinite(value) || value < 0.5 || value > 1.5) return;
+        this.settings[kind] = value; this.applySettings(); this.saveProgress(); this.refreshUI();
+      },
+      recover: () => this.recover(),
       accept: () => {
         if (!this.taxi.active && !this.story.active && this.mission.accept()) { this.phone = false; this.syncScreen(); this.ui.toast('Parcel collected. Follow DelhiNav and deliver on foot.'); }
       },
@@ -101,7 +109,7 @@ export class Game {
       cancelStory: () => { this.story.cancel(); this.refreshUI(); },
       cancelTaxi: () => { this.taxi.cancel(); this.refreshUI(); this.ui.toast('Fare cancelled. No payment taken.'); },
     });
-    this.syncScreen(); this.updateViews(1); this.renderer.render(this.scene, this.camera.camera);
+    this.applySettings(); this.syncScreen(); this.updateViews(1); this.renderer.render(this.scene, this.camera.camera);
     window.addEventListener('resize', this.resize, { signal: this.abort.signal });
     document.addEventListener('visibilitychange', () => {
       if (document.hidden && this.started) { this.paused = true; this.phone = false; this.syncScreen(); }
@@ -116,6 +124,23 @@ export class Game {
   private syncScreen(): void {
     this.input.reset(); this.input.enabled = this.started && !this.paused && !this.phone;
     this.accumulator = 0; this.ui.screen(this.started, this.paused, this.phone); this.refreshUI();
+  }
+  private applySettings(): void {
+    const mobile = matchMedia('(pointer: coarse)').matches;
+    this.input.steeringSensitivity = this.settings.steeringSensitivity;
+    this.renderer.shadowMap.enabled = !this.settings.performanceMode;
+    this.renderer.setPixelRatio(Math.min(devicePixelRatio, this.settings.performanceMode ? 0.75 : mobile ? 1.25 : 1.5));
+    this.ui.setSettings(this.settings);
+  }
+  private recover(): void {
+    if (!this.started || !this.paused) return;
+    if (!recoverToRoad(this.world, this.car, this.player, this.otherCars(), this.mission, this.taxi, this.story)) {
+      this.ui.recoveryStatus('No clear recovery space. Resume and move a blocking car, then try again.'); return;
+    }
+    this.input.reset(); this.input.reverse = false; this.interaction.message = '';
+    this.camera.reset(); this.saveProgress(); this.paused = false;
+    this.syncScreen(); this.updateViews(1); this.renderer.render(this.scene, this.camera.camera);
+    this.ui.toast('Back on a clear road. Recovery is free; active jobs cancelled with no payout.');
   }
   private togglePhone(): void {
     if (!this.started || this.paused) return;
@@ -201,8 +226,9 @@ export class Game {
     this.selected = best; this.interaction.car = this.car;
   }
   private saveProgress(): void {
+    if (!this.saveWritable) { this.saveAvailable = false; return; }
     try {
-      this.saveAvailable = writeProgress(localStorage, { version: 1, cash: this.mission.cash, rides: this.taxi.completed, courierCompleted: this.mission.state === 'completed' });
+      this.saveAvailable = writeProgress(localStorage, { version: 2, cash: this.mission.cash, rides: this.taxi.completed, courierCompleted: this.mission.state === 'completed', settings: this.settings });
     } catch { this.saveAvailable = false; }
   }
   private resize = (): void => {

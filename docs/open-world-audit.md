@@ -1,5 +1,8 @@
 # Open-world audit and build direction
 
+Historical audit of the PR #4 baseline. For subsequent work and verification,
+read [HANDOFF.md](HANDOFF.md), [ROADMAP.md](ROADMAP.md) and [PLAYTESTS.md](PLAYTESTS.md).
+
 ## Repository inspected
 
 Main was at `2c4a1cf` (atmospheric dusk overhaul) on 16 October 2026. Published

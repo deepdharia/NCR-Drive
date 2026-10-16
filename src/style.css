@@ -96,7 +96,7 @@ kbd { font-family: inherit; font-size: 9px; border: 1px solid #dfc79d77; border-
 .phone-home { flex-shrink: 0; width: 83px; height: 4px; border-radius: 8px; background: #cbd5b46b; margin: 10px auto 0; }
 .phone-open .touch-controls,.phone-open .interaction,.phone-open .mode-card,.phone-open .desktop-help { visibility: hidden; }
 .pause-screen { position: absolute; inset: 0; display: grid; place-items: center; background: #0d281fc9; backdrop-filter: blur(15px); pointer-events: auto; z-index: 10; }
-.pause-screen>div { padding: 30px; text-align: center; }
+.pause-screen>div { padding: 24px; text-align: center; max-height: 100%; max-width: 520px; overflow-y: auto; }
 .pause-screen h2 { font-family: Georgia,serif; font-weight: 400; font-size: 45px; letter-spacing: -.04em; margin: 18px 0; }
 .pause-screen p { font-size: 12px; color: #bdc8b1; margin-bottom: 28px; }
 .toast { position: absolute; top: 90px; left: 50%; transform: translateX(-50%); background: #234736e8; padding: 13px 18px; border: 1px solid #c9c39277; border-radius: 12px; color: #ead8b1; font-size: 11px; }
@@ -182,3 +182,8 @@ kbd { font-family: inherit; font-size: 9px; border: 1px solid #dfc79d77; border-
 .story-tag { font-size: 10px; letter-spacing: .12em; color: #e4bc70; }
 
 .graphics-button { display: block; margin: 0 auto 18px; padding: 12px 16px; border: 1px solid #897b60; border-radius: 12px; background: #252a27; color: #f2e5c9; cursor: pointer; }
+.control-settings { max-width: 330px; margin: 0 auto 16px; text-align: left; }
+.control-settings label { display: flex; justify-content: space-between; font-size: 13px; }
+.control-settings input { width: 100%; min-height: 36px; accent-color: var(--gold); touch-action: pan-y; }
+.pause-screen .recovery-note { line-height: 1.6; margin: 12px 0; }
+.pause-screen { padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }

@@ -8,8 +8,9 @@ import type { StoryMission } from '../systems/StoryMission';
 import type { TaxiMission } from '../systems/TaxiMission';
 import { roadRoute, routeLength } from '../systems/Navigation';
 import { Minimap } from './Minimap';
+import type { Settings } from '../systems/ProgressStore';
 
-interface UIActions { start: () => void; phone: () => void; pause: () => void; interact: () => void; accept: () => void; taxi: () => void; cancelTaxi: () => void; story: () => void; cancelStory: () => void; quality: () => void }
+interface UIActions { start: () => void; phone: () => void; pause: () => void; interact: () => void; accept: () => void; taxi: () => void; cancelTaxi: () => void; story: () => void; cancelStory: () => void; quality: () => void; recover: () => void; sensitivity: (kind: 'steeringSensitivity' | 'cameraSensitivity', value: number) => void }
 const phoneIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10 18h4"/></svg>';
 
 export class GameUI {
@@ -50,7 +51,10 @@ export class GameUI {
           <div class="app-heading"><span>◈ Hustle</span><small>LOCAL GIGS</small></div><article class="gig-card"><span class="gig-tag">YOUR FIRST GIG</span><h3>Shivaji Stadium<br>Courier Run</h3><p>One parcel. A short drive through CP. Hand it over on foot at the stadium metro.</p><div class="gig-reward"><strong>₹750</strong><span>No time limit<br>Parcel included</span></div><button class="primary" data-action="accept">Accept delivery →</button></article><p class="phone-footer">A little hustle. A bigger city.</p>
         </div><div class="phone-home"></div>
       </aside>
-      <section class="pause-screen" hidden aria-label="Paused"><div><span class="eyebrow">TAKE A BREATHER</span><h2>Delhi can wait.</h2><p>Your drive will be right here.</p><button class="graphics-button" data-action="quality">Graphics: Detailed · Tap for performance</button><button class="primary" data-action="pause">Back to the city →</button></div></section>`;
+      <section class="pause-screen" hidden aria-label="Paused"><div><span class="eyebrow">TAKE A BREATHER</span><h2>Delhi can wait.</h2><p>Your drive will be right here.</p><button class="graphics-button" data-action="quality">Graphics: Detailed · Tap for performance</button>
+        <div class="control-settings"><label for="steering-sensitivity">Steering sensitivity <output data-steering-value>1.0×</output></label><input id="steering-sensitivity" type="range" min="0.5" max="1.5" step="0.1" value="1" data-setting="steeringSensitivity"><label for="camera-sensitivity">Camera sensitivity <output data-camera-value>1.0×</output></label><input id="camera-sensitivity" type="range" min="0.5" max="1.5" step="0.1" value="1" data-setting="cameraSensitivity"></div>
+        <p class="recovery-note" id="recovery-policy">Stuck? Recovery is free. Your nearby car returns to a clear road.<br>Active jobs are cancelled without payout. Earned money is kept.</p><button class="graphics-button" data-action="recover" aria-describedby="recovery-policy">Recover to a clear road · Free</button><p data-recovery-status role="status"></p>
+        <button class="primary" data-action="pause">Back to the city →</button></div></section>`;
     const options = { signal: this.abort.signal };
     root.addEventListener('click', event => {
       const button = (event.target as Element).closest<HTMLButtonElement>('button[data-action]');
@@ -60,6 +64,7 @@ export class GameUI {
         case 'phone': actions.phone(); break;
         case 'pause': actions.pause(); break;
         case 'quality': actions.quality(); break;
+        case 'recover': actions.recover(); break;
         case 'interact': actions.interact(); break;
         case 'accept': actions.accept(); break;
         case 'story': actions.story(); break;
@@ -69,6 +74,11 @@ export class GameUI {
         case 'jump': input.requestJump(); break;
         case 'reverse': input.reverse = !input.reverse; this.text('[data-reverse]', input.reverse ? 'DRIVE' : 'REVERSE'); break;
       }
+    }, options);
+    root.addEventListener('change', event => {
+      const slider = event.target as HTMLInputElement;
+      const kind = slider.dataset.setting;
+      if (kind === 'steeringSensitivity' || kind === 'cameraSensitivity') actions.sensitivity(kind, Number(slider.value));
     }, options);
     for (const button of root.querySelectorAll<HTMLButtonElement>('[data-hold]')) {
       let pointer: number | null = null;
@@ -166,9 +176,14 @@ export class GameUI {
     this.maps.forEach(map => map.draw(position, driving ? car.yaw : player.yaw, car.position, target, route, taxi.state === 'pickup'));
   }
 
-  setQuality(performance: boolean): void {
-    this.text('[data-action="quality"]', performance ? 'Graphics: Performance · Tap for detailed' : 'Graphics: Detailed · Tap for performance');
+  setSettings(settings: Settings): void {
+    this.text('[data-action="quality"]', settings.performanceMode ? 'Graphics: Performance · Tap for detailed' : 'Graphics: Detailed · Tap for performance');
+    this.element<HTMLInputElement>('[data-setting="steeringSensitivity"]').value = String(settings.steeringSensitivity);
+    this.element<HTMLInputElement>('[data-setting="cameraSensitivity"]').value = String(settings.cameraSensitivity);
+    this.text('[data-steering-value]', `${settings.steeringSensitivity.toFixed(1)}×`);
+    this.text('[data-camera-value]', `${settings.cameraSensitivity.toFixed(1)}×`);
   }
+  recoveryStatus(message: string): void { this.text('[data-recovery-status]', message); }
   toast(message: string): void {
     clearTimeout(this.toastTimer);
     const element = this.element('.toast'); element.textContent = message; element.hidden = false;

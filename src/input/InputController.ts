@@ -7,6 +7,7 @@ export interface InputActions { interact: () => void; phone: () => void; pause: 
 export class InputController {
   enabled = false;
   reverse = false;
+  steeringSensitivity = 1;
   private keys = new Set<string>();
   private stick = { x: 0, z: 0 };
   private gas = false;
@@ -42,6 +43,8 @@ export class InputController {
   }
 
   private keyDown = (event: KeyboardEvent): void => {
+    const tag = (event.target as HTMLElement | null)?.tagName;
+    if (tag && ['INPUT', 'SELECT', 'TEXTAREA'].includes(tag) && event.code !== 'Escape') return;
     if (['Space', 'Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.code)) event.preventDefault();
     if (event.repeat) return;
     if (event.code === 'Tab') { this.actions.phone(); return; }
@@ -69,7 +72,7 @@ export class InputController {
     const forward = Number(this.keys.has('KeyW') || this.keys.has('ArrowUp')) - Number(this.keys.has('KeyS') || this.keys.has('ArrowDown'));
     const steer = Number(this.keys.has('KeyD') || this.keys.has('ArrowRight')) - Number(this.keys.has('KeyA') || this.keys.has('ArrowLeft'));
     return this.enabled ? { throttle: this.gas ? (this.reverse ? -1 : 1) : forward,
-      steer: clamp(steer || this.stick.x, -1, 1), brake: this.brake, handbrake: this.brake || this.keys.has('Space') }
+      steer: clamp((steer || this.stick.x) * this.steeringSensitivity, -1, 1), brake: this.brake, handbrake: this.brake || this.keys.has('Space') }
       : { throttle: 0, steer: 0, brake: false, handbrake: false };
   }
   dispose(): void { this.abort.abort(); this.reset(); }
