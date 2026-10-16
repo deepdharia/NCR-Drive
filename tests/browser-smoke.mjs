@@ -1,4 +1,4 @@
-import { chromium } from 'playwright';
+const { chromium } = await import(process.env.PLAYWRIGHT_MODULE ?? 'playwright');
 import { spawn } from 'node:child_process';
 import { mkdir } from 'node:fs/promises';
 const server = spawn(process.execPath, ['node_modules/vite/bin/vite.js', '--host', '127.0.0.1', '--port', '3000', '--strictPort'], { stdio: 'inherit' });
@@ -13,7 +13,7 @@ for (let i = 0; i < 100; i++) {
   await new Promise(resolve => setTimeout(resolve, 100));
 }
 if (!ready) throw Error('Vite did not start');
-browser=await chromium.launch({headless:true,args:['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
+browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_EXECUTABLE_PATH || undefined,args:['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
 page=await browser.newPage({viewport:{width:960,height:640},deviceScaleFactor:0.5});
 page.on('pageerror',e=>errors.push(e.message));
 await page.route('**/src/main.ts',async route=>{const r=await route.fetch();let s=await r.text();s=s.replace('const game = new Game(root);','const game = new Game(root); window.__game = game;');await route.fulfill({response:r,body:s});});

@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { TaxiMission, TAXI_STOPS } from '../src/systems/TaxiMission';
-import { readProgress, writeProgress } from '../src/systems/ProgressStore';
+import { defaultSettings, readProgress, writeProgress } from '../src/systems/ProgressStore';
 import { roadRoute, routeLength } from '../src/systems/Navigation';
 import { CollisionWorld } from '../src/core/CollisionWorld';
 import { createDistrictLayout } from '../src/world/DistrictLayout';
@@ -32,13 +32,13 @@ test('impacts remove only the clean bonus; cancellation never awards cash', () =
 });
 test('career survives a save round trip; corrupted, unsupported and unavailable storage recover', () => {
   let value = ''; const storage = { getItem: () => value, setItem: (_key: string, data: string) => { value = data; } };
-  const progress = { version: 1 as const, cash: 17000, rides: 3, courierCompleted: true };
+  const progress = { version: 2 as const, cash: 17000, rides: 3, courierCompleted: true, settings: defaultSettings() };
   assert.ok(writeProgress(storage, progress)); assert.deepEqual(readProgress(storage), progress);
   for (const bad of ['broken', 'null', '{"version":9}', JSON.stringify({ ...progress, rides: -1 }), JSON.stringify({ ...progress, cash: 'Infinity' })]) {
     value = bad; assert.equal(readProgress(storage).cash, 15000);
   }
   assert.equal(readProgress({ getItem: () => { throw Error('blocked'); } }).rides, 0);
-  assert.equal(writeProgress({ setItem: () => { throw Error('quota'); } }, progress), false);
+  assert.equal(writeProgress({ getItem: () => null, setItem: () => { throw Error('quota'); } }, progress), false);
 });
 test('all fare endpoints and sampled GPS routes have vehicle clearance', () => {
   const world = new CollisionWorld(createDistrictLayout().solids);

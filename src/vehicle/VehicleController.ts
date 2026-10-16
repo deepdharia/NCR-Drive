@@ -28,6 +28,7 @@ export class VehicleController {
 
   setDriving(driving: boolean): void {
     this.driving = driving; this.speed = 0; this.acceleration = 0; this.steering = 0;
+    this.braking = this.impact = this.touching = false; this.pitch = this.roll = 0;
   }
 
   update(dt: number, input: DriveInput, world: CollisionWorld, extra: readonly Solid[] = []): void {

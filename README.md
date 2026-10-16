@@ -28,7 +28,11 @@ driver's door. Exit below 15 km/h with a clear door. Drag to orbit; Tab opens
 DelhiOS; Escape pauses. Touch joystick, pedals, reverse, jump and entry buttons
 support mobile layouts. Phone and pause suspend the simulation and timers.
 The pause menu has Detailed/Performance graphics; Performance disables dynamic
-shadows and caps render resolution for slower devices. The choice lasts this session.
+shadows and caps render resolution for slower devices. Graphics, steering and
+camera sensitivity are saved locally. Use **Recover to a clear road · Free** if
+stuck: it checks car/door clearance, keeps your movement mode and earned money,
+and cancels active jobs without paying them. Occupied recovery pads leave the
+game unchanged. Recovery does not charge money.
 
 | Car | Location | Character |
 | --- | --- | --- |
@@ -51,8 +55,11 @@ Open DelhiOS for:
 - **Hustle:** one courier handover on foot, paying ₹750.
 - **DelhiNav:** route lines along the circle and radial roads, distance and target.
 
-Only one job can run at a time. Wallet, taxi ride count and courier completion
-persist in browser storage. Active missions, chapter state, vehicles and positions
+Only one job can run at a time. Wallet, taxi ride count, courier completion and
+settings persist in browser storage. Schema v2 migrates v1 saves, accepts balances
+down to ₹0, and keeps the previous valid save as a backup. A damaged primary can
+restore that backup; unsupported or unrecoverable saves are preserved while play
+continues for this session. Active missions, chapter state, vehicles and positions
 reset on reload. If storage is blocked, play continues with a session-only wallet.
 
 ## Architecture
@@ -76,7 +83,7 @@ or find detours. Parking across a lane can block that lane indefinitely.
 
 ## Verification
 
-`npm test` covers 24 controller, collision, navigation, mission, storage, input,
+`npm test` covers controller, collision, navigation, mission, storage, input,
 camera, geometry and traffic tests. `npm run build` includes strict type checking.
 The CI workflow additionally installs Chromium and runs `tests/browser-smoke.mjs`:
 entry, driving, chapter progression/payout, switching motor-pool cars, taxi payout,
@@ -84,6 +91,13 @@ reload persistence and mobile phone bounds. Controlled position placement tests
 mission wiring; it does not establish that a route feels good to drive. Browser
 screenshots are retained as CI artifacts. The browser harness exposes a game
 reference only by intercepting the test page's module; production has no debug API.
+
+After `npm run build`, `npm run test:production` runs a second Chromium check
+against the shipped dist files: ordinary keyboard/touch controls, a driven courier,
+safe recovery, save migration and settings/reward reload. It needs Playwright and
+Chromium, installed by CI. Local browser installations can set `PLAYWRIGHT_MODULE`
+to the Playwright entry module and `CHROMIUM_EXECUTABLE_PATH` to the browser binary.
+See [handoff](docs/HANDOFF.md) for exact completed checks and remaining M1 work.
 
 See [audit and roadmap](docs/open-world-audit.md) for missing systems, known limits
 and the next playable milestones. This remains a small CP-inspired prototype,

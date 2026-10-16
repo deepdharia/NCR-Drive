@@ -18,6 +18,7 @@ export class CameraRig {
     this.pitch = clamp(this.pitch + dy * 0.006, -0.1, 1.05);
   }
   enterVehicle(): void { this.chaseOffset = 0; this.pitch = 0.3; }
+  reset(): void { this.initialized = false; this.enterVehicle(); }
   update(dt: number, player: PlayerController, car: VehicleController, world: CollisionWorld): void {
     const driving = car.driving;
     const position = driving ? car.position : player.position;
