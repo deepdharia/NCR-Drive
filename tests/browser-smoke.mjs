@@ -3,6 +3,8 @@ import { spawn } from 'node:child_process';
 import { mkdir } from 'node:fs/promises';
 const server = spawn(process.execPath, ['node_modules/vite/bin/vite.js', '--host', '127.0.0.1', '--port', '3000', '--strictPort'], { stdio: 'inherit' });
 let browser;
+let page;
+const errors = [];
 try {
 await mkdir('test-results', { recursive: true });
 let ready = false;
@@ -12,13 +14,15 @@ for (let i = 0; i < 100; i++) {
 }
 if (!ready) throw Error('Vite did not start');
 browser=await chromium.launch({headless:true,args:['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
-const page=await browser.newPage({viewport:{width:1365,height:900}});const errors=[];
+page=await browser.newPage({viewport:{width:960,height:640},deviceScaleFactor:0.5});
 page.on('pageerror',e=>errors.push(e.message));
 await page.route('**/src/main.ts',async route=>{const r=await route.fetch();let s=await r.text();s=s.replace('const game = new Game(root);','const game = new Game(root); window.__game = game;');await route.fulfill({response:r,body:s});});
 await page.goto('http://127.0.0.1:3000');await page.getByRole('button',{name:'Explore Connaught Place'}).click();
 await page.keyboard.press('f');await page.waitForTimeout(250);
 if(!await page.evaluate(()=>window.__game.car.driving))throw Error('keyboard entry failed');
-await page.keyboard.down('w');await page.waitForTimeout(700);await page.keyboard.up('w');
+await page.keyboard.down('w');
+await page.waitForFunction(()=>window.__game.car.kmh > 1, null, {timeout:20000});
+await page.keyboard.up('w');
 console.log('drive speed',await page.evaluate(()=>window.__game.car.kmh));
 await page.keyboard.press('Tab');await page.getByRole('button',{name:'Start chapter'}).click();
 // Controlled placements exercise real fixed simulation, mission events, UI and save wiring.
@@ -43,10 +47,17 @@ for(const stage of ['pickup','dropoff']){
 console.log('taxi complete',await page.evaluate(()=>({rides:window.__game.taxi.completed,cash:window.__game.mission.cash})));
 await page.screenshot({path:'test-results/desktop.png'});
 await page.reload();await page.waitForFunction(()=>window.__game);if (await page.evaluate(()=>window.__game.taxi.completed) !== 1) throw Error('Ride save failed');
-const mobile=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});mobile.on('pageerror',e=>errors.push(e.message));
+const mobile=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:0.5,isMobile:true,hasTouch:true});mobile.on('pageerror',e=>errors.push(e.message));
 await mobile.goto('http://127.0.0.1:3000');await mobile.getByRole('button',{name:'Explore Connaught Place'}).click();await mobile.getByRole('button',{name:'Open DelhiOS phone'}).click();
 const bounds = await mobile.evaluate(()=>({page:document.documentElement.scrollWidth,viewport:innerWidth,phone:document.querySelector('.phone').getBoundingClientRect().toJSON()}));
 if (bounds.page > bounds.viewport || bounds.phone.x < 0 || bounds.phone.right > bounds.viewport) throw Error('Phone overflows mobile viewport');
 await mobile.locator('[data-action="story"]').scrollIntoViewIfNeeded();await mobile.locator('[data-action="story"]').click();await mobile.screenshot({path:'test-results/mobile.png'});
 if(errors.length)throw Error(errors.join('\n'));console.log('browser checks passed; no page errors');await browser.close();
+} catch (error) {
+ console.error('Page errors', errors);
+ if (page) {
+   console.error('Game diagnostic', await page.evaluate(()=>{const g=window.__game;return g ? {started:g.started,paused:g.paused,phone:g.phone,driving:g.car.driving,speed:g.car.speed,input:g.input.drive(),story:g.story,position:g.car.position} : {html:document.body.innerText};}).catch(()=>null));
+   await page.screenshot({path:'test-results/failure.png',timeout:10000}).catch(()=>{});
+ }
+ throw error;
 } finally { await browser?.close(); server.kill(); }
