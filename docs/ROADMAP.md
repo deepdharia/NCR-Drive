@@ -1,7 +1,8 @@
 # Milestones and gates
 
-Current integration branch: `improve/m1-driving-recovery`, based on PR #4 at
-`c6e0514573e44395c3e0a6505343678e5ad9054f`. See HANDOFF.md for evidence/state.
+Delivery branch: `main`. The foundation came from PR #4 at
+`c6e0514573e44395c3e0a6505343678e5ad9054f`; recovery/settings came through
+PR #5. See HANDOFF.md for merged commits, evidence and remaining work.
 
 | Milestone | Gate | Current status |
 | --- | --- | --- |

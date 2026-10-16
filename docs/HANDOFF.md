@@ -13,7 +13,7 @@ Updated: 17 October 2026 (Asia/Kolkata). Integration owner: this task's primary 
 - Baseline Git tree verified as `fa47a220e0777888d94d0c2c9cdfaff837363080`.
   Connector-retrieved files and commit objects matched their Git hashes; later
   shell fetch also succeeded in the approved network execution context.
-- Current working branch: `improve/m1-driving-recovery`, directly based on PR #4.
+- Integration branch: `improve/m1-driving-recovery`; delivery branch: `main`.
   Tested implementation commit: `f78b058` (recovery/settings, code, tests and docs).
   The delivery commit containing this file is the session checkpoint; use the PR
   head/Git log for its exact SHA (a commit cannot embed its own SHA).
@@ -70,7 +70,7 @@ cash ₹16,922), reload persistence and mobile phone bounds; no page errors.
 This harness uses controlled placement for mission transitions and is distinct
 from the ordinary-input production courier route. Clean `npm ci --ignore-scripts
 --prefer-offline`, `npm test`, strict lint/build, browser syntax and whitespace
-checks also pass. CI for the new branch has not yet been observed.
+checks also pass. Remote CI and main integration results are recorded in the delivery section below.
 
 ## Save/schema/assets and known limits
 
@@ -102,23 +102,34 @@ Do not infer device performance from headless Chromium.
 
 ## Merge/deployment state
 
-No merge or production deployment performed. PR #4 remains the required base
-until merged. Its Vercel status reports a successful preview. Read-only Vercel
-project inspection returned HTTP 403 for `deep-07f0`; no Vercel CLI is installed,
-so the live production source remains unverified.
+The owner explicitly authorised publishing and saving all completed work in main
+on 17 October 2026 (Asia/Kolkata). The earlier push approval block is resolved.
 
-Publication blocked: automatic approval review rejected `git push -u origin
-improve/m1-driving-recovery` because sending the code to GitHub requires explicit
-user authorization in trusted conversation content. No push or PR creation
-occurred; do not bypass the rejection through the connector. The tested code is
-committed locally. Source archive, patch and browser evidence are retained under
-`/workspace/work/ncr-drive-review/`. The designated chat output directory under
-`/codex/browser/projectless/` could not be created in this worker (permission
-denied), so no downloadable chat attachment is claimed.
+- Foundation PR #4 merged into main as
+  `16ea2fccce6bb2a1c553619ca0800a0e40707517`.
+- Recovery/settings PR #5 merged into main as
+  `3d056d57413c175e9f85f7d9d1bb1d0c1faff374`.
+- PR #5's tested head was `71bdd8210cc5fb356fc5b3fa1fa2462062541a3a`.
+  The main merge has an identical file tree; the final delivery-record update
+  changes documentation only.
+- GitHub Actions run 38958966041 passed clean install, logic tests, strict build,
+  retained development-browser smoke and production-browser smoke:
+  https://github.com/deepdharia/NCR-Drive/actions/runs/38958966041
+- Foundation main CI run 38958828551 also passed. New main pushes trigger fresh
+  checks; inspect the current main commit's status before a subsequent release.
+- Implementation, tests, CI workflow, README and all five project documents are
+  now in main. No branch deletion or force-push was performed.
+- Current main includes this delivery-record commit; obtain its exact SHA with
+  `git rev-parse origin/main` after fetching. Future work starts from main.
 
-After explicit user approval, push only this branch and open a draft PR targeting
-`improve/open-world-foundation` to keep the M1 diff separate from PR #4. Merge
-PR #4 first, then retarget the task PR to main and rerun checks. Creating the
-review branch may trigger existing preview automation; no production promotion
-is authorized or performed here. Implement audio only after preserving this
-checkpoint and resolving review publication.
+No manual Vercel deployment or promotion was performed. Merges into main may
+trigger the existing Git/Vercel integration. Read-only Vercel project inspection
+returned HTTP 403 for `deep-07f0`, so a successful GitHub status alone is not
+independent verification of the live production source or gameplay.
+
+Source archive, patch and browser evidence are retained under
+`/workspace/work/ncr-drive-review/`. The designated chat output directory could
+not be created in this worker, so no downloadable chat attachment is claimed.
+The GitHub main branch is the durable source of truth after delivery. Begin the
+next task by fetching main and reading this handoff; do not use the old local
+archive or an assistant summary as evidence of newer remote state.

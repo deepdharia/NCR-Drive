@@ -52,3 +52,13 @@ Open evidence: a complete human-driven taxi route, handling/camera/audio judgmen
 full chapter pacing, M1 frame-time percentiles, named Android 10-minute run,
 startup on a stated network, retained-resource cycles and independent player
 feedback. No fps, GPU time, startup budget or qualitative superiority is claimed.
+
+## Main integration — 17 October 2026
+
+PR #4 (foundation) and PR #5 (recovery/settings) are merged into main.
+PR #5 head `71bdd82` passed GitHub Actions run 38958966041, including both browser
+harnesses. The main merge `3d056d5` has the identical file tree. The subsequent
+delivery-record update changes documentation only. CI evidence:
+https://github.com/deepdharia/NCR-Drive/actions/runs/38958966041
+
+No real-device performance or human-playtest evidence was added during merging.
