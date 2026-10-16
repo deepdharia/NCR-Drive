@@ -1,3 +1,5 @@
+import { VEHICLE_SPECS } from './VehicleSpec';
+import type { VehicleSpec } from './VehicleSpec';
 import { blend, clamp } from '../core/math';
 import type { Point } from '../core/math';
 import type { CollisionWorld, Solid } from '../core/CollisionWorld';
@@ -18,16 +20,17 @@ export class VehicleController {
   braking = false;
   impact = false;
   private touching = false;
-  readonly width = 1.72;
-  readonly length = 3.85;
+  constructor(readonly spec: VehicleSpec = VEHICLE_SPECS[0]) {}
+  get width(): number { return this.spec.width; }
+  get length(): number { return this.spec.length; }
   get kmh(): number { return Math.abs(this.speed) * 3.6; }
-  get collider(): Solid { return { ...this.position, yaw: this.yaw, width: this.width, depth: this.length, height: 1.65 }; }
+  get collider(): Solid { return { ...this.position, yaw: this.yaw, width: this.width, depth: this.length, height: this.spec.height }; }
 
   setDriving(driving: boolean): void {
     this.driving = driving; this.speed = 0; this.acceleration = 0; this.steering = 0;
   }
 
-  update(dt: number, input: DriveInput, world: CollisionWorld): void {
+  update(dt: number, input: DriveInput, world: CollisionWorld, extra: readonly Solid[] = []): void {
     this.impact = false;
     if (!this.driving) {
       this.pitch *= 1 - blend(10, dt); this.roll *= 1 - blend(10, dt); return;
@@ -35,12 +38,12 @@ export class VehicleController {
     const throttle = clamp(input.throttle, -1, 1);
     const reversingInput = throttle * this.speed < -0.15;
     this.braking = input.brake || input.handbrake || reversingInput;
-    let desiredAcceleration = throttle * (throttle < 0 ? 3 : 4.8);
+    let desiredAcceleration = throttle * (throttle < 0 ? 3 : this.spec.acceleration);
     if (this.braking) desiredAcceleration = -Math.sign(this.speed) * (input.handbrake ? 8 : 10);
     else desiredAcceleration -= Math.sign(this.speed) * (0.24 + 0.006 * this.speed * this.speed);
     this.acceleration += (desiredAcceleration - this.acceleration) * blend(9, dt);
     const oldSpeed = this.speed;
-    this.speed = clamp(this.speed + this.acceleration * dt, -8, 38);
+    this.speed = clamp(this.speed + this.acceleration * dt, -8, this.spec.maxSpeed);
     if (oldSpeed * this.speed < 0 && (this.braking || throttle === 0)) { this.speed = 0; this.acceleration = 0; }
     if (Math.abs(this.speed) < 0.06 && Math.abs(throttle) < 0.01) { this.speed = 0; this.acceleration = 0; }
     const limit = 0.55 + (0.15 - 0.55) * clamp(Math.abs(this.speed) / 32, 0, 1);
@@ -50,7 +53,7 @@ export class VehicleController {
     const yawRate = clamp(this.speed / 2.4 * Math.tan(this.steering), -yawLimit, yawLimit);
     const heading = this.yaw + yawRate * dt;
     const motion = { x: Math.sin(heading) * this.speed * dt, z: Math.cos(heading) * this.speed * dt };
-    const contact = world.moveBox({ ...this.position, yaw: this.yaw }, motion, yawRate * dt, this.width, this.length);
+    const contact = world.moveBox({ ...this.position, yaw: this.yaw }, motion, yawRate * dt, this.width, this.length, extra);
     this.position = { x: contact.pose.x, z: contact.pose.z }; this.yaw = contact.pose.yaw;
     this.impact = contact.hit && !this.touching && Math.abs(this.speed) > 2;
     this.touching = contact.hit;

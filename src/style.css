@@ -178,3 +178,5 @@ kbd { font-family: inherit; font-size: 9px; border: 1px solid #dfc79d77; border-
 
 .gig-tracker { pointer-events: auto; text-align: left; color: inherit; font: inherit; }
 .phone-open .gig-tracker { visibility: hidden; }
+
+.story-tag { font-size: 10px; letter-spacing: .12em; color: #e4bc70; }

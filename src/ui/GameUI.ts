@@ -4,11 +4,12 @@ import type { VehicleController } from '../vehicle/VehicleController';
 import type { InteractionSystem } from '../systems/InteractionSystem';
 import { COURIER_TARGET } from '../systems/CourierMission';
 import type { CourierMission } from '../systems/CourierMission';
+import type { StoryMission } from '../systems/StoryMission';
 import type { TaxiMission } from '../systems/TaxiMission';
 import { roadRoute, routeLength } from '../systems/Navigation';
 import { Minimap } from './Minimap';
 
-interface UIActions { start: () => void; phone: () => void; pause: () => void; interact: () => void; accept: () => void; taxi: () => void; cancelTaxi: () => void }
+interface UIActions { start: () => void; phone: () => void; pause: () => void; interact: () => void; accept: () => void; taxi: () => void; cancelTaxi: () => void; story: () => void; cancelStory: () => void }
 const phoneIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10 18h4"/></svg>';
 
 export class GameUI {
@@ -19,7 +20,7 @@ export class GameUI {
     root.innerHTML = `
       <section class="welcome" aria-label="Welcome to NCR Drive">
         <div class="welcome-top"><span class="brand-mark">N</span><span>NCR DRIVE <small>NEW DELHI, INDIA</small></span><span class="edition">OPEN WORLD / 01</span></div>
-        <div class="welcome-copy"><span class="eyebrow">A CITY WITH A THOUSAND STORIES</span><h1>Your evening.<br>Your <em>Delhi.</em></h1><p>Walk beneath the arcades. Take the Parvaaz for a spin.<br>Pick up passengers. Earn your next fare in Connaught Place.</p><button class="primary" data-action="start">Explore Connaught Place <span>↗</span></button><div class="welcome-note">NO DOWNLOADS. NO KEYS. JUST THE CITY.</div></div>
+        <div class="welcome-copy"><span class="eyebrow">A CITY WITH A THOUSAND STORIES</span><h1>Your evening.<br>Your <em>Delhi.</em></h1><p>Walk beneath the arcades. Take the Parvaaz for a spin.<br>Switch cars. Pick up passengers. Start your first city story.</p><button class="primary" data-action="start">Explore Connaught Place <span>↗</span></button><div class="welcome-note">NO DOWNLOADS. NO KEYS. JUST THE CITY.</div></div>
         <div class="welcome-bottom"><span>25° golden hour · Connaught Place</span><span>WALK / DRIVE / HUSTLE</span></div>
       </section>
       <section class="game-ui" hidden aria-label="Game controls">
@@ -44,6 +45,8 @@ export class GameUI {
           <div class="app-heading"><span>↗ DelhiNav</span><small>LIVE GPS</small></div><div class="phone-map"><canvas aria-label="DelhiNav GPS minimap" role="img"></canvas><div><span>●</span> Connaught Place <small data-coordinates>New Delhi, India</small></div></div>
           <div class="app-heading"><span>↗ Delhi Cabs</span><small>YOUR DRIVING CAREER</small></div>
           <article class="taxi-card"><span class="taxi-tag">NEXT FARE</span><h3 data-taxi-route></h3><p>Stop below 2 km/h inside each marker for 2 seconds. Stay in the car for pickup and drop-off.</p><div class="gig-reward"><strong data-taxi-fare></strong><span>+ ₹150 clean-drive bonus<br>No time limit</span></div><p data-taxi-status></p><button class="primary" data-action="taxi">Accept passenger →</button><button class="cancel-fare" data-action="cancelTaxi" hidden>Cancel current fare</button></article>
+          <div class="app-heading"><span>↗ City Stories</span><small>CHAPTER 01</small></div><article class="taxi-card"><span class="story-tag">KABIR’S EVENING RUN</span><h3>One evening. Three stops.</h3><p data-story-status>Collect paperwork, cross the circle and finish a handover on foot. 4 minutes · ₹1,200.</p><button class="primary" data-action="story">Start chapter →</button><button class="cancel-fare" data-action="cancelStory" hidden>Abandon chapter</button></article>
+          <div class="app-heading"><span>↗ Motor pool</span><small>THREE CARS · FREE TO DRIVE</small></div><article class="taxi-card"><p>Gold Parvaaz: inner circle. White Raahi estate: west approach. Blue Baaz sport: east approach. Walk to the right-hand door and press F. Cars remain parked where you leave them this session.</p></article>
           <div class="app-heading"><span>◈ Hustle</span><small>LOCAL GIGS</small></div><article class="gig-card"><span class="gig-tag">YOUR FIRST GIG</span><h3>Shivaji Stadium<br>Courier Run</h3><p>One parcel. A short drive through CP. Hand it over on foot at the stadium metro.</p><div class="gig-reward"><strong>₹750</strong><span>No time limit<br>Parcel included</span></div><button class="primary" data-action="accept">Accept delivery →</button></article><p class="phone-footer">A little hustle. A bigger city.</p>
         </div><div class="phone-home"></div>
       </aside>
@@ -58,6 +61,8 @@ export class GameUI {
         case 'pause': actions.pause(); break;
         case 'interact': actions.interact(); break;
         case 'accept': actions.accept(); break;
+        case 'story': actions.story(); break;
+        case 'cancelStory': actions.cancelStory(); break;
         case 'taxi': actions.taxi(); break;
         case 'cancelTaxi': actions.cancelTaxi(); break;
         case 'jump': input.requestJump(); break;
@@ -113,12 +118,12 @@ export class GameUI {
       else if (started) this.element<HTMLButtonElement>('[aria-label="Open DelhiOS phone"]').focus({ preventScroll: true });
     }
   }
-  update(player: PlayerController, car: VehicleController, interaction: InteractionSystem, mission: CourierMission, taxi: TaxiMission, saveAvailable: boolean): void {
+  update(player: PlayerController, car: VehicleController, interaction: InteractionSystem, mission: CourierMission, taxi: TaxiMission, saveAvailable: boolean, story: StoryMission): void {
     const driving = car.driving, position = driving ? car.position : player.position;
     this.text('[data-cash]', `₹${mission.cash.toLocaleString('en-IN')}`);
-    this.text('[data-mode]', driving ? 'THE PARVAAZ / HATCHBACK' : 'ON FOOT / EXPLORER');
+    this.text('[data-mode]', driving ? `${car.spec.name.toUpperCase()} / ${car.spec.role.toUpperCase()}` : 'ON FOOT / EXPLORER');
     this.text('[data-speed]', driving ? `${Math.round(car.kmh)} km/h` : 'Take the long way.');
-    this.text('[data-mode-detail]', driving ? `${Math.abs(car.speed) < 0.1 ? 'IDLE' : car.speed < 0 ? 'REVERSE' : 'DRIVE'} · 900 kg · Indian compact` : 'The city moves at your pace.');
+    this.text('[data-mode-detail]', driving ? `${Math.abs(car.speed) < 0.1 ? 'IDLE' : car.speed < 0 ? 'REVERSE' : 'DRIVE'} · ${car.spec.role}` : 'The city moves at your pace.');
     this.text('[data-prompt]', interaction.prompt);
     for (const button of this.root.querySelectorAll<HTMLButtonElement>('[data-action="interact"]')) {
       button.disabled = !interaction.available; button.setAttribute('aria-label', driving ? 'Exit vehicle' : 'Enter vehicle');
@@ -127,13 +132,13 @@ export class GameUI {
     this.root.querySelectorAll<HTMLElement>('[data-driving]').forEach(e => { e.hidden = !driving; });
     this.root.querySelectorAll<HTMLElement>('[data-foot]').forEach(e => { e.hidden = driving; });
     const courier = mission.state === 'active';
-    const target = taxi.active ? taxi.target : courier ? COURIER_TARGET : undefined;
+    const target = story.active ? story.step.target : taxi.active ? taxi.target : courier ? COURIER_TARGET : undefined;
     const route = target ? roadRoute(position, target) : [];
     const metres = Math.round(routeLength(route));
     const stage = taxi.state === 'pickup' ? 'Pickup' : 'Drop-off';
     const stopHint = taxi.dwell > 0 ? `Hold still · ${Math.max(0, 2 - taxi.dwell).toFixed(1)} s` : `Stop in marker · ${metres} m by road`;
     this.text('[data-job-title]', taxi.active ? `${stage} · ${taxi.state === 'pickup' ? taxi.pickup.name : taxi.destination.name}` : courier ? 'Shivaji Stadium Courier Run' : 'Delhi Cabs · Your next fare');
-    this.text('[data-distance]', taxi.active ? (driving ? stopHint : 'Enter the Parvaaz to collect your passenger') : courier ? `${metres} m by road · Deliver on foot` : 'Open DelhiOS · Find a passenger →');
+    this.text('[data-distance]', taxi.active ? (driving ? stopHint : 'Enter a motor-pool car to collect your passenger') : courier ? `${metres} m by road · Deliver on foot` : 'Open DelhiOS · Find a passenger →');
     this.text('[data-coordinates]', `${position.x.toFixed(1)}, ${position.z.toFixed(1)} · ${driving ? 'Driving' : 'On foot'}`);
     this.text('[data-save]', saveAvailable ? 'Progress saved on this device' : 'Saving unavailable · This session only');
     this.text('[data-career]', `${taxi.completed} rides · ${taxi.completed >= 10 ? 'CP regular' : taxi.completed >= 3 ? 'City driver' : 'New driver'}`);
@@ -142,12 +147,21 @@ export class GameUI {
     this.text('.taxi-tag', taxi.active ? `${stage.toUpperCase()} IN PROGRESS` : 'NEXT FARE');
     this.text('[data-taxi-status]', taxi.active ? `${stage} · ${taxi.collisions ? 'Clean bonus lost after impact' : 'Clean bonus available'}` : courier ? 'Finish your courier gig to take a fare.' : 'One passenger. A new route through CP.');
     const taxiButton = this.element<HTMLButtonElement>('[data-action="taxi"]');
-    taxiButton.disabled = taxi.active || courier;
+    taxiButton.disabled = taxi.active || courier || story.active;
     this.text('[data-action="taxi"]', taxi.active ? 'Fare in progress · Close phone to drive' : 'Accept passenger →');
     this.element('[data-action="cancelTaxi"]').hidden = !taxi.active;
     this.text('.gig-tag', mission.state === 'completed' ? 'DELIVERED' : courier ? 'IN PROGRESS' : 'YOUR FIRST GIG');
-    const accept = this.element<HTMLButtonElement>('[data-action="accept"]'); accept.disabled = mission.state !== 'available' || taxi.active;
+    const accept = this.element<HTMLButtonElement>('[data-action="accept"]'); accept.disabled = mission.state !== 'available' || taxi.active || story.active;
     this.text('[data-action="accept"]', courier ? `GPS active · ${metres} m` : mission.state === 'completed' ? 'Delivery complete · ₹750 earned' : taxi.active ? 'Finish your taxi fare first' : 'Accept delivery →');
+    const storyButton = this.element<HTMLButtonElement>('[data-action="story"]');
+    storyButton.disabled = story.active || courier || taxi.active;
+    this.text('[data-action="story"]', story.active ? 'Chapter in progress' : story.state === 'failed' ? 'Retry chapter →' : story.state === 'completed' ? 'Replay chapter →' : 'Start chapter →');
+    this.element('[data-action="cancelStory"]').hidden = !story.active;
+    this.text('[data-story-status]', story.active ? `${story.index + 1}/${story.steps.length} · ${story.step.title} · ${Math.ceil(story.remaining)}s remaining` : 'Collect paperwork, cross the circle and finish a handover on foot. 4 minutes · ₹1,200.');
+    if (story.active) {
+      this.text('[data-job-title]', `${story.index + 1}/${story.steps.length} · ${story.step.title}`);
+      this.text('[data-distance]', `${Math.ceil(story.remaining)}s · ${metres} m · ${story.step.mode === 'foot' ? 'Exit car · hand over on foot' : 'Stop in car'} · Hold still 1.5s`);
+    }
     this.maps.forEach(map => map.draw(position, driving ? car.yaw : player.yaw, car.position, target, route, taxi.state === 'pickup'));
   }
 

@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeStaticMeshes } from '../rendering/MeshUtils';
 import { signTexture } from '../rendering/ProceduralTextures';
+import { VEHICLE_SPECS } from './VehicleSpec';
+import type { VehicleSpec } from './VehicleSpec';
 import type { VehicleController } from './VehicleController';
 
 /** A compact five-door hatchback; static detail is batched per material. */
@@ -11,9 +13,9 @@ export class VehicleView {
   private wheels: { pivot: THREE.Group; spin: THREE.Group; front: boolean }[] = [];
   private brakeMaterial = new THREE.MeshStandardMaterial({ color: 0x9b2520, emissive: 0xff3420, emissiveIntensity: 0.65 });
 
-  constructor() {
-    this.group.name = 'The Parvaaz · DL 1C AB 4092'; this.body.name = 'Sprung hatchback body';
-    const paint = new THREE.MeshPhysicalMaterial({ color: 0xb78b36, metalness: 0.7, roughness: 0.25, clearcoat: 0.65, clearcoatRoughness: 0.22 }); paint.name = 'Marigold metallic paint';
+  constructor(spec: VehicleSpec = VEHICLE_SPECS[0], plateNumber = 'DL 1C AB 4092') {
+    this.group.name = `${spec.name} · ${plateNumber}`; this.body.name = 'Sprung hatchback body';
+    const paint = new THREE.MeshPhysicalMaterial({ color: spec.color, metalness: 0.7, roughness: 0.25, clearcoat: 0.65, clearcoatRoughness: 0.22 }); paint.name = 'Marigold metallic paint';
     const glass = new THREE.MeshStandardMaterial({ color: 0x344f59, roughness: 0.1, metalness: 0.35, transparent: true, opacity: 0.68, depthWrite: false, side: THREE.DoubleSide, envMapIntensity: 1.25 }); glass.name = 'Tinted reflective glass';
     const rubber = new THREE.MeshStandardMaterial({ color: 0x16191a, roughness: 0.96 }); rubber.name = 'Rubber and trim';
     const chrome = new THREE.MeshStandardMaterial({ color: 0xb5bac0, roughness: 0.26, metalness: 0.85 }); chrome.name = 'Alloy and chrome';
@@ -84,12 +86,12 @@ export class VehicleView {
     addBox(0.54, 0.14, 0.04, rubber, 0, 1.01, 0.62);
     const steering = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.018, 6, 16), rubber); steering.position.set(-0.35, 1.10, 0.46); steering.rotation.x = -0.35; this.body.add(steering);
     for (const rear of [false, true]) {
-      const map = signTexture('DL 1C AB 4092', undefined, rear ? '#e5bd5e' : '#e9e7d9');
+      const map = signTexture(plateNumber, undefined, rear ? '#e5bd5e' : '#e9e7d9');
       // High-contrast Indian number plates use dark, unlit lettering.
       const ctx = (map.image as HTMLCanvasElement).getContext('2d')!;
       ctx.fillStyle = rear ? '#e5bd5e' : '#e9e7d9'; ctx.fillRect(0, 0, 512, 112);
       ctx.strokeStyle = '#303536'; ctx.lineWidth = 5; ctx.strokeRect(5, 5, 502, 102);
-      ctx.fillStyle = '#1d292c'; ctx.font = 'bold 48px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('DL 1C AB 4092', 265, 74, 465); map.needsUpdate = true;
+      ctx.fillStyle = '#1d292c'; ctx.font = 'bold 48px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(plateNumber, 265, 74, 465); map.needsUpdate = true;
       const plate = new THREE.Mesh(new THREE.PlaneGeometry(0.54, 0.125), new THREE.MeshStandardMaterial({ map, roughness: 0.65 }));
       plate.name = rear ? 'Rear Indian plate' : 'Front Indian plate'; plate.position.set(0, 0.53, rear ? -1.90 : 1.91); plate.rotation.y = rear ? Math.PI : 0; this.body.add(plate);
     }
@@ -109,12 +111,13 @@ export class VehicleView {
       mergeStaticMeshes(spin); pivot.add(spin); this.group.add(pivot); this.wheels.push({ pivot, spin, front: z > 0 });
     }
     mergeStaticMeshes(this.body); this.group.add(this.body);
+    this.group.scale.set(spec.width / 1.72, spec.height / 1.65, spec.length / 3.85);
   }
 
   update(car: VehicleController): void {
     this.group.position.set(car.position.x, 0.035, car.position.z); this.group.rotation.y = car.yaw;
     this.body.rotation.set(car.pitch, 0, car.roll);
     this.wheels.forEach(w => { w.pivot.rotation.y = w.front ? car.steering : 0; w.spin.rotation.x = car.wheelTravel / 0.32; });
-    this.brakeMaterial.emissiveIntensity = car.braking && car.driving ? 3 : 0.65;
+    this.brakeMaterial.emissiveIntensity = car.braking ? 3 : 0.65;
   }
 }

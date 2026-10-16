@@ -44,10 +44,10 @@ export class CollisionWorld {
     return result;
   }
 
-  boxIsClear(pose: BoxPose, width: number, depth: number): boolean {
+  boxIsClear(pose: BoxPose, width: number, depth: number, extra: readonly Solid[] = []): boolean {
     const axes = (yaw: number): Point[] => [{ x: Math.cos(yaw), z: -Math.sin(yaw) }, { x: Math.sin(yaw), z: Math.cos(yaw) }];
     const a = axes(pose.yaw);
-    return !this.solids.some(solid => {
+    return ![...this.solids, ...extra].some(solid => {
       if ((solid.base ?? 0) > 1.7 || solid.height < 0.15) return false;
       const b = axes(solid.yaw);
       const dx = solid.x - pose.x, dz = solid.z - pose.z;
@@ -60,12 +60,12 @@ export class CollisionWorld {
     });
   }
 
-  moveBox(start: BoxPose, motion: Point, yawMotion: number, width: number, depth: number): { pose: BoxPose; hit: boolean } {
+  moveBox(start: BoxPose, motion: Point, yawMotion: number, width: number, depth: number, extra: readonly Solid[] = []): { pose: BoxPose; hit: boolean } {
     const pose = { ...start };
     const steps = Math.max(1, Math.ceil(Math.hypot(motion.x, motion.z) / 0.2), Math.ceil(Math.abs(yawMotion) / 0.025));
     for (let i = 0; i < steps; i++) {
       const next = { x: pose.x + motion.x / steps, z: pose.z + motion.z / steps, yaw: pose.yaw + yawMotion / steps };
-      if (!this.boxIsClear(next, width, depth)) return { pose, hit: true };
+      if (!this.boxIsClear(next, width, depth, extra)) return { pose, hit: true };
       Object.assign(pose, next);
     }
     return { pose, hit: false };
