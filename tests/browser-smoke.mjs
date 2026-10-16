@@ -18,6 +18,9 @@ page=await browser.newPage({viewport:{width:960,height:640},deviceScaleFactor:0.
 page.on('pageerror',e=>errors.push(e.message));
 await page.route('**/src/main.ts',async route=>{const r=await route.fetch();let s=await r.text();s=s.replace('const game = new Game(root);','const game = new Game(root); window.__game = game;');await route.fulfill({response:r,body:s});});
 await page.goto('http://127.0.0.1:3000');await page.getByRole('button',{name:'Explore Connaught Place'}).click();
+await page.keyboard.press('Escape');
+await page.locator('[data-action="quality"]').click();
+await page.getByRole('button',{name:'Back to the city'}).click();
 await page.keyboard.press('f');await page.waitForTimeout(250);
 if(!await page.evaluate(()=>window.__game.car.driving))throw Error('keyboard entry failed');
 await page.keyboard.down('w');
@@ -48,7 +51,7 @@ console.log('taxi complete',await page.evaluate(()=>({rides:window.__game.taxi.c
 await page.screenshot({path:'test-results/desktop.png'});
 await page.reload();await page.waitForFunction(()=>window.__game);if (await page.evaluate(()=>window.__game.taxi.completed) !== 1) throw Error('Ride save failed');
 const mobile=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:0.5,isMobile:true,hasTouch:true});mobile.on('pageerror',e=>errors.push(e.message));
-await mobile.goto('http://127.0.0.1:3000');await mobile.getByRole('button',{name:'Explore Connaught Place'}).click();await mobile.getByRole('button',{name:'Open DelhiOS phone'}).click();
+await mobile.goto('http://127.0.0.1:3000');await mobile.getByRole('button',{name:'Explore Connaught Place'}).click();await mobile.getByRole('button',{name:'Pause game'}).click();await mobile.locator('[data-action="quality"]').click();await mobile.getByRole('button',{name:'Back to the city'}).click();await mobile.getByRole('button',{name:'Open DelhiOS phone'}).click();
 const bounds = await mobile.evaluate(()=>({page:document.documentElement.scrollWidth,viewport:innerWidth,phone:document.querySelector('.phone').getBoundingClientRect().toJSON()}));
 if (bounds.page > bounds.viewport || bounds.phone.x < 0 || bounds.phone.right > bounds.viewport) throw Error('Phone overflows mobile viewport');
 await mobile.locator('[data-action="story"]').scrollIntoViewIfNeeded();await mobile.locator('[data-action="story"]').click();await mobile.screenshot({path:'test-results/mobile.png'});

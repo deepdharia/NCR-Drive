@@ -9,7 +9,7 @@ import type { TaxiMission } from '../systems/TaxiMission';
 import { roadRoute, routeLength } from '../systems/Navigation';
 import { Minimap } from './Minimap';
 
-interface UIActions { start: () => void; phone: () => void; pause: () => void; interact: () => void; accept: () => void; taxi: () => void; cancelTaxi: () => void; story: () => void; cancelStory: () => void }
+interface UIActions { start: () => void; phone: () => void; pause: () => void; interact: () => void; accept: () => void; taxi: () => void; cancelTaxi: () => void; story: () => void; cancelStory: () => void; quality: () => void }
 const phoneIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10 18h4"/></svg>';
 
 export class GameUI {
@@ -50,7 +50,7 @@ export class GameUI {
           <div class="app-heading"><span>◈ Hustle</span><small>LOCAL GIGS</small></div><article class="gig-card"><span class="gig-tag">YOUR FIRST GIG</span><h3>Shivaji Stadium<br>Courier Run</h3><p>One parcel. A short drive through CP. Hand it over on foot at the stadium metro.</p><div class="gig-reward"><strong>₹750</strong><span>No time limit<br>Parcel included</span></div><button class="primary" data-action="accept">Accept delivery →</button></article><p class="phone-footer">A little hustle. A bigger city.</p>
         </div><div class="phone-home"></div>
       </aside>
-      <section class="pause-screen" hidden aria-label="Paused"><div><span class="eyebrow">TAKE A BREATHER</span><h2>Delhi can wait.</h2><p>Your drive will be right here.</p><button class="primary" data-action="pause">Back to the city →</button></div></section>`;
+      <section class="pause-screen" hidden aria-label="Paused"><div><span class="eyebrow">TAKE A BREATHER</span><h2>Delhi can wait.</h2><p>Your drive will be right here.</p><button class="graphics-button" data-action="quality">Graphics: Detailed · Tap for performance</button><button class="primary" data-action="pause">Back to the city →</button></div></section>`;
     const options = { signal: this.abort.signal };
     root.addEventListener('click', event => {
       const button = (event.target as Element).closest<HTMLButtonElement>('button[data-action]');
@@ -59,6 +59,7 @@ export class GameUI {
         case 'start': actions.start(); break;
         case 'phone': actions.phone(); break;
         case 'pause': actions.pause(); break;
+        case 'quality': actions.quality(); break;
         case 'interact': actions.interact(); break;
         case 'accept': actions.accept(); break;
         case 'story': actions.story(); break;
@@ -165,6 +166,9 @@ export class GameUI {
     this.maps.forEach(map => map.draw(position, driving ? car.yaw : player.yaw, car.position, target, route, taxi.state === 'pickup'));
   }
 
+  setQuality(performance: boolean): void {
+    this.text('[data-action="quality"]', performance ? 'Graphics: Performance · Tap for detailed' : 'Graphics: Detailed · Tap for performance');
+  }
   toast(message: string): void {
     clearTimeout(this.toastTimer);
     const element = this.element('.toast'); element.textContent = message; element.hidden = false;

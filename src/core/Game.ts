@@ -43,6 +43,7 @@ export class Game {
   private started = false;
   private paused = false;
   private phone = false;
+  private performanceMode = false;
   private accumulator = 0;
   private uiElapsed = 0;
   private lastTime = performance.now();
@@ -81,6 +82,13 @@ export class Game {
     this.ui = new GameUI(overlay, this.input, {
       start: () => { this.started = true; this.syncScreen(); }, phone: () => this.togglePhone(),
       pause: () => this.togglePause(), interact: () => this.interact(),
+      quality: () => {
+        this.performanceMode = !this.performanceMode;
+        this.renderer.shadowMap.enabled = !this.performanceMode;
+        this.renderer.setPixelRatio(Math.min(devicePixelRatio, this.performanceMode ? 0.75 : mobile ? 1.25 : 1.5));
+        this.ui.setQuality(this.performanceMode);
+        this.renderer.render(this.scene, this.camera.camera);
+      },
       accept: () => {
         if (!this.taxi.active && !this.story.active && this.mission.accept()) { this.phone = false; this.syncScreen(); this.ui.toast('Parcel collected. Follow DelhiNav and deliver on foot.'); }
       },
