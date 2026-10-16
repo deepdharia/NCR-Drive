@@ -37,7 +37,7 @@ the current playable promise is driving and completing jobs in one coherent area
 | Gunplay | Absent | Decide whether it serves the core game before implementing |
 | Delhi world | Stylized CP arcades, ring, six approaches and stadium frontage | Bangla Sahib landmark, better street detail and connected district routes |
 | Visuals | Existing dusk sky, haze, shadows, reflections and procedural textures | Day/night lighting, quality settings, restrained particles and audio |
-| Performance | Existing batching, DPR cap, fixed-step budget and bounded traffic | Real-device profiling; add spatial indexing/LOD from measured bottlenecks |
+| Performance | Batching, bounded traffic, fixed-step budget and Detailed/Performance toggle | Real-device profiling and adaptive quality; add spatial indexing/LOD from measured bottlenecks |
 | Persistence | Wallet, rides and courier saved locally | Mission/vehicle/world saves and validated migrations |
 | Native release | Static web build works | PWA/offline, Android wrapper, lifecycle, signing and store checks |
 
@@ -46,7 +46,7 @@ the current playable promise is driving and completing jobs in one coherent area
 1. **Driving district quality:** manually drive a complete fare on desktop and a
    midrange Android; no blocked mission target, inverted steering or trapping
    exit. Profile simulation/GPU costs before expanding density. Add a recovery
-   action, driving audio and player-selectable graphics quality.
+   action and driving audio; tune the existing graphics quality modes on devices.
 2. **Connected Delhi slice:** extend the existing layout toward Shivaji Stadium
    and Bangla Sahib. Use one graph for roads, routes and AI. Require reachable
    targets, left-hand traffic, junction priorities and reliable turn geometry.
@@ -67,8 +67,12 @@ dynamic vehicle sweeps, blocked exits, story objective order, mode/dwell rules,
 timeout, cancellation and retry.
 
 Local Chromium checks could not execute: no browser binary was installed, and the
-browser download returned a truncated/invalid archive. CI is configured to run
-the browser harness on a GitHub-hosted Linux runner. Until a successful CI run is
-observed, browser results and screenshots are pending. Real-device performance,
+browser download returned a truncated/invalid archive. CI runs
+the browser harness on a GitHub-hosted Linux runner. Initial browser runs
+confirmed entry and acceleration but timed out because software rendering
+advanced the simulation much slower than wall time. The harness uses Performance
+graphics, low resolution and a longer wall-time budget; in-game dwell times are
+unchanged. Consult the PR checks for the latest browser result and screenshots.
+Real-device performance,
 full human-driven mission timing, production deployment and native builds remain
 unverified. No graphical parity with commercial open-world games is claimed.

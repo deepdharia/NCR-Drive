@@ -27,6 +27,8 @@ Space jumps on foot and handbrakes in a car. F enters/exits at the right-hand
 driver's door. Exit below 15 km/h with a clear door. Drag to orbit; Tab opens
 DelhiOS; Escape pauses. Touch joystick, pedals, reverse, jump and entry buttons
 support mobile layouts. Phone and pause suspend the simulation and timers.
+The pause menu has Detailed/Performance graphics; Performance disables dynamic
+shadows and caps render resolution for slower devices. The choice lasts this session.
 
 | Car | Location | Character |
 | --- | --- | --- |
