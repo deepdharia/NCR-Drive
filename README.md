@@ -1,134 +1,93 @@
 # NCR Drive
 
-A unified Web 3D Delhi open-world game, built with **Three.js, strict TypeScript,
-and Vite**. Walk Connaught Place's arcades, drive **The Parvaaz**, and take a courier
-gig through the DelhiOS phone. All geometry, materials, sky and signs are generated
-locally. There are no external assets, font requests, API keys or backend services.
+A playable, stylized Delhi open-world district using Three.js, strict TypeScript
+and Vite. Walk the CP arcades, switch between three fictional vehicles, drive
+through two-way traffic, take repeatable taxi fares and play an opening chapter.
+All art is procedural and generated locally; no paid APIs, keys or asset servers.
 
-## Run and deploy
+## Run
 
-Use Node.js **22.12+** (Node 24 recommended).
+Node 22.12+ (Node 24 recommended):
 
 ```sh
 npm ci
 npm run dev
-```
-
-Select **Explore Connaught Place** to start on foot beside the driver's door.
-
-```sh
-npm run lint
 npm test
 npm run build
-npm run preview
 ```
 
-`build` runs strict TypeScript checking before Vite. Output is in `dist/`. On
-Vercel select the **Vite** framework preset, `npm run build`, and `dist` as the
-output directory. No environment variables or custom server are required. The
-app uses one static page and needs no client-route rewrites. Three.js shader
-strings are split from engine code for separate caching and smaller chunks.
+Vercel: Vite preset, `npm run build`, output `dist`. No environment variables,
+backend or route rewrites required. If a restricted container cannot enumerate
+network interfaces, run `npx vite --host 127.0.0.1 --port 3000` instead.
 
-## Controls
+## Play
 
-| Action | Desktop | Mobile |
+Start with **Explore Connaught Place**. WASD/arrows move or drive; Shift sprints;
+Space jumps on foot and handbrakes in a car. F enters/exits at the right-hand
+driver's door. Exit below 15 km/h with a clear door. Drag to orbit; Tab opens
+DelhiOS; Escape pauses. Touch joystick, pedals, reverse, jump and entry buttons
+support mobile layouts. Phone and pause suspend the simulation and timers.
+The pause menu has Detailed/Performance graphics; Performance disables dynamic
+shadows and caps render resolution for slower devices. The choice lasts this session.
+
+| Car | Location | Character |
 | --- | --- | --- |
-| Walk / steer | WASD or arrows | Left joystick |
-| Sprint | Shift | Hold Sprint on foot |
-| Jump | Space on foot | Jump |
-| Accelerate / reverse | W / S; opposite input brakes first | Accelerate; Reverse toggles direction |
-| Handbrake | Space while driving | Brake (service brake and handbrake) |
-| Enter / exit | F at the driver's door | Tap car, prompt, or Drive / Exit button |
-| Orbit camera | Drag the scene | Drag the scene outside controls |
-| DelhiOS phone | Tab | Top-right phone icon |
-| Pause / resume | Escape | Pause / Back to the city |
+| Gold Parvaaz | Inner circle start | Balanced compact |
+| White Raahi | West radial road | Longer touring estate, slower acceleration |
+| Blue Baaz | East radial road | Lower sport variant, faster acceleration |
 
-Exiting requires speed **below 15 km/h** and a clear door. The character disappears
-and stops colliding while driving; exiting restores the character next to the
-right-hand driver's door. The camera smoothly follows both modes, with pitch
-limits and obstruction handling. Touch capture, cancellation, blur, visibility
-changes and teardown release controls. Portrait and landscape layouts are supported.
+These are scaled variants of one procedural body, with distinct paint, plates,
+dimensions and acceleration. Traffic cars cannot be entered. All three motor-pool
+cars are freely drivable and remain where parked until reload.
 
-## District and first hustle
+Open DelhiOS for:
 
-The compressed CP-inspired district has a 44 m radius inner-circle road, six
-radial approaches, road markings, zebra crossings, a full central green park,
-white heritage arches, and a Shivaji Stadium frontage. Warm directional light is
-set to **25° elevation**, with long shadows and Delhi evening haze. This is a
-stylized blockout rather than a geographically accurate reconstruction.
+- **Delhi Cabs:** four rotating fares, two-second stopped pickups/drop-offs,
+  distance-based payment and a ₹150 clean-driving bonus.
+- **City Stories:** *Kabir's Evening Run*. Meet Kabir at the east arcade, collect
+  market paperwork and hand over on foot at Shivaji Stadium within four minutes.
+  Hold still for 1.5 seconds at each objective. Completion pays ₹1,200; timeout,
+  cancellation and retry are supported. Replay earns the reward again.
+- **Hustle:** one courier handover on foot, paying ₹750.
+- **DelhiNav:** route lines along the circle and radial roads, distance and target.
 
-Open **DelhiOS** to see your **₹15,000** starting balance and the live **DelhiNav**
-map. In **Hustle**, accept **Shivaji Stadium Courier Run**. A parcel is included;
-follow the gold map marker/beacon to the west of CP. Get out and walk within 3.5 m
-of the delivery marker to earn **₹750**. The gig rewards once per session and has
-no timer. Refreshing starts a fresh session; no old prototype saves are read.
-The phone and pause menu suspend simulation while keeping the scene visible.
+Only one job can run at a time. Wallet, taxi ride count and courier completion
+persist in browser storage. Active missions, chapter state, vehicles and positions
+reset on reload. If storage is blocked, play continues with a session-only wallet.
 
 ## Architecture
 
-| Directory | Responsibility |
+| Area | Responsibility |
 | --- | --- |
-| `src/core` | Application lifecycle, fixed 120 Hz simulation, shared math and swept collision |
-| `src/player` | Kinematic character and animated procedural character view |
-| `src/vehicle` | Arcade bicycle dynamics, speed-sensitive steering, body lean and hatchback view |
-| `src/camera` | Orbit/chase camera, pitch clamp, smoothing and obstruction checks |
-| `src/rendering` | Canvas PBR textures, road UVs and static mesh batching |
-| `src/input` | Unified keyboard, pointer and touch input |
-| `src/world` | Shared deterministic district layout, collision shapes and instanced rendering |
-| `src/systems` | Enter/exit handoff and courier progression |
-| `src/ui` | DOM/CSS overlays and Canvas 2D DelhiNav map |
-| `tests` | Physics, collision, camera, input, interaction, mission and district-clearance tests |
+| `core` | Lifecycle, 120 Hz simulation and swept analytic collision |
+| `vehicle` | Shared controller, data-driven specs, articulated procedural view |
+| `player`, `camera`, `input` | Character, orbit/chase and keyboard/touch handoff |
+| `world`, `rendering` | Shared scenery/collision layout, dusk PBR textures and batching |
+| `systems/TrafficSystem.ts` | Six ring-road traffic cars, left-hand lane direction, stopping |
+| `systems/StoryMission.ts` | Data-driven sequential objective chapter, dwell and timer |
+| Other `systems` | Taxi/courier, storage, door interaction and navigation |
+| `ui` | Responsive DOM overlays, phone and local Canvas maps |
 
-Geometry and analytic collision use the same layout. Characters sweep circles
-against rotated solids and land on low obstacles. Vehicles sweep oriented boxes
-through translation and rotation. The vehicle model uses signed speed, smooth
-acceleration, braking-before-reverse, grip-limited yaw, handbraking and suspension
-pitch/roll. It is an arcade approximation for this flat district, not a rigid-body
-or tire simulation. Static scenery uses instancing; no traffic or legacy taxi,
-garage, Godot or AI experiments are included.
+Dynamic collision prevents the player vehicle passing through traffic and parked
+cars. Traffic sweeps against vehicles and pedestrians, stops when blocked and
+resumes when clear. This is a flat arcade model, with no rigid-body impacts or
+ramming damage. Traffic uses bounded ring paths; it does not yet navigate junctions
+or find detours. Parking across a lane can block that lane indefinitely.
 
-## Dusk visual treatment
+## Verification
 
-The renderer uses ACES filmic tone mapping at **1.25 exposure**, PCF soft shadows,
-and warm `FogExp2(0xd6a472, 0.008)` haze. A 25° directional sun and amber/dusty
-hemisphere light illuminate matte off-white plaster. A procedural environment map
-provides filtered reflections for the metallic mustard paint and tinted glass.
+`npm test` covers 24 controller, collision, navigation, mission, storage, input,
+camera, geometry and traffic tests. `npm run build` includes strict type checking.
+The CI workflow additionally installs Chromium and runs `tests/browser-smoke.mjs`:
+entry, driving, chapter progression/payout, switching motor-pool cars, taxi payout,
+reload persistence and mobile phone bounds. Controlled position placement tests
+mission wiring; it does not establish that a route feels good to drive. Browser
+screenshots are retained as CI artifacts. The browser harness exposes a game
+reference only by intercepting the test page's module; production has no debug API.
 
-Asphalt uses deterministic Canvas albedo, bump and roughness maps, with worn white
-dash paint and bold double yellow lines. Polar road UVs preserve marking scale
-around the circle; sandstone/beige paving, beveled concrete curb stones, and the
-zebra crossings are generated locally. Classical column shafts, plinths and
-capitals frame two-story façades with illuminated shop interiors and bilingual
-Canvas signs, including Rajiv Chowk, Kabir Motors and CP Chai. Hindi lettering
-uses the device's Devanagari font fallback. Ornamental green lanterns have emissive
-cores and halos; three nearby point lights on mobile (four on desktop) illuminate
-paving without making every lamp a separate active light.
+See [audit and roadmap](docs/open-world-audit.md) for missing systems, known limits
+and the next playable milestones. This remains a small CP-inspired prototype,
+not a full Delhi reconstruction or store-ready open-world game.
 
-The Parvaaz has a beveled cabin profile, glazing apertures, seats and headrests,
-mirrors, chrome trim, five-spoke alloys, brake discs/calipers, front headlamps,
-red tail/brake lamps and **DL 1C AB 4092** number plates. Static car detail is merged
-per material while steering and wheel spin remain independent. The explorer has
-a textured khaki jacket, indigo jeans and sneakers, with hip/knee/ankle and
-shoulder/elbow articulation, separate run amplitudes, and a blended procedural gait.
-
-All visual textures, including signs, plate lettering, reflections and lamp halos,
-come from Canvas APIs. No image URLs, model files, font CDN or new runtime
-packages are required. Environment textures, sprites and shared materials are
-released with the rest of the scene during teardown.
-
-## Validation scope
-
-`npm test` covers actual controller behavior, thin-wall sweeps, platform landing,
-vehicle direction changes and stopping, high-speed steering, parking, repeated
-enter/exit, the 15 km/h exit boundary, obstructed doors, single-award delivery,
-input reset/disposal, orbit limits, camera interpolation, and clearance of all
-circular lanes and radial roads. Rendering geometry tests check curved-road UV
-continuity and static batching bounds/material preservation. The build enforces strict types and unused-code
-checks. Browser checks against the production build exercise desktop driving,
-full courier delivery, mobile joystick cancellation, enter/exit, phone bounds,
-native phone scrolling and console errors. Device performance and handling feel
-still need testing on real phones; software-rendered browser tests are not a
-frame-rate benchmark.
-
-Three.js is MIT licensed; its package includes its license. No third-party game
-assets or proprietary map imagery are bundled.
+Three.js is MIT licensed. No third-party game assets or proprietary map imagery
+are bundled.

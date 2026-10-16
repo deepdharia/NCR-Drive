@@ -14,7 +14,7 @@ export class PlayerController {
   active = true;
   stride = 0;
 
-  update(dt: number, input: FootInput, cameraYaw: number, world: CollisionWorld, car: Solid): void {
+  update(dt: number, input: FootInput, cameraYaw: number, world: CollisionWorld, car: Solid, extra: readonly Solid[] = []): void {
     if (!this.active) return;
     let x = Math.cos(cameraYaw) * input.x + Math.sin(cameraYaw) * input.z;
     let z = -Math.sin(cameraYaw) * input.x + Math.cos(cameraYaw) * input.z;
@@ -29,8 +29,8 @@ export class PlayerController {
     const previousY = this.y;
     this.verticalSpeed -= 9.81 * dt;
     this.y = Math.max(0, this.y + this.verticalSpeed * dt);
-    this.position = world.moveCircle(this.position, { x: x * pace * dt, z: z * pace * dt }, 0.32, Math.max(previousY, this.y), [car]);
-    const floor = world.landingHeight(this.position, 0.32, previousY, this.y, [car]);
+    this.position = world.moveCircle(this.position, { x: x * pace * dt, z: z * pace * dt }, 0.32, Math.max(previousY, this.y), [car, ...extra]);
+    const floor = world.landingHeight(this.position, 0.32, previousY, this.y, [car, ...extra]);
     this.grounded = this.y <= floor;
     if (this.grounded) { this.y = floor; this.verticalSpeed = 0; }
   }

@@ -6,7 +6,7 @@ import type { VehicleController } from '../vehicle/VehicleController';
 
 export class InteractionSystem {
   message = '';
-  constructor(readonly player: PlayerController, readonly car: VehicleController, private world: CollisionWorld) {}
+  constructor(readonly player: PlayerController, public car: VehicleController, private world: CollisionWorld, private obstacles: () => readonly import('../core/CollisionWorld').Solid[] = () => []) {}
   get driving(): boolean { return this.car.driving; }
   get door(): Point { return localToWorld({ x: -1.65, z: 0.35 }, this.car.position, this.car.yaw); }
   get available(): boolean {
@@ -21,7 +21,7 @@ export class InteractionSystem {
     this.message = '';
     if (!this.available) return false;
     if (this.driving) {
-      if (!this.world.isClear(this.door)) { this.message = 'Door blocked. Park in a clear space.'; return false; }
+      if (!this.world.isClear(this.door, 0.32, 0, 1.8, this.obstacles())) { this.message = 'Door blocked. Park in a clear space.'; return false; }
       this.player.teleport(this.door); this.player.setActive(true); this.car.setDriving(false);
     } else { this.player.setActive(false); this.car.setDriving(true); }
     return true;
