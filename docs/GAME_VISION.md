@@ -16,9 +16,9 @@ local single-player saves and practical development on an M1 with 8 GB RAM.
 Web first; Android follows device-tested web controls/lifecycle/performance.
 No backend, accounts, paid APIs or engine migration in current scope.
 
-Build one coherent, compressed CP–Shivaji Stadium–Bangla Sahib district before
-expanding the city. Current geometry is an original CP-inspired blockout;
-geographic accuracy is not claimed. New content must add an action, choice,
+The connected-world increment expands the CP foundation into original compressed
+Delhi–Gurgaon–Noida routes and arrival loops. Its geography is fictional, not an
+accurate city replica. Keep journeys purposeful and legible before adding density. New content must add an action, choice,
 feedback or consequence, rather than just more coordinates or meshes.
 
 Kabir is the implemented garage/story contact. A transport organiser, journalist

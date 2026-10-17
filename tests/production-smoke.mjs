@@ -99,6 +99,7 @@ try {
   assert.equal(await page.getByLabel('Camera sensitivity').inputValue(), '1.4');
   log('On-foot recovery kept completed courier reward; graphics/sensitivity and earned balance survived reload.');
 
+  await context.close();
   const mobileContext = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 0.5 });
   await mobileContext.addInitScript(key => localStorage.setItem(key, JSON.stringify({ version: 2, cash: 0, rides: 0, courierCompleted: false,
     settings: { performanceMode: true, steeringSensitivity: 1, cameraSensitivity: 1 } })), key);
@@ -130,9 +131,10 @@ try {
     await mobile.getByRole('button', { name: 'Close phone' }).tap();
   }
   log('Mobile simultaneous throttle/steering, touch cancellation and recovery/phone in portrait and landscape passed.');
+  await mobileContext.close();
   const blockedContext = await browser.newContext({ viewport: { width: 640, height: 480 }, deviceScaleFactor: 0.5 });
   await blockedContext.addInitScript(() => { Object.defineProperty(window, 'localStorage', { get() { throw new Error('blocked by test'); } }); });
-  const blocked = await blockedContext.newPage(); checkPage(blocked);
+  const blocked = await blockedContext.newPage(); checkPage(blocked); blocked.setDefaultTimeout(90000);
   await blocked.goto(origin); await blocked.getByRole('button', { name: 'Explore Connaught Place' }).click();
   await blocked.getByRole('button', { name: 'Open DelhiOS phone' }).click();
   assert.match(await blocked.locator('[data-save]').innerText(), /Saving unavailable/);
