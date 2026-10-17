@@ -74,7 +74,12 @@ an extent-aware distance budget. CP activates through 850m, new slice through
 Colliders stay globally indexed and independent of visibility.
 
 All scene materials, textures and geometries remain owned by Game's disposal
-path, including hidden LODs; resized shadow maps dispose the previous target.
+path, including hidden LODs. Two complete enabled-preset shadow targets are
+cached (1024² and 2048²) to avoid r186 depth-attachment replacement hazards;
+both are freed on shutdown. The environment is explicitly prefiltered once,
+its generator scratch data is disposed, and Game destroys its owned WebGL
+context on unmount. Three.js retains a module-global DFG_LUT info counter of
+one after disposal; it is not an owned-scene leak or a growing-cycle count.
 No new runtime dependencies, network assets or paid services are used.
 
 ## Verification and limits
@@ -101,3 +106,13 @@ preset, route, warmup/sample duration, p50/p95 and memory/resource trends. Repea
 CP→east underpass→Yamuna→Noida→CP and CP→Gurgaon→CP, inspect all seam mouths,
 then repeat three times for hitches/retention. Test both phone orientations,
 simultaneous touches, focus loss, vehicle switching and reward/settings reload.
+
+## Review views
+
+These are controlled development camera/actor placements, not evidence that a
+whole journey was driven. Images are screenshots of original project geometry;
+they are documentation only and are not bundled into the game.
+
+![CP chase view](evidence/visual-cp-chase.png)
+![CP slice overview](evidence/visual-cp-overview.png)
+![East approach under the scenic flyover](evidence/visual-east-underpass.png)

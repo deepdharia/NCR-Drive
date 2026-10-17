@@ -49,3 +49,7 @@ plane resources, merged road faces and instanced modules. Refer to
 [VISUAL_REALISM.md](VISUAL_REALISM.md) for LOD/DPR/shadow budgets. The old dusk
 palette description above is historical; V1 uses neutral daylight. Real-device
 budgets remain unverified. No new licence/attribution dependency was introduced.
+
+Review PNGs under `docs/evidence/visual-*.png` are unedited screenshots of this
+repository's own rendered geometry/UI, captured with disclosed controlled camera
+placement. They are documentation, not runtime assets or third-party imagery.

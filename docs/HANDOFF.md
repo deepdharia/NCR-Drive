@@ -1,6 +1,8 @@
-# NCR Drive connected-world handoff
+# NCR Drive handoff
 
 Updated 18 October 2026 (Asia/Kolkata). Model-neutral continuation record.
+Latest increment: **Visual Realism V1**, final delivery section below; earlier
+connected-world evidence remains historical context.
 
 ## Exact source and delivery
 
@@ -132,45 +134,63 @@ them as real-device drive times. Supplied Vercel preview remains unverified (403
 Audio remains backlog. Keep the PR draft until owner/device acceptance; no
 background continuation is promised after this session ends.
 
-## Visual Realism V1 — active increment (18 October 2026)
+## Visual Realism V1 — latest delivery (18 October 2026)
 
-Dedicated branch `improve/visual-realism-v1`, clean connected-world parent
-`3b5e593d1460dc8aaf8599bf416dbaff5d785f43` (remote fetched and matched HEAD).
-The connected-world evidence above describes the parent; it is not a visual-V1
-playtest. Baseline 46 tests, lint and build passed before editing. The attempted
-baseline production-browser launch failed on an executor transport disconnect.
+Dedicated branch `improve/visual-realism-v1`, clean refreshed parent
+`3b5e593d1460dc8aaf8599bf416dbaff5d785f43`. Implementation
+`0287b78ec245c8161bd197b4b6c4e8ccb53f141b`, bundle
+`dist/assets/index-BZgxjkF-.js`. Draft PR #7 targets the connected-world branch:
+https://github.com/deepdharia/NCR-Drive/pull/7 . Later documentation-only commits
+do not change that game bundle; use `git log -1` for the delivery head. The older
+connected-world evidence above belongs to the parent, not a new V1 road trip.
 
-| Status | Visual acceptance |
+| Status | Visual acceptance / evidence |
 | --- | --- |
-| IN PROGRESS | CP surface union, junction pavements, islands, crossings and regional seam checks |
-| IN PROGRESS | Daylight/PBR, supported scenic flyover, modular facades/landmark and bounded props |
-| IN PROGRESS | Low/Balanced/High save-compatible profiles, vehicle LOD, round tires and chase camera |
-| IN PROGRESS | Final logic/build/lint, production controls/jobs/touch and controlled visual/resource checks |
-| BLOCKED | Physical desktop 60 FPS/mobile 30 FPS acceptance: no M1 or Android device attached |
-| IN PROGRESS | Preview publication: existing Vercel project discovered, scoped inspection returns 403 |
+| DONE | CP ring/strip union, junction pavement/curb mouths, crossings, painted refuges and wider east-avenue planted median; rendered surface coverage and all-roster clearance tests |
+| DONE | Shared world-metre PBR asphalt, plaster variation, paving/concrete/glass, neutral daylight/haze/PCF shadows and ACES; eight representative scenes inspected |
+| DONE | Modular facade/rear/roof detail, signs, furniture, original ceremonial arch and supported flyover/courier canopy; no imported/proprietary assets |
+| DONE | Round 0.32m tires, wheel/caliper/brake/body animation, variant trim, traffic proxy LOD and bounded chase look-ahead/FOV; handling unchanged |
+| DONE | Low/Balanced/High validation and v2 persistence, legacy Performance/Detailed mapping; all 51 logic tests, lint and build PASS |
+| DONE | Full visual-browser gate: zero browser/WebGL errors or warnings, all-roster tire contact, three identical warmed region/preset cycles (361 geometries / 98 textures), quality reload and owned-resource/context cleanup |
+| DONE | Final exact-bundle production, original browser and regional wiring PASS; 364.64m planned CP→east-underpass drive with ordinary keys, no actor placement/clock changes, reload and zero errors |
+| DONE | Vercel Git integration preview deployed for the implementation; GitHub status SUCCESS. Remote gameplay not verified: scoped API/protected fetch and worker HTTPS proxy return 403 |
+| BLOCKED | Physical desktop 60 FPS/mobile 30 FPS, M1/Android frame times, startup, retention, boundary hitches and human enjoyment: no real devices attached |
 
-The flyover is supported architectural scenery with a 6.4m clear, usable ground
-underpass. Vehicle physics remains flat; elevated driving/ramps are intentionally
-not advertised. Original ceremonial arch is India Gate inspired at a fictional
-compressed location. All assets remain original procedural work; no proprietary
-or externally downloaded imagery, geometry or fonts. No road graph/handling/
-mission changes are intended. Finish the Central Delhi slice before extra regions.
+Preview: https://ncr-drive-git-improve-visual-realism-v1-deep-07f0.vercel.app
+Implementation deployment: https://vercel.com/deep-07f0/ncr-drive/FzUCnBVR8jud9S8M7JLwoUpazbxo
+CI SUCCESS for implementation: https://github.com/deepdharia/NCR-Drive/actions/runs/39077737804
+No connected-world/main merge, force-push, Vercel configuration change or
+production promotion occurred. Vercel CLI fallback found no credentials; no
+interactive login was completed or protection settings changed.
 
-Visual checkpoint after `e5181fb`: current uncommitted fixes touch Game,
-DaylightRig, DistrictView, visual-browser harness and regional-drive scope.
-Initial final-visual gate exposed native depth sampler/attachment problems during
-shadow resizing. The active fix caches at most two complete shadow targets,
-explicitly owns/disposes the prefiltered environment and destroys the owned
-WebGL context on shutdown. Three.js r186's module-global DFG_LUT leaves a stale
-texture counter of one; the harness now verifies zero owned geometries plus
-context destruction, rather than reaching into private engine singletons.
-Do not treat the earlier warning-bearing timing numbers as final benchmarks.
-The focused diagnostic is running; then rerun full visual, production, regional
-wiring and the Central Delhi input drive (`REGIONAL_DRIVE_SCOPE=central`).
+Architecture: CentralDelhiLayout supplies static overlay/proxy data;
+CentralDelhiView owns merged road/pavement faces and instanced detail;
+DaylightRig owns one prefiltered environment and two complete shadow targets.
+Caching targets avoids native depth-sampler/resize attachment hazards found in
+r186 browser tests. Low disables shadow rendering, with at most two enabled-mode
+targets retained after toggling; both are freed on shutdown. Hidden LODs remain
+in Game's disposal traversal; generator scratch data is freed before gameplay.
+Game shutdown is idempotent and destroys its owned WebGL context. The engine's
+module-global DFG_LUT leaves an info texture counter of one after disposal;
+zero owned geometries plus context loss are asserted, without private imports.
 
-Draft review: https://github.com/deepdharia/NCR-Drive/pull/7 (base connected world).
-Git integration created a READY preview for e5181fb:
-https://ncr-drive-git-improve-visual-realism-v1-deep-07f0.vercel.app . A later push
-must update it with the verified resource fix. API protected fetch returns 403;
-direct HTTPS CONNECT is denied by the worker proxy. Deployment status is evidence
-of publication only, not a remote playtest. No production promotion occurred.
+The flyover is scenery with a clear 6.4m ground underpass. There are no accessible
+elevated ramps or elevated driving. Terrain/physics remain flat. The original
+ceremonial arch is India Gate inspired at a fictional compressed location.
+Foliage and the shared procedural vehicle body remain stylized; no scanned-city
+or photorealism claim. All 10.03km, connections, directed lanes, missions, saves,
+recovery pads and handling remain. Audio stays backlog.
+
+Measured only on managed Linux x86_64 (AMD EPYC 9V45, three logical CPUs exposed),
+Node 24.19.0, Chromium 154.0.8037.57 / SwiftShader. Fixed controlled CP scene,
+960×640, DPR 0.75 Low and 1.0 Balanced/High, 45 RAF frames/profile after GPU drain,
+first ten discarded. The 35 retained frames/profile are software diagnostics,
+not desktop/mobile acceptance or gameplay FPS. Actual numbers and limits live
+in PLAYTESTS.md and docs/evidence/visual-realism-verification.json.
+
+Owner next step: use VISUAL_REALISM.md's named-device checklist to test M1 and
+Android, every CP mouth and underpass both directions, route returns, touch,
+focus loss and three repeat journeys for frame times/retention/hitches. Reconnect
+the Vercel scope only if remote automated inspection is needed. Keep this PR
+draft until visual/device acceptance. Do not resume the rejected shadow resizing
+approach, and do not block this map on audio.

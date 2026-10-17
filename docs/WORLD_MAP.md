@@ -105,3 +105,14 @@ optional Noida fare via Delhi. Completion events pay once per accepted run;
 replays retain the original replay-reward policy. Recovery cancels jobs with no
 payment. No new persistent fields: v2 career/settings, backups and v1 migration
 remain unchanged; active jobs/locations reset on reload.
+
+## Visual Realism V1 overlay
+
+`improve/visual-realism-v1` preserves this graph, all 10,032.35m of unique
+centreline, destination/recovery IDs and existing regional connections. CP ring
+and radial pavement now use non-overlapping surface pieces at the same metre
+scale; original lane/mission access remains. The east approach adds a scenic
+supported flyover crossing at (210, 0), 6.4m underside clearance. The original
+flat east road runs beneath it. The scenic deck is not a graph edge and has no
+accessible ramp; routing does not direct a vehicle onto it. See VISUAL_REALISM.md
+for art/preset budgets and tests/visual-realism.test.ts for overlay clearances.
