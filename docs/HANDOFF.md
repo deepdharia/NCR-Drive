@@ -1,89 +1,85 @@
 # NCR Drive connected-world handoff
 
-Updated 17 October 2026 (Asia/Kolkata). Model-neutral continuation record.
+Updated 18 October 2026 (Asia/Kolkata). Model-neutral continuation record.
 
-## Source / publication
+## Exact source and delivery
 
-- Starting clean source and refreshed remote main: `546fff3fbddd7ad0efc6c23c5356e6729e221c2f`.
-- Review branch: `improve/connected-ncr-world`.
-- Frozen implementation: `09d4f96d456ce88d38463a9f0debebca75a5a418`.
-- Earlier outbound evidence is explicitly labelled for `986308b`.
-- Draft PR: https://github.com/deepdharia/NCR-Drive/pull/6
-- No force-push, main merge or production promotion. Git push works; GitHub CLI
-  reports an invalid token, so PR management uses the connected GitHub tool.
-- Supplied Vercel preview inspection returned 403 for `deep-07f0`; no Vercel CLI
-  is installed. Its source and gameplay remain unverified.
-- This assignment supersedes the earlier audio-first next task. Audio stays backlog.
+- Starting clean checkout and refreshed remote main: `546fff3fbddd7ad0efc6c23c5356e6729e221c2f`.
+- Implementation: `c844016d06b812f079b472254496ef80ab54d7a3`.
+- Branch: `improve/connected-ncr-world`; draft PR https://github.com/deepdharia/NCR-Drive/pull/6
+- Current production bundle: `dist/assets/index-B-k0R3oY.js`.
+- CI SUCCESS for that exact implementation: https://github.com/deepdharia/NCR-Drive/actions/runs/39058094120
+- No force-push, main merge or production promotion. Git pushes and connected
+  GitHub PR tools work; the GitHub CLI token is invalid. Vercel preview inspection
+  returned 403 for `deep-07f0`; its source/gameplay remain unverified.
+- Chat output mount is read-only in this worker. Source/evidence delivery uses
+  the GitHub branch and CI artifacts; no downloadable chat attachment is claimed.
+- Map work supersedes the old audio-first next task. Audio remains backlog.
 
 ## Acceptance checklist
 
-| Status | Item / concrete evidence |
+| Status | Item / evidence |
 | --- | --- |
-| DONE | All three regions, both continuous two-way corridors, flat river bridge, Gurgaon avenue loop and Noida sector grid; no direct Gurgaon–Noida graph bypass |
-| DONE | 10,032.35m unique centreline, measured once per physical road; WORLD_MAP.md records regional totals and routed bay distances |
-| DONE | Shared stable roads/lanes/junctions/destinations/recovery IDs; directed left-hand routing and legal turns; unreachable/water targets rejected; safe original courier plaza approach |
-| DONE | Player-following radar and phone regional overview from actual roads; route distance, targets and regional labels |
-| DONE | Spatial hash includes rotated/spanning objects; original swept collision retained; all collision stays available globally regardless of camera or activation |
-| DONE | Regional clear-body/door recovery for every car and movement mode; active jobs cancel without payout; blocked recovery is atomic; original save compatibility checks pass |
-| DONE | Capped local traffic; nearest-arrival outer-junction reservations, safe following, distant recycling, bounded nearby movement; opposing-arrival regression passes |
-| DONE | Regional fare and dispatch complete/pay once through Game, Noida recovery and reward/settings/rides reload: final controlled browser wiring PASS, zero errors |
-| DONE | Three warmed controlled scene cycles: 356 geometries / 94 textures, 103 draws / 18,305 triangles in the final Noida view; no growing counts |
-| DONE | 45 named logic cases, strict lint and production build; baseline and an integrated full production smoke PASS; stable original story/fleet/taxi/mobile development smoke PASS |
-| DONE | Ordinary-input Delhi→Gurgaon fare and regional recovery: 3,226.07m planned route, 472.287s software wall time, ₹2,815 paid once; zero browser errors |
-| IN PROGRESS | Remaining ordinary-input return/Noida legs; a return U-turn stopped the first attempt. Full avenue/grid-loop rerun underway; controlled placement is separate |
-| BLOCKED | Real M1 8GB and named Android frame times, startup, boundary hitches and human enjoyment; no such hardware attached |
+| DONE | Three regions, both continuous two-way corridors, flat Yamuna-inspired bridge, Gurgaon avenue loop, Noida sector grid; Gurgaon→Noida graph routes pass Delhi |
+| DONE | 10,032.35m unique centreline counted once per physical road; measured region/route lengths and units in WORLD_MAP.md |
+| DONE | Shared stable IDs, directed left-hand lanes, junction transitions, nearest same-side routing, legal reverse-goal loops and courier plaza approach; unreachable/water goals rejected |
+| DONE | Player-following local radar and phone regional overview, region labels, route distance and offscreen targets |
+| DONE | Spatial hash includes rotated/spanning solids; swept narrow phase retained; collision remains globally available independent of camera/speed |
+| DONE | Regional pads clear every car and driver door; preserve mode/progress, cancel active jobs without payout, fail atomically when all pads blocked |
+| DONE | Capped local traffic, forward junction ports, approach reservations, physical on-segment lookahead; every outer onward turn clears in an exhaustive movement regression |
+| DONE | Regional fare/dispatch pay once through Game; Noida recovery and reward/settings/rides reload PASS in controlled browser wiring, zero errors |
+| DONE | Three warmed controlled cycles: 356 geometries / 94 textures; final Noida view 103 draws / 18,305 triangles, no growing counts |
+| DONE | All 46 named logic cases, lint/build; CI clean install, original gameplay browser, production smoke and regional wiring all PASS |
+| IN PROGRESS | Current-build continuous keyboard Delhi→Gurgaon→Delhi and Delhi→Noida→Delhi; earlier partial attempts are labelled by commit in PLAYTESTS.md |
+| BLOCKED | Real M1 8GB / named Android FPS, startup, boundary hitches, human handling/enjoyment and pacing: no physical devices attached |
 
-## Architecture / integration choices
+## Architecture and policies
 
-`world/WorldRoads.ts` owns metre-scale global topology, directed left offsets,
-permitted transitions, bays, pads, barriers, building colliders and median trunks.
-CP retains its radius, radial streets, colonnades/park and mission access. The
-geography is original and fictional, not a real road replica. See WORLD_MAP.md.
+`world/WorldRoads.ts` owns metre-scale roads/junctions, directed lanes and legal
+transitions, bays/pads, barriers and regional building/trunk colliders. CP keeps
+its radius/scale, colonnades, park and mission access. Geography is original and
+fictional, not a road-accurate city replica. The road centreline total does not
+count lanes twice. Outer lane ports make forward turns inside overlapping rendered
+junction pavement; wide junctions/corridor mouths allow U-turns. NPCs prefer onward
+roads. `Navigation.ts` uses directed Dijkstra and bounded 750ms UI rerouting.
 
-`RegionalView.ts` builds flat roads, bridge/water, procedural signs, sparse planted
-medians and instanced office/residential blocks. It shares box/plane/foliage
-resources and activates bounded chunks. CP scenery deactivates beyond 450m;
-vehicle views also activate locally. Metadata stays global. Collision is small
-enough to remain entirely indexed, so there is no camera-dependent collision
-streaming or speed/stopping-distance activation race. Every queried cell includes
-objects spanning its boundary. Game's existing owned-resource disposal handles
-all new resources; no per-travel mesh/texture construction occurs.
+`RegionalView.ts` shares box/plane/foliage resources, instances buildings/markings
+and activates bounded chunks. CP scenery and vehicle views activate locally;
+lightweight metadata stays global. All static collision remains in a 48m spatial
+hash rather than being camera-streamed, so fast movement cannot outrun activation.
+Game's existing owned-resource disposal traverses hidden objects as well.
 
-`Navigation.ts` uses directed Dijkstra, nearest same-side snapping and explicit
-junction connectors. Targets behind a lane require legal junction travel, not
-backwards lane traversal. Wide outer junctions/corridor mouths permit U-turns;
-traffic prefers onward roads. The original stadium courier retains a safe foot
-plaza approach. UI rerouting is bounded to 750ms, immediate on target changes.
+Traffic defaults to six, capped at ten; 6m/s CP, 8m/s outer cities, 12m/s corridors.
+Closest arrivals reserve outer junctions before entry, stable index breaks ties,
+and ownership lasts until the car exits clear. Probe positions clamp to the current
+movement segment and use physical body dimensions; swept movement is the final
+guard. Nearby blocked cars wait. Only distant cars (>650m) recycle to clear spots
+300–500m from focus, away from bays/actors, at one attempt/car/second. No dynamic
+detours or unbounded queues are claimed. Exhaustive turn tests cover actual movement,
+not only graph connectivity.
 
-`TrafficSystem.ts` keeps six cars by default, capped at ten. Cruises are 6m/s CP,
-8m/s outer cities and 12m/s corridors. Reservations are claimed 22m before outer
-junction entry; closest arrival wins and index breaks ties, ownership retained
-until clear by 28m. Collision and scaled lookahead guard movement. Cars wait when
-blocked nearby; only distant cars (>650m) recycle to clear positions 300–500m
-from focus, away from bays/actors. At most one attempt/car/second; no new queues.
-
-`TaxiMission.ts`, `StoryMission.ts`, `Game.ts` and `GameUI.ts` add direct regional
-fare selection and a 12-minute Delhi pickup → Gurgaon dispatch (₹2,400), followed
-by an optional Noida fare via Delhi. Existing jobs and fleet switching remain.
-Spare fleet vehicles are now in adjacent paved roadside bays so they do not block
-CP routes. Each accepted completion pays once; existing replay policy remains.
+Regional taxis use routed distance; dispatch reuses the existing story runner:
+Delhi pickup → Gurgaon bay, 12 minutes, ₹2,400, then optional Noida fare via Delhi.
+Existing courier/chapter/taxi/fleet controls remain. Spare cars occupy adjacent
+paved bays so CP lanes stay clear. Each accepted completion pays once; original
+replay-reward policy remains. Recovery is free and cancels active work without pay.
 
 ProgressStore/schema v2/key are unchanged: v1 migration, legitimate zero cash,
-backups, corrupt/unknown payload preservation and blocked-storage behavior remain.
-No new location/road ID is persisted. Jobs/positions reset on reload; no active-job
-resume is claimed. Recovery remains free and cancels active work without reward.
+backup restoration, corrupt/unknown preservation and storage failure checks pass.
+No location/road IDs are persisted. Active jobs/positions reset on reload; there
+is no active-job resume. No paid APIs, runtime backend, imported game assets,
+new engine, combat or multiplayer was added.
 
-## Verification / exact continuation
+## Verification and exact continuation
 
-Use Node 22.12+ (tested Node 24.19), Linux x86_64, Chromium 154.0.8037.57 /
-SwiftShader. Software rendering establishes functionality, not M1/Android FPS.
+Test environment: managed Linux x86_64, Node 24.19.0, Chromium 154.0.8037.57 /
+SwiftShader. Resource counters and functionality do not establish device FPS.
 
 ```sh
 npm ci
 npm test
 npm run lint
 npm run build
-# Use installed Playwright/Chromium selectors when needed:
 export PLAYWRIGHT_MODULE=/workspace/tools/browser/node_modules/playwright/index.mjs
 export CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium
 npm run test:regional-wiring
@@ -92,76 +88,27 @@ npm run test:production
 node tests/browser-smoke.mjs
 ```
 
-Production entry at freeze: `dist/assets/index-D_My0SGq.js`. The regional drive
-harness reads only displayed coordinates/heading and sends ordinary keys; no game
-reference, actor placement or artificial clock. It slows to 6m/s inside CP and
-18m/s on corridors. The wiring harness intercepts the development module and
-places actors deliberately; its evidence is labelled accordingly. Full-resolution
-static scene inspection also uses controlled placement and camera views.
+The drive harness reads displayed coordinates/heading and sends ordinary keys,
+including reverse when blocked. It does not place actors or alter the clock.
+It follows avenue/grid waypoints, waits for real passenger/reward UI states and
+checks reload. The wiring harness deliberately places actors through a development
+module interception; those results are not full driven routes. Static scene views
+are also explicitly controlled. Production has no game/debug reference.
 
-Earlier route attempts found and fixed starter traffic spacing, spare cars on
-through lanes and a late-yield parkway deadlock. Attempts before the frozen commit
-are not completed regional journeys. Some browser refresh attempts were invalidated
-by live source reloads; do not count them as passes. Full actual records and owner
-hardware checklist are in PLAYTESTS.md; JSON/screenshots are in test-results.
+Earlier input attempts found and fixed parked-car lane blockage, late junction
+yielding, backward turn seams and a false lookahead rail obstruction. The last
+bug was reproduced with one NPC and no actors; the all-outer-turn test failed
+before the fix and now passes every transition. No barriers/tests/systems were
+disabled. Partial evidence is retained as `verified-outbound-986308b.json` and
+`verified-city-loop-09d4f96.json` under test-results; neither is a completed loop.
 
-If interrupted: implementation is safely committed/pushed at the SHA above. The subsequent documentation/harness commit contains current records, aligned
-README/vision, actual passenger/reward UI waits and full avenue/grid routes with
-normal reverse manoeuvres. The game bundle is unchanged. Use `git log -1` for
-the exact current documentation head; no uncommitted game-source changes remain. Finish the serial
-browser checks against frozen source, record actual legs/results, CI run
-39054736945 is fully green (clean install, logic/build, both retained browsers and
-regional wiring); update docs and PR description, then commit/push documentation. If a
-new concrete failure appears, fix it with a focused regression and repeat only
-affected gates. Keep PR draft until acceptance evidence is reviewable. Do not
-promise background continuation after a session ends.
-
-## Junction-port correction checkpoint
-
-The Gurgaon return review showed that centre-to-centre lane seams could angle
-left-turning NPCs back into following cars. Outer lane endpoints now stop at
-junction-edge ports. All outer permitted connectors continue forward relative
-to incoming/outgoing lanes; a new exhaustive turn regression enforces this.
-Reservations now remain owned during approach and until the exiting car clears;
-spawned outgoing cars are recognised. CP samples and all rendered roads retain
-their scale/geometry. Whole-route clearance, opposing-arrival motion, all 45 logic
-cases, lint and build PASS. Road centreline total is unchanged; routed bay lengths
-were remeasured in WORLD_MAP.md. New bundle is `index-D_My0SGq.js`.
-
-The previous ordinary-input rerun was stopped so verification can use these
-corrected NPC paths. Prior outbound/fare evidence remains labelled for `986308b`;
-it is not final-code proof. Next: serial regional wiring and four-leg input-only
-loop on this checkpoint, then actual-result docs/PR updates. No new imported asset,
-save schema, control or mission framework change was made. Source commits are
-published on the existing draft branch. The chat output mount is read-only in this
-worker; source/evidence delivery uses the GitHub branch/CI, not a claimed attachment.
-
-CI 39056669154 is SUCCESS for 09d4f96: clean install, 45 logic cases/build,
-original gameplay browser, production smoke and regional wiring. Final local
-regional wiring also PASS (₹2,956 clean fare, ₹2,400 dispatch, Noida recovery,
-reload; stable 356 geometries / 94 textures, 103 draws / 18,305 triangles).
-The active ordinary-input loop is tool session 23668 in this execution; it is
-currently on the Gurgaon outbound. Source is clean/committed; only subsequent
-result-document updates are pending. If interrupted, check the process and
-JSON results rather than assuming the active run finished.
-
-## Final traffic-probe correction
-
-The 09d4f96 loop drove the outbound/fare/recovery and Gurgaon west/south/east
-avenues, then stopped behind an NPC at the parkway entrance. An isolated one-car
-reproduction confirmed a false guardrail hit: lookahead extrapolated past the
-turn endpoint. The probe now clamps to the current movement segment and uses
-the physical body, avoiding both a false rail hit and a false rear obstruction
-from a following car. Swept movement remains the final guard. A new exhaustive
-movement test exercises every outer onward turn and requires each car to clear
-the junction; it failed on the exact Gurgaon→parkway transition before the fix,
-then passes after it. The isolated NPC now proceeds at 12m/s.
-
-All 46 named logic cases, lint and build PASS. Bundle entry is now
-`index-B-k0R3oY.js`; road geometry, route lengths, jobs, saves and player controls
-are unchanged. Source freeze is the commit containing this correction. Previous
-CI runs remain historical; refresh final browser/CI evidence for this commit.
-The attempted loop's partial JSON is retained as
-`test-results/verified-city-loop-09d4f96.json`; do not call it a round trip.
-Next: serial regional wiring and complete input-only loop on the corrected
-probe build, then result-document/PR updates.
+Active local browser run: execution tool session **49274**, current source c844016.
+At this checkpoint it has completed controlled wiring, the current-build outbound
+fare/recovery and Gurgaon avenue loop, and is approaching Delhi on the return.
+The Noida legs and complete four-leg result are not yet claimed. Only this handoff rewrite is
+uncommitted; game source is committed/pushed. If interrupted, inspect the running
+process and actual result JSON rather than assuming completion. Finish that input
+run, record exact legs/times/errors, update PLAYTESTS/ROADMAP and PR metadata, then
+commit/push documentation. Source, unit and CI work is already reviewable; do not
+re-audit from the old foundation snapshot. Do not promise background continuation
+after a session ends. Keep PR draft pending owner/device acceptance.
