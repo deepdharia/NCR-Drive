@@ -3,12 +3,16 @@
 import assert from 'node:assert/strict';
 import {spawn} from 'node:child_process';
 import {mkdir,writeFile} from 'node:fs/promises';
+import {writeFileSync} from 'node:fs';
 import {roadRoute,routeLength} from '../src/systems/Navigation.ts';
 import {destinations} from '../src/world/WorldRoads.ts';
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE??'playwright');
 const server=spawn(process.execPath,['node_modules/vite/bin/vite.js','preview','--host','127.0.0.1','--port','4176','--strictPort'],{stdio:'inherit'});
-let browser,page;const errors=[],evidence=[];
-const log=value=>{console.log(value);evidence.push(value);};
+const scope=process.env.REGIONAL_DRIVE_SCOPE??'all';
+assert.ok(['all','gurgaon','noida'].includes(scope),'Unknown driving scope');
+let browser,page,status='running',failure;const errors=[],evidence=[];
+const result=()=>({status,scope,failure,evidence,errors,environment:'managed Linux / headless Chromium / SwiftShader, functional only'});
+const log=value=>{console.log(value);evidence.push(value);writeFileSync(`test-results/regional-drive-${scope}-evidence.json`,JSON.stringify(result(),null,2));};
 try{
  await mkdir('test-results',{recursive:true});for(let i=0;i<100;i++){try{if((await fetch('http://127.0.0.1:4176')).ok)break;}catch{}await new Promise(r=>setTimeout(r,100));}
  browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_EXECUTABLE_PATH||undefined,args:['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader','--disable-dev-shm-usage']});
@@ -49,6 +53,7 @@ try{
   }
   throw Error(`Timed out ${label}`);
  }
+ if(scope!=='noida'){
  await page.keyboard.press('Tab');await page.locator('[data-action="regionalTaxi"]').click();
  await drive({x:92,z:0},'Delhi pickup');await page.waitForFunction(()=>document.querySelector('[data-job-title]').textContent.startsWith('Drop-off'));
  await drive(destinations[0],'Delhi → Gurgaon');await page.waitForFunction(()=>document.querySelector('[data-career]').textContent.includes('1 rides'));
@@ -59,12 +64,15 @@ try{
  await drive({x:-2100,z:2296},'Gurgaon return · south avenue');
  await drive({x:-1904,z:2100},'Gurgaon return · east avenue');
  await drive({x:92,z:0},'Gurgaon → Delhi');
+ }else{await drive({x:92,z:0},'Delhi departure');}
+ if(scope!=='gurgaon'){
  await drive({x:3004,z:250},'Delhi → Noida · sector west');
  await drive({x:3250,z:246},'Noida · middle sector avenue');
  await drive({x:3396,z:120},'Noida · east sector avenue');
  await drive(destinations[2],'Noida · Sector 18 arrival');await page.screenshot({path:'test-results/regional-noida.png'});
  await drive({x:92,z:0},'Noida → Delhi');
+ }
  const cash=await page.locator('[data-cash]').first().innerText();await page.reload();await page.locator('[data-action="start"]').click();assert.equal(await page.locator('[data-cash]').first().innerText(),cash);
- assert.deepEqual(errors,[]);log('Four regional legs completed with ordinary keyboard controls; reward persisted; zero browser/asset errors.');
-}catch(e){if(page){console.error(await page.locator('body').innerText());await page.screenshot({path:'test-results/regional-failure.png'}).catch(()=>{});}throw e;}
-finally{await writeFile('test-results/regional-drive-evidence.json',JSON.stringify({evidence,errors,environment:'managed Linux / headless Chromium / SwiftShader, functional only'},null,2));await browser?.close();server.kill();}
+ assert.deepEqual(errors,[]);status='passed';log(`${scope==='all'?'Four regional legs':scope+' round trip'} completed with ordinary keyboard controls; saved cash persisted; zero browser/asset errors.`);
+}catch(e){status='failed';failure=String(e);if(page){console.error(await page.locator('body').innerText());await page.screenshot({path:'test-results/regional-failure.png'}).catch(()=>{});}throw e;}
+finally{writeFileSync(`test-results/regional-drive-${scope}-evidence.json`,JSON.stringify(result(),null,2));await writeFile('test-results/regional-drive-evidence.json',JSON.stringify(result(),null,2));await browser?.close();server.kill();}

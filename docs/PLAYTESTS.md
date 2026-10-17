@@ -206,3 +206,35 @@ all-outer-turn movement test failed before the fix on `g-avenue-e:out` →
 `southwest-6:back` and now passes every onward transition. All 46 logic cases,
 lint/build pass. Final bundle for the next browser run: `index-B-k0R3oY.js`.
 No barriers, collision checks, actors or tests were disabled.
+
+## 18 October 2026 — final implementation driving checkpoint
+
+Implementation c844016 (bundle `index-B-k0R3oY.js`) completed the real-input
+Delhi→Gurgaon→Delhi loop before the browser process was interrupted. No actor
+placement or artificial clock was used. It completed the cross-region fare
+(one ride asserted), local Gurgaon recovery, and west/south/east avenue tour.
+It used one normal reverse manoeuvre near Delhi on the return, not a recovery
+reset. Planned route lengths / software wall times reported by the live harness:
+
+| Input leg | Planned metres | Wall seconds |
+| --- | ---: | ---: |
+| CP start → Delhi pickup | 203.56 | 82.299 |
+| Delhi → Gurgaon bay | 3,213.64 | 482.503 |
+| Gurgaon west avenue | 436.14 | 37.106 |
+| Gurgaon south avenue | 436.14 | 86.450 |
+| Gurgaon east avenue | 387.74 | 68.896 |
+| Gurgaon east avenue → Delhi stop | 3,121.66 | 628.674 |
+
+This is functional route evidence, not M1/Android pacing or FPS evidence. The
+return intentionally tours the avenue loop. The interrupted process did not
+write its final aggregate JSON; the values above are transcribed from actual
+execution outputs in `verified-gurgaon-roundtrip-c844016.json`. Its overall
+browser-error aggregate is unavailable, although separate final-code CI and
+regional wiring passed with zero errors. Do not describe the interrupted process
+as a completed four-leg suite.
+
+The harness now checkpoints each completed leg and supports independent `all`,
+`gurgaon` and `noida` scopes via REGIONAL_DRIVE_SCOPE. Every scope starts at the
+normal CP spawn and drives there using ordinary inputs; it never restores actor
+positions. The remaining Noida round trip is running separately with
+`REGIONAL_DRIVE_SCOPE=noida npm run test:regional-drive`.

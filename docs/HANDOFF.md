@@ -102,13 +102,27 @@ before the fix and now passes every transition. No barriers/tests/systems were
 disabled. Partial evidence is retained as `verified-outbound-986308b.json` and
 `verified-city-loop-09d4f96.json` under test-results; neither is a completed loop.
 
-Active local browser run: execution tool session **49274**, current source c844016.
-At this checkpoint it has completed controlled wiring, the current-build outbound
-fare/recovery and Gurgaon avenue loop, and is approaching Delhi on the return.
-The Noida legs and complete four-leg result are not yet claimed. Only this handoff rewrite is
-uncommitted; game source is committed/pushed. If interrupted, inspect the running
-process and actual result JSON rather than assuming completion. Finish that input
-run, record exact legs/times/errors, update PLAYTESTS/ROADMAP and PR metadata, then
-commit/push documentation. Source, unit and CI work is already reviewable; do not
-re-audit from the old foundation snapshot. Do not promise background continuation
-after a session ends. Keep PR draft pending owner/device acceptance.
+Current-code Delhi→Gurgaon→Delhi is complete, including a paid fare, local
+regional recovery and full avenue tour. The process was interrupted after the
+Delhi return and before the Noida legs. Exact live-output values and limitations
+are recorded in PLAYTESTS.md and `verified-gurgaon-roundtrip-c844016.json`. Do not
+claim that interrupted process completed the four-leg suite.
+
+Active local run: execution tool session **85709**, Noida scope on unchanged
+implementation c844016. It starts at the normal CP spawn, drives to the east
+approach, then Noida sector/bridge routes and back. No actor placement or clock
+changes. Each completed leg now checkpoints a status-bearing scoped JSON, so
+interruption cannot turn a partial run into an apparent pass. Commands:
+
+```sh
+REGIONAL_DRIVE_SCOPE=noida npm run test:regional-drive
+# Default all scope remains available; gurgaon scope runs that round trip.
+```
+
+Pending local changes: test harness scope/checkpoint support plus result docs;
+game source remains committed/pushed at c844016 and all 46 tests/CI are green.
+Next: finish the Noida input run, inspect its actual status/legs/errors, update
+acceptance docs/PR metadata, then commit/push documentation and harness changes.
+If interrupted, inspect processes and scoped JSON rather than assuming completion.
+Keep PR draft pending owner/device acceptance. No background continuation is
+promised after a session ends.
