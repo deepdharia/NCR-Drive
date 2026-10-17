@@ -38,9 +38,10 @@ try {
       g.camera.reset(); g.refreshUI(); g.updateViews(1);
       if (camera) { g.camera.camera.position.set(...camera); g.camera.camera.lookAt(...target); }
       g.renderer.render(g.scene, g.camera.camera);
+      const glError = g.renderer.getContext().getError(); if (glError) throw new Error(`WebGL ${glError} in scene ${position.x},${position.z}`);
       return { ...g.renderer.info.memory, calls: g.renderer.info.render.calls, triangles: g.renderer.info.render.triangles };
     }, { position, yaw, camera, target });
-    await page.screenshot({ path: `test-results/visual-${name}.png` }); evidence.push({ scene: name, ...counts });
+    await page.screenshot({ path: `test-results/visual-${name}.png` }); evidence.push({ scene: name, ...counts }); console.log('Scene inspected', name);
   }
   const wheelContact = await page.evaluate(() => {
     const g = window.__game;
@@ -64,10 +65,13 @@ try {
       const g = window.__game;
       for (const quality of ['low', 'balanced', 'high']) {
         g.settings.graphicsQuality = quality; g.applySettings();
-        for (const [, position, yaw] of scenes) { g.car.position = position; g.car.yaw = yaw; g.camera.reset(); g.updateViews(1); g.renderer.render(g.scene, g.camera.camera); }
+        for (const [name, position, yaw] of scenes) {
+          g.car.position = position; g.car.yaw = yaw; g.camera.reset(); g.updateViews(1); g.renderer.render(g.scene, g.camera.camera);
+          const glError = g.renderer.getContext().getError(); if (glError) throw new Error(`WebGL ${glError} on ${quality}/${name}`);
+        }
       }
       return { ...g.renderer.info.memory, calls: g.renderer.info.render.calls, triangles: g.renderer.info.render.triangles };
-    }, scenes); cycles.push(counts);
+    }, scenes); cycles.push(counts); console.log('Warmed preset/region cycle', cycle + 1, counts);
   }
   assert.deepEqual(cycles[2], cycles[1]); evidence.push({ warmedSceneAndPresetCycles: cycles });
   const profiles = [];
@@ -78,6 +82,7 @@ try {
       const g = window.__game; g.settings.graphicsQuality = quality; g.applySettings();
       g.car.position = { x: -44, z: 0 }; g.car.yaw = 0; g.car.speed = 0; g.camera.reset(); g.updateViews(1);
       g.renderer.setPixelRatio(Math.min(devicePixelRatio, quality === 'low' ? 0.75 : quality === 'balanced' ? 1.25 : 1.5));
+      g.renderer.getContext().finish(); // Drain the previous profile's GPU work.
       // Simulation stays frozen so all profiles render identical scene content.
       const frames = []; let previous = 0;
       await new Promise(resolve => { function sample(time) { if (previous) frames.push(time - previous); previous = time; g.renderer.render(g.scene, g.camera.camera); if (frames.length < 45) requestAnimationFrame(sample); else resolve(); } requestAnimationFrame(sample); });
@@ -90,8 +95,15 @@ try {
   await page.reload(); await page.locator('[data-action="start"]').click();
   assert.equal(await page.evaluate(() => window.__game.settings.graphicsQuality), 'high');
   const disposed = await page.evaluate(() => { const g = window.__game; g.dispose(); return { children: document.querySelector('#app').children.length, ...g.renderer.info.memory }; });
-  assert.equal(disposed.children, 0); assert.equal(disposed.geometries, 0); assert.equal(disposed.textures, 0); evidence.push({ disposed });
-  assert.deepEqual(errors, []); assert.ok(!warnings.some(w => /removed|deprecated|shader/i.test(w)), warnings.join('\n'));
+  evidence.push({ disposed }); console.log('Disposal', disposed);
+  assert.equal(disposed.children, 0); assert.equal(disposed.geometries, 0);
+  // r186 keeps its module-global DFG_LUT texture outside scene ownership.
+  // Its stale info counter is 1 after disposal; destroying the context frees
+  // the actual allocation without reaching into private engine singletons.
+  assert.equal(disposed.textures, 1);
+  await page.waitForTimeout(100);
+  assert.equal(await page.evaluate(() => window.__game.renderer.getContext().isContextLost()), true);
+  assert.deepEqual(errors, []); assert.ok(!warnings.some(w => /removed|deprecated|shader|GL_INVALID|WebGL: too many/i.test(w)), warnings.join('\n'));
   console.log('Controlled visuals, wheels, LOD/preset cycles, settings reload and disposal passed.');
 } finally {
   await writeFile('test-results/visual-browser-evidence.json', JSON.stringify({ evidence, errors, warnings, method: 'Controlled development-module interception and actor/camera placement. Software renderer; not continuous travel or real device FPS.' }, null, 2));

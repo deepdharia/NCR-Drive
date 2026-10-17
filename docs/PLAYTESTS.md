@@ -298,3 +298,32 @@ provenance): [connected-world-verification.json](evidence/connected-world-verifi
 Source/tests/docs are published in draft PR #6. No main merge or production
 promotion occurred. Vercel inspection remains 403. The remaining acceptance
 work is the owner hardware/human checklist above; audio remains backlog.
+
+## Visual Realism V1 — verification in progress, 18 October 2026
+
+Parent `3b5e593`, visual branch `improve/visual-realism-v1`, draft PR #7 targeting
+the connected-world branch. First implementation milestone `e5181fb`; do not use
+that preview's initial preset-switch behaviour as final acceptance. Baseline 46
+logic cases/lint/build passed. First visual checks: all 51 named logic cases,
+lint/build pass; production smoke on `index-B5HLegy-.js` passed original courier,
+recovery, migration/settings reload, simultaneous touches and both phone bounds
+with zero errors. Later slice visibility/LOD/shadow ownership changes require
+final exact-bundle rechecks.
+
+Initial controlled visual run inspected eight scenes, wheel contact and stable
+regional/preset counts, but FAILED the cleanup assertion (two remaining internal
+geometries) and emitted WebGL comparison-sampler warnings when replacing shadow
+maps. These are retained as failures, not passes. Fixes preserve the shadow
+DepthTexture identity across size changes and explicitly own/filter/dispose the
+environment PMREM target and generator. The short first-run software timing
+numbers are not acceptance evidence because the warning-bearing renderer could
+skip draws. A focused diagnostic and the full gate will verify the fix.
+
+The existing Vercel Git integration reports READY for `e5181fb` at
+https://ncr-drive-git-improve-visual-realism-v1-deep-07f0.vercel.app
+(deployment `dpl_7m6KgnitWXu753JbUJfMmv8gghzn`, GitHub commit status SUCCESS).
+This confirms a deployment, not remote gameplay. Scoped project/API and protected
+fetch access return 403; CLI 64.5.0 found no existing credentials, and direct HTTPS
+was denied by the environment proxy at CONNECT (403). No protection settings,
+production domains, Vercel configuration or credentials were changed. Local
+production verification remains the accessible gameplay evidence.

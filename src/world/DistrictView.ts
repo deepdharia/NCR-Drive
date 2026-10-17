@@ -34,9 +34,9 @@ export class DistrictView {
   private passenger = new THREE.Group();
   private localObjects: THREE.Object3D[] = [];
 
-  constructor(scene: THREE.Scene, layout: DistrictLayout) {
+  constructor(scene: THREE.Scene, layout: DistrictLayout, renderer: THREE.WebGLRenderer) {
     this.group.name = 'Connaught Place'; scene.add(this.group);
-    this.lighting = new DaylightRig(scene); this.sun = this.lighting.sun;
+    this.lighting = new DaylightRig(scene, renderer); this.sun = this.lighting.sun;
     const stone = surfaceMaterial('paving');
     const white = surfaceMaterial('plaster');
     const grass = worldSurfaceMaterial('grass');

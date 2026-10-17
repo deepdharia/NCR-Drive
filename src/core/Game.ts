@@ -59,6 +59,7 @@ export class Game {
   private lastTime = performance.now();
   private frameId = 0;
   private abort = new AbortController();
+  private disposed = false;
 
   constructor(private root: HTMLElement) {
     try {
@@ -81,7 +82,7 @@ export class Game {
     const overlay = document.createElement('div'); overlay.className = 'overlay';
     root.replaceChildren(this.renderer.domElement, overlay);
     const layout = createDistrictLayout(); this.world = new CollisionWorld(layout.solids);
-    this.district = new DistrictView(this.scene, layout);
+    this.district = new DistrictView(this.scene, layout, this.renderer);
     this.central = new CentralDelhiView(this.scene);
     this.regional = new RegionalView(this.scene);
     motorPoolBays.forEach((bay,i)=>{this.fleet[i+1].position={x:bay.x,z:bay.z};this.fleet[i+1].yaw=bay.yaw;});
@@ -267,6 +268,7 @@ export class Game {
     this.renderer.render(this.scene, this.camera.camera);
   };
   dispose(): void {
+    if (this.disposed) return; this.disposed = true;
     cancelAnimationFrame(this.frameId); this.abort.abort(); this.input.dispose(); this.ui.dispose();
     const geometries = new Set<THREE.BufferGeometry>(), materials = new Set<THREE.Material>(), textures = new Set<THREE.Texture>();
     this.scene.traverse(object => {
@@ -281,8 +283,8 @@ export class Game {
       }
       if (object instanceof THREE.InstancedMesh) object.dispose();
     });
-    if (this.scene.environment instanceof THREE.Texture) textures.add(this.scene.environment);
     geometries.forEach(g => g.dispose()); materials.forEach(m => m.dispose()); textures.forEach(t => t.dispose());
-    this.district.sun.shadow.map?.dispose(); this.renderer.dispose(); this.root.replaceChildren();
+    this.district.lighting.dispose(); this.scene.environment = null;
+    this.renderer.dispose(); this.renderer.forceContextLoss(); this.root.replaceChildren();
   }
 }

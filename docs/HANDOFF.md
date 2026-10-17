@@ -155,3 +155,22 @@ not advertised. Original ceremonial arch is India Gate inspired at a fictional
 compressed location. All assets remain original procedural work; no proprietary
 or externally downloaded imagery, geometry or fonts. No road graph/handling/
 mission changes are intended. Finish the Central Delhi slice before extra regions.
+
+Visual checkpoint after `e5181fb`: current uncommitted fixes touch Game,
+DaylightRig, DistrictView, visual-browser harness and regional-drive scope.
+Initial final-visual gate exposed native depth sampler/attachment problems during
+shadow resizing. The active fix caches at most two complete shadow targets,
+explicitly owns/disposes the prefiltered environment and destroys the owned
+WebGL context on shutdown. Three.js r186's module-global DFG_LUT leaves a stale
+texture counter of one; the harness now verifies zero owned geometries plus
+context destruction, rather than reaching into private engine singletons.
+Do not treat the earlier warning-bearing timing numbers as final benchmarks.
+The focused diagnostic is running; then rerun full visual, production, regional
+wiring and the Central Delhi input drive (`REGIONAL_DRIVE_SCOPE=central`).
+
+Draft review: https://github.com/deepdharia/NCR-Drive/pull/7 (base connected world).
+Git integration created a READY preview for e5181fb:
+https://ncr-drive-git-improve-visual-realism-v1-deep-07f0.vercel.app . A later push
+must update it with the verified resource fix. API protected fetch returns 403;
+direct HTTPS CONNECT is denied by the worker proxy. Deployment status is evidence
+of publication only, not a remote playtest. No production promotion occurred.

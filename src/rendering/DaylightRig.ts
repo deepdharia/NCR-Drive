@@ -10,10 +10,16 @@ export class DaylightRig {
   readonly sky: THREE.Mesh;
   private offset = new THREE.Vector3(-65, 105, -45);
   private quality: QualityPreset = 'balanced';
-  constructor(scene: THREE.Scene) {
+  private environment: THREE.WebGLRenderTarget;
+  private shadowTargets = new Map<QualityPreset, THREE.RenderTarget>();
+  constructor(scene: THREE.Scene, renderer: THREE.WebGLRenderer) {
     scene.background = new THREE.Color(0xc9d8db);
     scene.fog = new THREE.FogExp2(0xc9d8db, 0.0022);
-    scene.environment = environmentTexture(); scene.environmentIntensity = 0.8;
+    // Pre-filter once with an explicit owner, then free generator scratch data.
+    // No renderer-private PMREM lifetime or lazy first-drive allocations.
+    const source = environmentTexture(), pmrem = new THREE.PMREMGenerator(renderer);
+    this.environment = pmrem.fromEquirectangular(source); pmrem.dispose(); source.dispose();
+    scene.environment = this.environment.texture; scene.environmentIntensity = 0.8;
     scene.add(new THREE.HemisphereLight(0xd6e9ff, 0x726952, 1.6));
     this.sun.name = 'Late morning sun'; this.sun.castShadow = true;
     this.sun.shadow.normalBias = 0.025; this.sun.shadow.bias = -0.00015; this.sun.shadow.radius = 2;
@@ -35,19 +41,28 @@ export class DaylightRig {
     this.setQuality('balanced'); this.update({ x: 0, z: 0 });
   }
   setQuality(quality: QualityPreset): void {
+    // r186 native comparison-depth attachments are not safely resized/replaced
+    // while their light uniforms are cached. Keep at most two complete targets,
+    // one per enabled preset, and release both with this rig.
+    if (this.quality !== 'low' && this.sun.shadow.map) this.shadowTargets.set(this.quality, this.sun.shadow.map);
     this.quality = quality;
     const profile = QUALITY[quality], size = profile.shadowSize || 512;
-    if (this.sun.shadow.mapSize.x !== size) { this.sun.shadow.map?.dispose(); this.sun.shadow.map = null; }
+    if (quality !== 'low') this.sun.shadow.map = this.shadowTargets.get(quality) ?? null;
     this.sun.shadow.mapSize.set(size, size);
     const extent = profile.shadowExtent;
     Object.assign(this.sun.shadow.camera, { left: -extent, right: extent, top: extent, bottom: -extent, near: 1, far: 240 });
     this.sun.shadow.camera.updateProjectionMatrix();
   }
   update(focus: Point): void {
-    // Texel-snapped follow avoids shimmering, and gives every region shadows.
+    // Quantized follow reduces shadow movement and gives every region shadows.
     const p = QUALITY[this.quality], texel = p.shadowExtent * 2 / (p.shadowSize || 512);
     const x = Math.round(focus.x / texel) * texel, z = Math.round(focus.z / texel) * texel;
     this.sun.target.position.set(x, 0, z); this.sun.position.set(x, 0, z).add(this.offset);
     this.sky.position.set(focus.x, 0, focus.z);
+  }
+  dispose(): void {
+    this.environment.dispose();
+    const targets = new Set(this.shadowTargets.values()); if (this.sun.shadow.map) targets.add(this.sun.shadow.map);
+    targets.forEach(target => target.dispose()); this.shadowTargets.clear(); this.sun.shadow.map = null;
   }
 }

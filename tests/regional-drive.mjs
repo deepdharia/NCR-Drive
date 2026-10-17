@@ -9,7 +9,7 @@ import {destinations} from '../src/world/WorldRoads.ts';
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE??'playwright');
 const server=spawn(process.execPath,['node_modules/vite/bin/vite.js','preview','--host','127.0.0.1','--port','4176','--strictPort'],{stdio:'inherit'});
 const scope=process.env.REGIONAL_DRIVE_SCOPE??'all';
-assert.ok(['all','gurgaon','noida'].includes(scope),'Unknown driving scope');
+assert.ok(['all','gurgaon','noida','central'].includes(scope),'Unknown driving scope');
 let browser,page,status='running',failure;const errors=[],evidence=[];
 const result=()=>({status,scope,failure,evidence,errors,environment:'managed Linux / headless Chromium / SwiftShader, functional only'});
 const log=value=>{console.log(value);evidence.push(value);writeFileSync(`test-results/regional-drive-${scope}-evidence.json`,JSON.stringify(result(),null,2));};
@@ -53,6 +53,11 @@ try{
   }
   throw Error(`Timed out ${label}`);
  }
+ if(scope==='central'){
+ await drive({x:92,z:0},'Central Delhi · ring and east radial');
+ await drive({x:250,z:-4},'Central Delhi · corridor seam and flyover underpass');
+ await page.screenshot({path:'test-results/visual-input-underpass.png'});
+ }else{
  if(scope!=='noida'){
  await page.keyboard.press('Tab');await page.locator('[data-action="regionalTaxi"]').click();
  await drive({x:92,z:0},'Delhi pickup');await page.waitForFunction(()=>document.querySelector('[data-job-title]').textContent.startsWith('Drop-off'));
@@ -72,7 +77,8 @@ try{
  await drive(destinations[2],'Noida · Sector 18 arrival');await page.screenshot({path:'test-results/regional-noida.png'});
  await drive({x:92,z:0},'Noida → Delhi');
  }
+ }
  const cash=await page.locator('[data-cash]').first().innerText();await page.reload();await page.locator('[data-action="start"]').click();assert.equal(await page.locator('[data-cash]').first().innerText(),cash);
- assert.deepEqual(errors,[]);status='passed';log(`${scope==='all'?'Four regional legs':scope+' round trip'} completed with ordinary keyboard controls; saved cash persisted; zero browser/asset errors.`);
+ assert.deepEqual(errors,[]);status='passed';log(`${scope==='all'?'Four regional legs':scope==='central'?'Central Delhi outbound underpass drive':scope+' round trip'} completed with ordinary keyboard controls; saved cash persisted; zero browser/asset errors.`);
 }catch(e){status='failed';failure=String(e);if(page){console.error(await page.locator('body').innerText());await page.screenshot({path:'test-results/regional-failure.png'}).catch(()=>{});}throw e;}
 finally{writeFileSync(`test-results/regional-drive-${scope}-evidence.json`,JSON.stringify(result(),null,2));await writeFile('test-results/regional-drive-evidence.json',JSON.stringify(result(),null,2));await browser?.close();server.kill();}
