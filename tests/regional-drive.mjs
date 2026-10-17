@@ -12,10 +12,11 @@ const log=value=>{console.log(value);evidence.push(value);};
 try{
  await mkdir('test-results',{recursive:true});for(let i=0;i<100;i++){try{if((await fetch('http://127.0.0.1:4176')).ok)break;}catch{}await new Promise(r=>setTimeout(r,100));}
  browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_EXECUTABLE_PATH||undefined,args:['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader','--disable-dev-shm-usage']});
- const context=await browser.newContext({viewport:{width:640,height:480},deviceScaleFactor:0.5});
- await context.addInitScript(()=>localStorage.setItem('ncr-drive-career-v1',JSON.stringify({version:2,cash:15000,rides:0,courierCompleted:false,settings:{performanceMode:true,steeringSensitivity:1,cameraSensitivity:1}})));
+ const context=await browser.newContext({viewport:{width:640,height:480},deviceScaleFactor:0.25});
+ await context.addInitScript(()=>{if(!localStorage.getItem('ncr-drive-career-v1'))localStorage.setItem('ncr-drive-career-v1',JSON.stringify({version:2,cash:15000,rides:0,courierCompleted:false,settings:{performanceMode:true,steeringSensitivity:1,cameraSensitivity:1}}));});
  page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});page.on('response',r=>{if(r.status()>=400)errors.push(`${r.status()} ${r.url()}`);});
  await page.goto('http://127.0.0.1:4176');await page.locator('[data-action="start"]').click();await page.keyboard.press('f');
+ await page.setViewportSize({width:480,height:320});
  const held=new Set();async function key(k,on){if(on&&!held.has(k)){await page.keyboard.down(k);held.add(k);}else if(!on&&held.has(k)){await page.keyboard.up(k);held.delete(k);}}
  async function read(){return page.evaluate(()=>{const p=document.querySelector('[data-coordinates]').textContent.split(',');const heading=document.querySelector('[data-mode-detail]').textContent.match(/HDG ([\d.]+)/);return{x:parseFloat(p[0]),z:parseFloat(p[1]),yaw:Number(heading?.[1]??0)*Math.PI/180,speed:parseFloat(document.querySelector('[data-speed]').textContent)/3.6};});}
  async function stop(){await key('w',false);await key('a',false);await key('d',false);await key('Space',true);await page.waitForFunction(()=>document.querySelector('[data-speed]').textContent==='0 km/h');await key('Space',false);}
@@ -33,7 +34,7 @@ try{
    const speed=Math.min(goal<22?Math.max(2,goal*0.3):18,Math.abs(error)>0.35?6:Math.abs(error)>0.15?10:18);
    await key('a',error>0.045);await key('d',error< -0.045);await key('w',p.speed<speed);await key('Space',p.speed>speed+2);
    if(Math.hypot(p.x-previous.x,p.z-previous.z)<0.05&&goal>5)stuck++;else stuck=0;previous=p;
-   if(stuck>250)throw Error(`Stopped on ${label}: ${JSON.stringify(p)}, route segment ${index}, error ${error}`);
+   if(stuck>100)throw Error(`Stopped on ${label}: ${JSON.stringify(p)}, route segment ${index}, error ${error}`);
    if(Date.now()-lastLog>30000){console.log(label,Math.round(goal),'m to go',JSON.stringify(p));lastLog=Date.now();}
    await page.waitForTimeout(100);
   }

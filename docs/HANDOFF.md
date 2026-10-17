@@ -30,3 +30,27 @@ Starting source: `546fff3fbddd7ad0efc6c23c5356e6729e221c2f`; clean checkout. Rem
 ## Precise next step
 
 Finish new-world tests and resolve traffic/route clearance failures, then build and run shipped-dist production browser harness plus ordinary-input regional journey evidence. Update this document with actual results, measured road lengths and remaining gaps before final delivery. Do not treat this checkpoint as a completion claim.
+
+## Integration checkpoint update
+
+Runnable local commit: `93a81c1` (first connected-world checkpoint). Subsequent
+uncommitted work fixes same-lane reverse routing, explicit courier plaza access,
+water endpoint rejection, CP motor-pool roadside bays and traffic junction entry;
+adds WORLD_MAP.md and updates README/ROADMAP/PLAYTESTS/ASSET_MANIFEST plus production
+context cleanup. `git status --short` is the exact file inventory. World tests now
+have nine named cases; both focused traffic and world tests and strict build pass.
+A traffic regression found at spawn/entry was fixed by tracking connector entry
+explicitly rather than oscillating back to the first 0.4m of a lane. Recycling
+attempts are now bounded to one per car per second.
+
+The old-source production smoke passed. Integrated production smoke passed its
+main/mobile cases but timed out at the final blocked-storage context; the harness
+now closes completed contexts and a final run is pending. The first development
+smoke completed story, fleet switching and taxi, then was invalidated by a live
+source edit/reload; rerun on stable source is required. Current regional keyboard
+run is against the shipped dist with no placement/debug clock; earlier attempts
+exposed and fixed starter traffic spacing and a parked Baaz blocking the east
+route. No whole regional leg is claimed yet.
+
+Next: finish regional keyboard run, stable development and production regressions,
+then record exact outcomes and create the final commit/publication or patch.

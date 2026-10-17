@@ -19,6 +19,8 @@ export class TaxiMission {
   elapsed = 0;
   collisions = 0;
   lastReward = 0;
+  private fareKey="";
+  private fareValue=0;
   private selectedTrip: readonly [number, number] | undefined;
   constructor(public completed = 0) {}
   acceptRegional(noida = false): boolean { if(this.active)return false;this.selectedTrip=noida ? [4,6] : [1,4];return this.accept(); }
@@ -27,7 +29,11 @@ export class TaxiMission {
   get destination() { return TAXI_STOPS[this.trip[1]]; }
   get target(): Point { return this.state === 'dropoff' ? this.destination : this.pickup; }
   get active(): boolean { return this.state !== 'available'; }
-  get fare(): number { return 300 + Math.round(routeLength(roadRoute(this.pickup, this.destination)) * 0.8); }
+  get fare(): number {
+    const key=this.trip.join(':');
+    if(key!==this.fareKey){this.fareKey=key;this.fareValue=300+Math.round(routeLength(roadRoute(this.pickup,this.destination))*0.8);}
+    return this.fareValue;
+  }
   get cleanBonus(): number { return this.collisions === 0 ? 150 : 0; }
   accept(): boolean {
     if (this.active) return false;

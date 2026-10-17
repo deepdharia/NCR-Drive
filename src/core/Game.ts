@@ -17,6 +17,7 @@ import { TaxiMission } from '../systems/TaxiMission';
 import { defaultSettings, loadProgress, writeProgress } from '../systems/ProgressStore';
 import { recoverToRoad } from '../systems/RecoverySystem';
 import { createDistrictLayout } from '../world/DistrictLayout';
+import { motorPoolBays } from '../world/WorldRoads';
 import { RegionalView } from '../world/RegionalView';
 import { DistrictView } from '../world/DistrictView';
 import { GameUI } from '../ui/GameUI';
@@ -79,8 +80,7 @@ export class Game {
     const layout = createDistrictLayout(); this.world = new CollisionWorld(layout.solids);
     this.district = new DistrictView(this.scene, layout, mobile);
     this.regional = new RegionalView(this.scene);
-    this.fleet[1].position = { x: -84, z: 3 }; this.fleet[1].yaw = Math.PI / 2;
-    this.fleet[2].position = { x: 84, z: -3 }; this.fleet[2].yaw = -Math.PI / 2;
+    motorPoolBays.forEach((bay,i)=>{this.fleet[i+1].position={x:bay.x,z:bay.z};this.fleet[i+1].yaw=bay.yaw;});
     this.scene.add(this.playerView.group, ...this.fleetViews.map(v => v.group), ...this.trafficViews.map(v => v.group));
     this.camera = new CameraRig(root.clientWidth / root.clientHeight);
     this.interaction = new InteractionSystem(this.player, this.car, this.world, () => this.otherCars());

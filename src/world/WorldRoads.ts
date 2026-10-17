@@ -40,7 +40,7 @@ export const lanes: Lane[] = roads.flatMap(r => [false,true].map(reverse => {
 /** All outgoing transitions permitted except immediate U-turns when an onward edge exists. */
 export function successors(lane: Lane): Lane[] { const out=lanes.filter(l=>l.from===lane.to && l.road.id!==lane.road.id); return out.length ? out : lanes.filter(l=>l.from===lane.to); }
 export function projection(p: Point,a: Point,b: Point): { point: Point; t: number; distance: number } {
- const dx=b.x-a.x,dz=b.z-a.z,t=Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.z-a.z)*dz)/(dx*dx+dz*dz)));
+ const dx=b.x-a.x,dz=b.z-a.z,t=Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.z-a.z)*dz)/(dx*dx+dz*dz||1)));
  const point={x:a.x+dx*t,z:a.z+dz*t}; return {point,t,distance:distance(p,point)};
 }
 export function nearestRoad(p: Point): Road { return roads.reduce((a,b)=>projection(p,...ends(a)).distance < projection(p,...ends(b)).distance ? a:b); }
@@ -70,3 +70,8 @@ export const regionalBuildings: Solid[] = roads.filter(r=>r.region==='gurgaon'||
 });
 
 export const riverBanks: Solid[] = [1220,1530].flatMap(x=>[-1,1].map(side=>({x,z:-170+side*570,width:1.2,depth:1100,height:1,yaw:0})));
+
+export const motorPoolBays = [
+ {id:'delhi-west-motorpool',name:'DELHI · MOTOR POOL',region:'delhi' as const,x:-84,z:9,yaw:Math.PI/2},
+ {id:'delhi-east-motorpool',name:'DELHI · MOTOR POOL',region:'delhi' as const,x:84,z:-9,yaw:-Math.PI/2},
+];

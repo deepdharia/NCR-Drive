@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { roads, ends, destinations, worldBarriers, riverBanks } from './WorldRoads';
+import { roads, ends, destinations, worldBarriers, riverBanks, motorPoolBays } from './WorldRoads';
 import type { Point } from '../core/math';
 import { signTexture } from '../rendering/ProceduralTextures';
 
@@ -47,7 +47,7 @@ export class RegionalView {
     const sign=new THREE.Mesh(plane,new THREE.MeshBasicMaterial({map:signTexture(label),side:THREE.DoubleSide}));sign.position.set(x,4,z);sign.scale.set(12,2.5,1);sign.rotation.y=yaw+(reverse?0:Math.PI);chunk.add(sign);
    }
   }
-  for(const bay of destinations){
+  for(const bay of [...destinations,...motorPoolBays]){
    const g=new THREE.Group();this.group.add(g);this.chunks.push({group:g,point:bay,radius:80});
    mesh(g,asphalt,bay.x,0.01,bay.z,30,0.04,12);
    for(const dx of [-14,14])mesh(g,paint,bay.x+dx,0.05,bay.z,0.2,0.02,11);

@@ -32,6 +32,7 @@ export class DistrictView {
   private passenger = new THREE.Group();
   private lampLights: THREE.PointLight[] = [];
   private lampPositions: THREE.Vector3[] = [];
+  private localObjects: THREE.Object3D[] = [];
 
   constructor(scene: THREE.Scene, layout: DistrictLayout, mobile: boolean) {
     this.group.name = 'Connaught Place'; scene.add(this.group);
@@ -217,6 +218,7 @@ export class DistrictView {
     }
     this.delivery.add(this.passenger);
     this.delivery.position.set(COURIER_TARGET.x, 0, COURIER_TARGET.z); this.delivery.visible = false; this.group.add(this.delivery);
+    this.localObjects=this.group.children.filter(child=>child!==sky && child!==earth && child!==eastBank && child!==this.delivery);
   }
 
   setPickup(pickup: boolean): void {
@@ -227,6 +229,7 @@ export class DistrictView {
   }
 
   update(focus: Point): void {
+    for(const object of this.localObjects)object.visible=Math.hypot(focus.x,focus.z)<450;
     const sorted = [...this.lampPositions].sort((a, b) => Math.hypot(a.x - focus.x, a.z - focus.z) - Math.hypot(b.x - focus.x, b.z - focus.z));
     this.lampLights.forEach((light, i) => light.position.copy(sorted[i]));
   }

@@ -62,3 +62,61 @@ delivery-record update changes documentation only. CI evidence:
 https://github.com/deepdharia/NCR-Drive/actions/runs/38958966041
 
 No real-device performance or human-playtest evidence was added during merging.
+
+## Connected world — 17 October 2026
+
+Source starts at refreshed main `546fff3`; implementation branch
+`improve/connected-ncr-world`, first runnable checkpoint `93a81c1`.
+
+Environment: managed Linux, Node 24.19.0, installed headless Chromium with
+SwiftShader. This is functional evidence only. No M1 Mac or physical Android is
+attached; no stable 30 FPS, hardware frame-time or enjoyment claim is established.
+
+Measured data: 10,032.35m unique centreline; directed east-arcade-to-outer-bay routes
+3,144–4,034m. See WORLD_MAP.md for region totals and speed-based time estimates.
+
+Automated additions cover stable IDs, left offsets, connectivity in both
+directions, Gurgaon→Noida through Delhi, unreachable/water endpoints, whole-car
+route clearance, bridge endpoints, regional recovery for every car/mode and
+atomic blockage, multi-cell collision/spanning shapes, local capped graph traffic,
+cross-region fare/dispatch payout guards, same-lane reverse-goal loops and original
+courier plaza access. Existing save/mission/input suites are retained.
+
+Production baseline at the original source passed the entire retained smoke.
+First integrated smoke passed migrated zero cash, driving/entry, active-job
+recovery/no reward, driven courier/on-foot ₹750 handover, reload/settings and
+simultaneous mobile steering/throttle plus portrait/landscape bounds. It timed
+out loading the last blocked-storage context while multiple software-rendered
+contexts were still alive. Harness now closes completed contexts and allows
+90s for blocked-context startup; final rerun result is recorded below when done.
+
+First regional keyboard run found initial traffic too near the starter car;
+traffic starts were moved around the CP ring. A later run progressed, but was
+stopped to reduce headless render resolution (480×320, DPR 0.25) and finish
+routing edge-case fixes. Neither attempt is evidence of a completed regional leg.
+`tests/regional-drive.mjs` uses only UI coordinates/heading and ordinary keyboard
+controls against dist. It does not expose a game reference, place actors or
+alter the simulation clock. Its software wall times must not be described as
+M1 or ordinary human drive times.
+
+Vercel deployment inspection for the supplied preview returned 403 for scope
+`deep-07f0`; no Vercel CLI is installed. Preview source/gameplay is unverified.
+
+### Owner hardware checklist
+
+1. State exact Mac/browser and Android model/browser; enable Performance mode.
+2. Drive CP→Gurgaon→CP and CP→Noida→CP at 15–20m/s on corridors, noting turns,
+   bridge approaches, signs/barriers, rerouting, arrival bays and traffic waits.
+3. Complete Regional Dispatch and a regional fare; try recovery in both modes,
+   then reload to confirm wallet, rides and settings. Switch all three cars.
+4. Check portrait/landscape phone and simultaneous throttle/steering, blur/pause.
+5. Record pause-menu 300-frame p50/p95, draw/triangle/resource counts at Delhi,
+   each arrival and return. Repeat loops; note growing counts or boundary hitches.
+   Target is stable 30 FPS on M1 8GB and a named Android; report actual values.
+
+A later keyboard attempt reached x79.9 on the east approach, then contacted the
+parked Baaz on the routed left lane. Both spare fleet vehicles now occupy adjacent
+paved roadside bays; a regression samples original CP routes against those parked
+colliders. This was a genuine route usability finding. No outer-region completion
+is inferred from that attempt. The route harness also now seeds a career only
+when absent, so its reload assertion checks persistence rather than resetting it.

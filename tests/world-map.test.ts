@@ -55,10 +55,32 @@ test('spatial broad phase includes rotated multi-cell solids and swept cell boun
 });
 test('regional traffic population capped, spawns clear and follows graph lane directions',()=>{
  const traffic=new TrafficSystem(100);assert.equal(traffic.cars.length,10);const focus={x:-2100,z:1900};
- for(let frame=0;frame<900;frame++){traffic.update(1/60,world,[],focus);for(const car of traffic.cars){assert.ok(world.boxIsClear({...car.position,yaw:car.yaw},car.width,car.length));if(car.speed>0){const segments=lanes.flatMap(l=>[{a:l.start,b:l.end},...successors(l).map(n=>({a:l.end,b:n.start}))]);assert.ok(segments.some(({a,b})=>projection(car.position,a,b).distance<5&&Math.cos(car.yaw-Math.atan2(b.x-a.x,b.z-a.z))>0.5));}}}
+ for(let frame=0;frame<900;frame++){traffic.update(1/60,world,[],focus);for(const car of traffic.cars){assert.ok(world.boxIsClear({...car.position,yaw:car.yaw},car.width,car.length));if(car.speed>0){const segments=lanes.flatMap(l=>[{a:l.start,b:l.end},...successors(l).map(n=>({a:l.end,b:n.start}))]);assert.ok(segments.some(({a,b})=>projection(car.position,a,b).distance<5&&Math.cos(car.yaw-Math.atan2(b.x-a.x,b.z-a.z))>0.5),JSON.stringify({frame,position:car.position,yaw:car.yaw}));}}}
  assert.ok(traffic.cars.some(c=>Math.hypot(c.position.x-focus.x,c.position.z-focus.z)<650));assert.equal(traffic.cars.length,10);
 });
 test('cross-region fares and modest dispatch pay once, with routed fare sizing',()=>{
  for(const noida of [false,true]){const taxi=new TaxiMission();assert.ok(taxi.acceptRegional(noida));assert.ok(routeLength(roadRoute(taxi.pickup,taxi.destination))>3000);assert.ok(taxi.fare>2500);assert.equal(taxi.update(2.1,taxi.target,true,0),'boarded');const fare=taxi.fare;assert.equal(taxi.update(2.1,taxi.target,true,0),'delivered');assert.equal(taxi.lastReward,fare+150);assert.equal(taxi.update(10,taxi.target,true,0),null);assert.equal(taxi.completed,1);}
  const story=new StoryMission(REGIONAL_JOURNEY,720,2400);story.accept();assert.equal(story.update(1.6,story.step.target,true,0),'step');assert.equal(story.update(1.6,story.step.target,true,0),'completed');assert.equal(story.reward,2400);assert.equal(story.update(1.6,story.step.target,true,0),null);
+});
+
+test('a goal behind the car on the same directed lane requires a legal loop',()=>{
+ const lane=lanes.find(l=>l.id==='g-avenue-n:out')!;
+ const from={x:lane.start.x+(lane.end.x-lane.start.x)*0.8,z:lane.start.z},to={x:lane.start.x+(lane.end.x-lane.start.x)*0.2,z:lane.start.z};
+ const route=roadRoute(from,to);assert.ok(route.length>5);assert.ok(routeLength(route)>900);
+ for(let i=1;i<route.length;i++){
+  const a=route[i-1],b=route[i],length=Math.hypot(b.x-a.x,b.z-a.z);if(length<12)continue;
+  assert.ok(lanes.some(l=>projection(a,l.start,l.end).distance<1&&projection(b,l.start,l.end).distance<1&&(b.x-a.x)*(l.end.x-l.start.x)+(b.z-a.z)*(l.end.z-l.start.z)>0),'long route segment obeys direction');
+ }
+});
+
+test('stadium courier keeps an explicit safe plaza approach; water outside the deck is rejected',()=>{
+ const route=roadRoute({x:92,z:0},{x:-99,z:24});assert.ok(route.length);assert.deepEqual(route.at(-2),{x:-99,z:13});assert.deepEqual(route.at(-1),{x:-99,z:24});
+ assert.ok(roadRoute({x:-99,z:24},{x:92,z:0}).length);
+ assert.equal(roadRoute({x:92,z:0},{x:1375,z:-154}).length,0);
+});
+
+test('parked motor-pool bays leave CP mission lanes and vehicle doors clear',async()=>{
+ const {motorPoolBays}=await import('../src/world/WorldRoads');
+ const parked=motorPoolBays.map((p,i)=>({...p,width:VEHICLE_SPECS[i+1].width,depth:VEHICLE_SPECS[i+1].length,height:1.65}));
+ for(const to of [{x:92,z:0},{x:-104,z:0}]){const route=roadRoute({x:-44,z:0},to);for(let i=1;i<route.length;i++){const a=route[i-1],b=route[i],len=Math.hypot(b.x-a.x,b.z-a.z);for(let t=0;t<=1;t+=0.1)assert.ok(world.boxIsClear({x:a.x+(b.x-a.x)*t,z:a.z+(b.z-a.z)*t,yaw:len?Math.atan2(b.x-a.x,b.z-a.z):0},1.82,4.55,parked));}}
 });
