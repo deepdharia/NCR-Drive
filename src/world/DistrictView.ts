@@ -32,8 +32,9 @@ export class DistrictView {
   private passenger = new THREE.Group();
   private lampLights: THREE.PointLight[] = [];
   private lampPositions: THREE.Vector3[] = [];
+  private localObjects: THREE.Object3D[] = [];
 
-  constructor(scene: THREE.Scene, layout: DistrictLayout, mobile: boolean) {
+  constructor(private scene: THREE.Scene, layout: DistrictLayout, mobile: boolean) {
     this.group.name = 'Connaught Place'; scene.add(this.group);
     scene.background = new THREE.Color(0xd6a472); scene.fog = new THREE.FogExp2(0xd6a472, 0.008);
     scene.environment = environmentTexture(); scene.environmentIntensity = 0.65;
@@ -44,7 +45,7 @@ export class DistrictView {
     this.sun.castShadow = true; this.sun.shadow.mapSize.set(mobile ? 1024 : 2048, mobile ? 1024 : 2048);
     Object.assign(this.sun.shadow.camera, { left: -85, right: 85, top: 85, bottom: -85, near: 1, far: 210 });
     this.sun.shadow.normalBias = 0.025; this.sun.shadow.bias = -0.00015; scene.add(this.sun, this.sun.target);
-    const sky = new THREE.Mesh(new THREE.SphereGeometry(420, 24, 16), new THREE.ShaderMaterial({
+    const sky = new THREE.Mesh(new THREE.SphereGeometry(9000, 24, 16), new THREE.ShaderMaterial({
       side: THREE.BackSide, depthWrite: false, uniforms: {
         topColor: { value: new THREE.Color(0x657c8b) }, horizonColor: { value: new THREE.Color(0xd6a472) },
         sunDirection: { value: this.sun.position.clone().normalize() },
@@ -73,8 +74,9 @@ export class DistrictView {
     const roadPaint = new THREE.MeshStandardMaterial({ color: 0xe7e3d7, roughness: 0.96 });
     const asphalt = surfaceMaterial('asphalt', true);
     const grass = new THREE.MeshStandardMaterial({ color: 0x6c8050, roughness: 1 });
-    const earth = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), new THREE.MeshStandardMaterial({ color: 0x9b9872, roughness: 1 }));
-    earth.rotation.x = -Math.PI / 2; earth.position.y = -0.04; earth.receiveShadow = true; this.group.add(earth);
+    const earth = new THREE.Mesh(new THREE.PlaneGeometry(6000, 7000), new THREE.MeshStandardMaterial({ color: 0x9b9872, roughness: 1 }));
+    earth.rotation.x = -Math.PI / 2; earth.position.set(-1775, -0.04, 1000); earth.receiveShadow = true; this.group.add(earth);
+    const eastBank=earth.clone();eastBank.position.x=4525;this.group.add(eastBank);
     this.flat(new THREE.CircleGeometry(30, 96), grass, 0.015);
     this.flat(planarUV(new THREE.RingGeometry(30, 38, 128)), stone, 0.02);
     this.flat(roadRingGeometry(38, 50), asphalt, 0.03);
@@ -216,6 +218,7 @@ export class DistrictView {
     }
     this.delivery.add(this.passenger);
     this.delivery.position.set(COURIER_TARGET.x, 0, COURIER_TARGET.z); this.delivery.visible = false; this.group.add(this.delivery);
+    this.localObjects=this.group.children.filter(child=>child!==sky && child!==earth && child!==eastBank && child!==this.delivery);
   }
 
   setPickup(pickup: boolean): void {
@@ -226,6 +229,8 @@ export class DistrictView {
   }
 
   update(focus: Point): void {
+    if(this.scene.fog instanceof THREE.FogExp2)this.scene.fog.density=Math.hypot(focus.x,focus.z)<160?0.008:0.0045;
+    for(const object of this.localObjects)object.visible=Math.hypot(focus.x,focus.z)<450;
     const sorted = [...this.lampPositions].sort((a, b) => Math.hypot(a.x - focus.x, a.z - focus.z) - Math.hypot(b.x - focus.x, b.z - focus.z));
     this.lampLights.forEach((light, i) => light.position.copy(sorted[i]));
   }

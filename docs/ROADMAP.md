@@ -1,35 +1,24 @@
-# Milestones and gates
+# NCR Drive milestones
 
-Delivery branch: `main`. The foundation came from PR #4 at
-`c6e0514573e44395c3e0a6505343678e5ad9054f`; recovery/settings came through
-PR #5. See HANDOFF.md for merged commits, evidence and remaining work.
+Connected-world assignment takes priority over unfinished M1 audio. Preserve all
+completed handling, recovery, progress/settings and existing jobs. No backend,
+engine change or real-world reconstruction is planned here.
 
-| Milestone | Gate | Current status |
-| --- | --- | --- |
-| M0 baseline | Verify remote state, instructions, feature inventory and reproducible checks | Complete for inspected PR #4 snapshot; production deployment source remains unverified |
-| M1 driving/recovery | Start, drive, finish a fare, recover, save settings and reload; audio, feedback and measured profiling | Partial: recovery, save migration and persistent sensitivity/quality implemented; production verification recorded in PLAYTESTS.md |
-| M2 connected district | Shared directed road graph, reachable targets, traffic junctions and bounded pedestrians; defined blockage/deadlock outcomes | Not started |
-| M3 chapter/progression | Varied non-pursuit objectives, dialogue history, checkpoints, garage/spending and safe migration | Not started; current three-stop story is an earlier prototype |
-| M4 pursuit/spectacle | One real pursuit with search/escape/failure/retry/cleanup plus a bounded stunt/prop encounter | Not started |
-| M5 presentation/release | Asset/audio quality, full player runs, device evidence, licences, lifecycle and versioned release | Not started |
+| Milestone | Status / gate |
+| --- | --- |
+| M0 source and baseline | Starting main `546fff3`, refreshed remote matches; baseline tests/lint/build and production smoke passed |
+| M1 driving/recovery/settings | Preserved; audio and real-device tuning remain backlog |
+| M2 connected NCR world | Implemented on `improve/connected-ncr-world`: 10.03km shared directed roads, Gurgaon and Noida loops, two corridors, river bridge, regional recovery/traffic/maps and jobs; functional routes and CI verified in HANDOFF/PLAYTESTS; hardware/human acceptance remains |
+| M3 story/career | Existing chapter plus modest Delhi→Gurgaon dispatch; larger campaign, spending and consequences deferred |
+| M4 spectacle | Pursuits/stunts remain later scope; no combat added |
+| M5 device/release | Owner M1 8GB + named Android performance/handling gate still required; no production promotion claimed |
 
-Next M1 increment: gesture-initialised procedural driving audio with mute/volume
-settings and pause/lifecycle behavior. Then add bounded frame-time/render-resource
-instrumentation and measure a representative full fare on the owner's M1 and a
-named midrange Android. Keep functional CI results separate from frame-rate data.
-Tune camera/handling using route playtests before marking M1 complete.
+The complete connected loop has functional browser evidence. Next acceptance
+work is actual device frame times, boundary hitches, ordinary-speed pacing and
+enjoyment. Reduce decorative density before sacrificing road/collision correctness. Audio can follow once this world
+is accepted; it must not block the connected-map increment.
 
-Recovery policy implemented here: free, cancel active jobs without reward,
-preserve earned cash/completed jobs, preserve driving/on-foot mode. Select a
-collision-clear radial-road pad and door; if all pads are occupied, change nothing.
-This deliberately avoids introducing recovery charges before transaction/economy
-design. Recovery is an explicit menu action, not an AI teleport system.
-
-Reload policy: wallet, taxi count, courier completion and settings persist.
-Active jobs cancel, chapter/vehicle locations reset. Chapter replay still pays
-again by the existing policy; no persistent chapter reward ledger is claimed.
-Timers continue to use clamped simulated time and stop under phone/pause.
-
-Do not widen into M2 before M1's remaining gates are evidenced. Future spending
-requires central validated/idempotent transactions; allowing zero cash alone is
-not a complete economy. No purchase or ownership feature is introduced here.
+Recovery remains free, regional, collision/door checked and atomic. Active jobs
+cancel without payout; completed rewards/settings persist. No active-job or saved
+location resume exists. Schema v2 and the v1 migration/backup/corruption handling
+are unchanged. Existing replay rewards remain intentional, once per completion.

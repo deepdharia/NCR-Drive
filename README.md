@@ -1,8 +1,10 @@
 # NCR Drive
 
-A playable, stylized Delhi open-world district using Three.js, strict TypeScript
+A playable, stylized connected Delhi–Gurgaon–Noida driving world using Three.js, strict TypeScript
 and Vite. Walk the CP arcades, switch between three fictional vehicles, drive
 through two-way traffic, take repeatable taxi fares and play an opening chapter.
+Drive both continuous regional corridors, cross the Yamuna-inspired bridge, and
+visit office avenues or Noida sector blocks. Geography is compressed and fictional.
 All art is procedural and generated locally; no paid APIs, keys or asset servers.
 
 ## Run
@@ -46,14 +48,17 @@ cars are freely drivable and remain where parked until reload.
 
 Open DelhiOS for:
 
-- **Delhi Cabs:** four rotating fares, two-second stopped pickups/drop-offs,
+- **Delhi Cabs:** rotating local and regional fares, two-second stopped pickups/drop-offs,
   distance-based payment and a ₹150 clean-driving bonus.
 - **City Stories:** *Kabir's Evening Run*. Meet Kabir at the east arcade, collect
   market paperwork and hand over on foot at Shivaji Stadium within four minutes.
   Hold still for 1.5 seconds at each objective. Completion pays ₹1,200; timeout,
   cancellation and retry are supported. Replay earns the reward again.
 - **Hustle:** one courier handover on foot, paying ₹750.
-- **DelhiNav:** route lines along the circle and radial roads, distance and target.
+- **DelhiNav:** directed left-lane road routes, remaining distance, local radar and regional overview.
+- **Regional Dispatch:** Delhi pickup → Gurgaon delivery, 12 minutes · ₹2,400.
+  The original chapter is still available; an optional Gurgaon→Noida taxi follows via Delhi.
+- **Regional fares:** choose Delhi→Gurgaon or Gurgaon→Noida directly in Delhi Cabs.
 
 Only one job can run at a time. Wallet, taxi ride count, courier completion and
 settings persist in browser storage. Schema v2 migrates v1 saves, accepts balances
@@ -70,7 +75,7 @@ reset on reload. If storage is blocked, play continues with a session-only walle
 | `vehicle` | Shared controller, data-driven specs, articulated procedural view |
 | `player`, `camera`, `input` | Character, orbit/chase and keyboard/touch handoff |
 | `world`, `rendering` | Shared scenery/collision layout, dusk PBR textures and batching |
-| `systems/TrafficSystem.ts` | Six ring-road traffic cars, left-hand lane direction, stopping |
+| `systems/TrafficSystem.ts` | Capped local graph traffic, left-hand lanes, junction yielding |
 | `systems/StoryMission.ts` | Data-driven sequential objective chapter, dwell and timer |
 | Other `systems` | Taxi/courier, storage, door interaction and navigation |
 | `ui` | Responsive DOM overlays, phone and local Canvas maps |
@@ -78,8 +83,9 @@ reset on reload. If storage is blocked, play continues with a session-only walle
 Dynamic collision prevents the player vehicle passing through traffic and parked
 cars. Traffic sweeps against vehicles and pedestrians, stops when blocked and
 resumes when clear. This is a flat arcade model, with no rigid-body impacts or
-ramming damage. Traffic uses bounded ring paths; it does not yet navigate junctions
-or find detours. Parking across a lane can block that lane indefinitely.
+ramming damage. Traffic follows directed road lanes and junction transitions, yields deterministically
+and safely recycles outside the local neighbourhood. It has no dynamic detours;
+parking across a lane blocks nearby cars until cleared.
 
 ## Verification
 
@@ -97,11 +103,17 @@ against the shipped dist files: ordinary keyboard/touch controls, a driven couri
 safe recovery, save migration and settings/reward reload. It needs Playwright and
 Chromium, installed by CI. Local browser installations can set `PLAYWRIGHT_MODULE`
 to the Playwright entry module and `CHROMIUM_EXECUTABLE_PATH` to the browser binary.
-See [handoff](docs/HANDOFF.md) for exact completed checks and remaining M1 work.
+See [handoff](docs/HANDOFF.md) for exact completed checks and remaining device checks.
 
 See [audit and roadmap](docs/open-world-audit.md) for missing systems, known limits
-and the next playable milestones. This remains a small CP-inspired prototype,
-not a full Delhi reconstruction or store-ready open-world game.
+and the next playable milestones. See [world topology and measured lengths](docs/WORLD_MAP.md). This remains an
+original stylized prototype, not an accurate city reconstruction or store-ready game.
 
 Three.js is MIT licensed. No third-party game assets or proprietary map imagery
 are bundled.
+
+Regional checks: `npm run test:regional-wiring` verifies focused mission/recovery
+wiring with disclosed placement; `npm run test:regional-drive` uses ordinary
+keyboard controls against dist. Set `REGIONAL_DRIVE_SCOPE=noida` or `gurgaon`
+for independent normal CP-start round trips. Each completed leg checkpoints
+evidence. See [PLAYTESTS.md](docs/PLAYTESTS.md) for actual results and controller-assistance disclosure.

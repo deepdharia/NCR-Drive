@@ -18,3 +18,15 @@ unbuilt. Future imported assets require source URL, exact licence, attribution,
 modifications, metre scale, origin/axis, texture/material/draw-call budgets and
 LOD/collision proxies before inclusion. Do not infer redistribution permission
 from a free download. Entity density and texture budgets await device profiling.
+
+## Connected NCR world increment
+
+All road geometry, bridge/river, office/residential boxes, pavement, bays, lane
+markings, railings and signs are original procedural TypeScript/Three.js geometry
+and Canvas lettering in `WorldRoads.ts` / `RegionalView.ts`. No imported meshes,
+textures, audio, geography, API data or external fonts were added. Map topology
+is fictional; no real-road licence or alignment claim applies. Existing local
+system fonts and Three.js MIT obligations continue unchanged. Geometry is metre
+scale, +Y up, +Z vehicle forward, shared box/plane resources with instanced
+buildings/markings and distance-visible chunks. Exact counts can be collected
+from pause-menu render statistics; device budgets remain subject to owner testing.

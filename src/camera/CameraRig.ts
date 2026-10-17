@@ -11,7 +11,7 @@ export class CameraRig {
   private chaseOffset = 0;
   private target = new THREE.Vector3();
   private initialized = false;
-  constructor(aspect: number) { this.camera = new THREE.PerspectiveCamera(62, aspect, 0.1, 550); }
+  constructor(aspect: number) { this.camera = new THREE.PerspectiveCamera(62, aspect, 0.1, 12000); }
   rotate(dx: number, dy: number, driving: boolean): void {
     if (driving) this.chaseOffset -= dx * 0.006;
     else this.yaw -= dx * 0.006;
