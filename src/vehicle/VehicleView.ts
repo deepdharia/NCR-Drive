@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { QUALITY } from '../rendering/QualityProfile';
+import type { QualityPreset } from '../rendering/QualityProfile';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeStaticMeshes } from '../rendering/MeshUtils';
 import { signTexture } from '../rendering/ProceduralTextures';
@@ -9,6 +11,8 @@ import type { VehicleController } from './VehicleController';
 /** A compact five-door hatchback; static detail is batched per material. */
 export class VehicleView {
   readonly group = new THREE.Group();
+  private detailed = new THREE.Group();
+  private distant = new THREE.Group();
   private body = new THREE.Group();
   private wheels: { pivot: THREE.Group; spin: THREE.Group; front: boolean }[] = [];
   private brakeMaterial = new THREE.MeshStandardMaterial({ color: 0x9b2520, emissive: 0xff3420, emissiveIntensity: 0.65 });
@@ -20,7 +24,7 @@ export class VehicleView {
     const rubber = new THREE.MeshStandardMaterial({ color: 0x16191a, roughness: 0.96 }); rubber.name = 'Rubber and trim';
     const chrome = new THREE.MeshStandardMaterial({ color: 0xb5bac0, roughness: 0.26, metalness: 0.85 }); chrome.name = 'Alloy and chrome';
     const interior = new THREE.MeshStandardMaterial({ color: 0x39372f, roughness: 0.95 }); interior.name = 'Interior upholstery';
-    const headlight = new THREE.MeshStandardMaterial({ color: 0xffedc6, emissive: 0xffd293, emissiveIntensity: 2.5, roughness: 0.15 }); headlight.name = 'Headlamps';
+    const headlight = new THREE.MeshStandardMaterial({ color: 0xffedc6, emissive: 0xffd293, emissiveIntensity: 0.8, roughness: 0.15 }); headlight.name = 'Headlamps';
     this.brakeMaterial.name = 'Tail lamps';
     const addBox = (w: number, h: number, d: number, material: THREE.Material, x: number, y: number, z: number, radius = 0.025): THREE.Mesh => {
       const mesh = new THREE.Mesh(new RoundedBoxGeometry(w, h, d, 2, Math.min(radius, w / 3, h / 3, d / 3)), material);
@@ -83,6 +87,11 @@ export class VehicleView {
     for (const y of [0.73, 0.78, 0.83]) addBox(0.67, 0.012, 0.05, chrome, 0, y, 1.88, 0.003);
     addBox(1.45, 0.045, 0.10, chrome, 0, 0.92, -1.77, 0.01);
     addBox(1.42, 0.06, 0.25, paint, 0, 1.58, -1.13, 0.025);
+    if (spec.id === 'raahi') for (const side of [-1, 1]) {
+      addBox(0.055, 0.045, 1.55, chrome, side * 0.54, 1.64, -0.27, 0.012);
+      for (const z of [-0.9, 0.35]) addBox(0.07, 0.08, 0.09, rubber, side * 0.54, 1.60, z, 0.01);
+    }
+    if (spec.id === 'baaz') addBox(1.48, 0.08, 0.2, rubber, 0, 0.35, 1.77, 0.015);
     addBox(0.54, 0.14, 0.04, rubber, 0, 1.01, 0.62);
     const steering = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.018, 6, 16), rubber); steering.position.set(-0.35, 1.10, 0.46); steering.rotation.x = -0.35; this.body.add(steering);
     for (const rear of [false, true]) {
@@ -96,9 +105,10 @@ export class VehicleView {
       plate.name = rear ? 'Rear Indian plate' : 'Front Indian plate'; plate.position.set(0, 0.53, rear ? -1.90 : 1.91); plate.rotation.y = rear ? Math.PI : 0; this.body.add(plate);
     }
     for (const x of [-0.84, 0.84]) for (const z of [-1.18, 1.18]) {
-      const pivot = new THREE.Group(), spin = new THREE.Group(); pivot.position.set(x, 0.32, z); pivot.name = `${z > 0 ? 'Front' : 'Rear'} ${x < 0 ? 'right' : 'left'} wheel`;
+      const pivot = new THREE.Group(), spin = new THREE.Group(); pivot.position.set(Math.sign(x) * (spec.width / 2 - 0.11), 0.32, z * spec.length / 3.85); pivot.name = `${z > 0 ? 'Front' : 'Rear'} ${x < 0 ? 'right' : 'left'} wheel`;
       const side = Math.sign(x);
       const tire = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.22, 24), rubber); tire.rotation.z = Math.PI / 2; spin.add(tire);
+      const sidewall = new THREE.Mesh(new THREE.TorusGeometry(0.255, 0.055, 6, 24), rubber); sidewall.rotation.y = Math.PI / 2; sidewall.position.x = side * 0.087; spin.add(sidewall);
       const rim = new THREE.Mesh(new THREE.TorusGeometry(0.194, 0.022, 8, 24), chrome); rim.rotation.y = Math.PI / 2; rim.position.x = side * 0.124; spin.add(rim);
       const disc = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.018, 24), new THREE.MeshStandardMaterial({ color: 0x70777c, metalness: 0.8, roughness: 0.5 })); disc.rotation.z = Math.PI / 2; disc.position.x = side * 0.113; spin.add(disc);
       const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.035, 12), chrome); hub.rotation.z = Math.PI / 2; hub.position.x = side * 0.14; spin.add(hub);
@@ -107,17 +117,32 @@ export class VehicleView {
         const spoke = new THREE.Mesh(new RoundedBoxGeometry(0.032, 0.165, 0.035, 1, 0.009), chrome);
         spoke.position.set(side * 0.14, Math.cos(a) * 0.10, Math.sin(a) * 0.10); spoke.rotation.x = a; spin.add(spoke);
       }
-      const caliper = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.09, 0.08), new THREE.MeshStandardMaterial({ color: 0x8e4934, roughness: 0.6 })); caliper.position.set(side * 0.125, 0.09, 0.08); spin.add(caliper);
-      mergeStaticMeshes(spin); pivot.add(spin); this.group.add(pivot); this.wheels.push({ pivot, spin, front: z > 0 });
+      const caliper = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.09, 0.08), new THREE.MeshStandardMaterial({ color: 0x8e4934, roughness: 0.6 })); caliper.position.set(side * 0.125, 0.09, 0.08); pivot.add(caliper);
+      mergeStaticMeshes(spin); pivot.add(spin); this.detailed.add(pivot); this.wheels.push({ pivot, spin, front: z > 0 });
     }
-    mergeStaticMeshes(this.body); this.group.add(this.body);
-    this.group.scale.set(spec.width / 1.72, spec.height / 1.65, spec.length / 3.85);
+    mergeStaticMeshes(this.body); this.detailed.add(this.body);
+    // Two-mesh traffic LOD. Detailed wheels, interior and lamps stay local.
+    const proxyBody = new THREE.Mesh(new THREE.BoxGeometry(1.68, 0.62, 3.65), paint); proxyBody.position.y = 0.68;
+    const proxyCabin = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.62, 1.95), glass); proxyCabin.position.set(0, 1.22, -0.28);
+    proxyBody.castShadow = true; this.distant.add(proxyBody, proxyCabin); this.distant.visible = false;
+    this.group.add(this.detailed, this.distant);
+    // Scale the coachwork, not the tires: every roster variant retains round
+    // 0.32m wheels touching the same ground plane and matching wheel odometry.
+    this.body.scale.set(spec.width / 1.72, spec.height / 1.65, spec.length / 3.85);
+    this.distant.scale.copy(this.body.scale);
+  }
+
+  setDetail(distance: number, quality: QualityPreset): void {
+    const detailed = distance < QUALITY[quality].vehicleDetail;
+    this.detailed.visible = detailed; this.distant.visible = !detailed;
   }
 
   update(car: VehicleController): void {
     this.group.position.set(car.position.x, 0.035, car.position.z); this.group.rotation.y = car.yaw;
-    this.body.rotation.set(car.pitch, 0, car.roll);
+    // Sprung visual body only; tire contact, collider and bicycle handling stay unchanged.
+    this.body.rotation.set(car.pitch * 0.65, 0, car.roll * 0.65);
+    this.body.position.y = Math.sin(car.wheelTravel * 2.1) * Math.min(Math.abs(car.speed) * 0.0006, 0.008);
     this.wheels.forEach(w => { w.pivot.rotation.y = w.front ? car.steering : 0; w.spin.rotation.x = car.wheelTravel / 0.32; });
-    this.brakeMaterial.emissiveIntensity = car.braking ? 3 : 0.65;
+    this.brakeMaterial.emissiveIntensity = car.braking ? 2.5 : 0.3;
   }
 }

@@ -22,3 +22,13 @@ Recovery remains free, regional, collision/door checked and atomic. Active jobs
 cancel without payout; completed rewards/settings persist. No active-job or saved
 location resume exists. Schema v2 and the v1 migration/backup/corruption handling
 are unchanged. Existing replay rewards remain intentional, once per completion.
+
+## Visual Realism V1
+
+The Central Delhi slice adds a continuous detailed surface, daylight/PBR,
+modular facade/service detail, original landmark/flyover scenery, round grounded
+wheels, chase-camera refinement and Low/Balanced/High profiles. Keep connected
+world gameplay unchanged. See VISUAL_REALISM.md and the latest HANDOFF/PLAYTESTS
+entry for exact acceptance evidence. Elevated **driving** and ramps remain
+unimplemented; the supported scenic span has a usable ground underpass. Expand
+art density only after owner desktop/mobile performance and visual acceptance.

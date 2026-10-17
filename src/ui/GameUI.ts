@@ -10,6 +10,7 @@ import { roadRoute, routeLength } from '../systems/Navigation';
 import { regionAt, regionLabels } from '../world/WorldRoads';
 import { Minimap } from './Minimap';
 import type { Settings } from '../systems/ProgressStore';
+import { nextQuality, QUALITY, resolvedQuality } from '../rendering/QualityProfile';
 
 interface UIActions { journey: () => void; regionalTaxi: (noida: boolean) => void; start: () => void; phone: () => void; pause: () => void; interact: () => void; accept: () => void; taxi: () => void; cancelTaxi: () => void; story: () => void; cancelStory: () => void; quality: () => void; recover: () => void; sensitivity: (kind: 'steeringSensitivity' | 'cameraSensitivity', value: number) => void }
 const phoneIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10 18h4"/></svg>';
@@ -197,7 +198,8 @@ export class GameUI {
   renderStats(value:string):void {this.text('[data-render-stats]',value);}
 
   setSettings(settings: Settings): void {
-    this.text('[data-action="quality"]', settings.performanceMode ? 'Graphics: Performance · Tap for detailed' : 'Graphics: Detailed · Tap for performance');
+    const quality = resolvedQuality(settings);
+    this.text('[data-action="quality"]', `Graphics: ${QUALITY[quality].label} · Tap for ${QUALITY[nextQuality(quality)].label}`);
     this.element<HTMLInputElement>('[data-setting="steeringSensitivity"]').value = String(settings.steeringSensitivity);
     this.element<HTMLInputElement>('[data-setting="cameraSensitivity"]').value = String(settings.cameraSensitivity);
     this.text('[data-steering-value]', `${settings.steeringSensitivity.toFixed(1)}×`);

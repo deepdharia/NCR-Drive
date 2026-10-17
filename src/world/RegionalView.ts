@@ -1,16 +1,19 @@
 import * as THREE from 'three';
 import { roads, ends, destinations, worldBarriers, riverBanks, motorPoolBays } from './WorldRoads';
 import type { Point } from '../core/math';
-import { signTexture } from '../rendering/ProceduralTextures';
+import { QUALITY } from '../rendering/QualityProfile';
+import type { QualityPreset } from '../rendering/QualityProfile';
+import { signTexture, worldSurfaceMaterial } from '../rendering/ProceduralTextures';
 
 /** Small shared-resource chunks, visibility independent of collision (which stays indexed globally). */
 export class RegionalView {
  readonly group=new THREE.Group();
+ private quality: QualityPreset='balanced';
  private chunks: {group:THREE.Group;point:Point;radius:number}[]=[];
  constructor(scene:THREE.Scene){
   scene.add(this.group);
   const box=new THREE.BoxGeometry(1,1,1),plane=new THREE.PlaneGeometry(1,1);
-  const asphalt=new THREE.MeshStandardMaterial({color:0x464d50,roughness:1});
+  const asphalt=worldSurfaceMaterial('asphalt');
   const verge=new THREE.MeshStandardMaterial({color:0x788263,roughness:1});
   const paint=new THREE.MeshBasicMaterial({color:0xe9dbad});
   const rail=new THREE.MeshStandardMaterial({color:0xc5bda0,roughness:0.85});
@@ -60,5 +63,6 @@ export class RegionalView {
    const label=new THREE.Mesh(plane,new THREE.MeshBasicMaterial({map:signTexture(bay.name),side:THREE.DoubleSide}));label.position.set(bay.x,3,bay.z+7);label.scale.set(16,2,1);g.add(label);
   }
  }
- update(focus:Point):void {for(const chunk of this.chunks)chunk.group.visible=Math.hypot(chunk.point.x-focus.x,chunk.point.z-focus.z)<chunk.radius+550;}
+ setQuality(quality:QualityPreset):void {this.quality=quality;}
+ update(focus:Point):void {for(const chunk of this.chunks)chunk.group.visible=Math.hypot(chunk.point.x-focus.x,chunk.point.z-focus.z)<chunk.radius+QUALITY[this.quality].sceneryDistance;}
 }

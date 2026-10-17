@@ -10,6 +10,7 @@ export class CameraRig {
   pitch = 0.27;
   private chaseOffset = 0;
   private target = new THREE.Vector3();
+  private probe = new THREE.Vector3();
   private initialized = false;
   constructor(aspect: number) { this.camera = new THREE.PerspectiveCamera(62, aspect, 0.1, 12000); }
   rotate(dx: number, dy: number, driving: boolean): void {
@@ -24,16 +25,23 @@ export class CameraRig {
     const position = driving ? car.position : player.position;
     const look = new THREE.Vector3(position.x, (driving ? 0 : player.y) + 1.15, position.z);
     const yaw = driving ? car.yaw + Math.PI + this.chaseOffset : this.yaw;
-    const radius = driving ? 7 + Math.min(1, car.kmh / 100) : 5.3;
+    const speed = Math.min(1, Math.abs(car.speed) / 35);
+    const radius = driving ? 7 + speed * 1.2 : 5.3;
     const offset = new THREE.Vector3(Math.sin(yaw) * Math.cos(this.pitch), Math.sin(this.pitch), Math.cos(yaw) * Math.cos(this.pitch));
     let distance = radius;
     for (let d = 0.4; d <= radius; d += 0.2) {
-      const p = look.clone().addScaledVector(offset, d);
+      const p = this.probe.copy(look).addScaledVector(offset, d);
       if (!world.isClear({ x: p.x, z: p.z }, 0.18, p.y - 0.18, 0.36)) { distance = Math.max(0.4, d - 0.25); break; }
     }
     const desired = look.clone().addScaledVector(offset, distance); desired.y = Math.max(0.3, desired.y);
     if (!this.initialized) { this.target.copy(look); this.camera.position.copy(desired); this.initialized = true; }
-    this.target.lerp(look, blend(14, dt)); this.camera.position.lerp(desired, blend(driving ? 6 : 12, dt));
+    if (driving) {
+      const lead = clamp(car.speed * 0.12, -0.7, 3.2);
+      look.x += Math.sin(car.yaw) * lead; look.z += Math.cos(car.yaw) * lead;
+    }
+    this.target.lerp(look, blend(10, dt)); this.camera.position.lerp(desired, blend(driving ? 7 : 12, dt));
+    const fov = 62 + (driving ? speed * 5 : 0);
+    if (Math.abs(this.camera.fov - fov) > 0.01) { this.camera.fov += (fov - this.camera.fov) * blend(3, dt); this.camera.updateProjectionMatrix(); }
     this.camera.lookAt(this.target);
   }
   resize(width: number, height: number): void { this.camera.aspect = width / height; this.camera.updateProjectionMatrix(); }

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-export type SurfaceKind = 'asphalt' | 'paving' | 'concrete' | 'plaster' | 'denim' | 'cloth';
+export type SurfaceKind = 'asphalt' | 'paving' | 'concrete' | 'plaster' | 'grass' | 'denim' | 'cloth';
 
 function canvas(size: number): { image: HTMLCanvasElement; ctx: CanvasRenderingContext2D } {
   const image = document.createElement('canvas'); image.width = image.height = size;
@@ -26,13 +26,15 @@ export function surfaceMaterial(kind: SurfaceKind, roadLines = false): THREE.Mes
   const { image, ctx } = canvas(size), height = canvas(size), roughness = canvas(size);
   const noise = random(kind.length * 3191 + size);
   const colors: Record<SurfaceKind, [number, number, number]> = {
-    asphalt: [30, 30, 32], paving: [180, 153, 123], concrete: [184, 183, 174],
-    plaster: [247, 247, 247], denim: [35, 54, 72], cloth: [199, 188, 160],
+    asphalt: [57, 60, 61], paving: [180, 153, 123], concrete: [184, 183, 174],
+    plaster: [239, 236, 226], grass: [102, 117, 77], denim: [35, 54, 72], cloth: [199, 188, 160],
   };
   const data = ctx.createImageData(size, size), bump = height.ctx.createImageData(size, size), rough = roughness.ctx.createImageData(size, size);
   const base = colors[kind];
   for (let i = 0; i < size * size; i++) {
-    const grain = (noise() - 0.5) * (kind === 'asphalt' ? 23 : 15);
+    const x = i % size, y = Math.floor(i / size);
+    const mottling = kind === 'asphalt' || kind === 'grass' ? Math.sin(x / size * Math.PI * 4) * Math.cos(y / size * Math.PI * 2) * 0.8 + Math.sin((x + y) / size * Math.PI * 6) * 0.6 : 0;
+    const grain = (noise() - 0.5) * (kind === 'asphalt' ? 19 : 15) + mottling;
     const weave = kind === 'denim' || kind === 'cloth' ? ((Math.floor(i / size) + i % size) % 3 - 1) * 8 : 0;
     for (let channel = 0; channel < 3; channel++) {
       data.data[i * 4 + channel] = Math.min(255, Math.max(0, base[channel] + grain + weave));
@@ -60,6 +62,16 @@ export function surfaceMaterial(kind: SurfaceKind, roadLines = false): THREE.Mes
       ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + noise() * 15, y + noise() * 50); ctx.stroke();
     }
   }
+  if (kind === 'plaster') {
+    const dust = ctx.createLinearGradient(0, 0, 0, size);
+    dust.addColorStop(0, '#61584018'); dust.addColorStop(0.35, '#86785800'); dust.addColorStop(1, '#78644730');
+    ctx.fillStyle = dust; ctx.fillRect(0, 0, size, size);
+    for (let i = 0; i < 24; i++) {
+      const x = noise() * size, length = 12 + noise() * 90;
+      const stain = ctx.createLinearGradient(0, 0, 0, length); stain.addColorStop(0, '#60584212'); stain.addColorStop(1, '#60584200');
+      ctx.fillStyle = stain; ctx.fillRect(x, 0, 1 + noise() * 6, length);
+    }
+  }
   if (kind === 'asphalt' && roadLines) {
     // U is travel distance (12 m per repeat); V spans the 12 m carriageway.
     ctx.fillStyle = '#e1b536';
@@ -76,6 +88,32 @@ export function surfaceMaterial(kind: SurfaceKind, roadLines = false): THREE.Mes
     bumpScale: kind === 'asphalt' ? 0.025 : kind === 'paving' ? 0.045 : 0.012,
     roughness: kind === 'asphalt' ? 0.95 : 0.92,
   });
+}
+
+/** Metric world projection keeps a shared road texture continuous across scaled
+ * box decks, curved geometry, seams and city boundaries. No new shader pass. */
+export function worldSurfaceMaterial(kind: SurfaceKind, metresPerTile = 4): THREE.MeshStandardMaterial {
+  const material = surfaceMaterial(kind);
+  material.onBeforeCompile = shader => {
+    shader.vertexShader = shader.vertexShader.replace('#include <project_vertex>', `#include <project_vertex>
+      vec4 surfaceWorld = vec4(transformed, 1.0);
+      #ifdef USE_INSTANCING
+        surfaceWorld = instanceMatrix * surfaceWorld;
+      #endif
+      surfaceWorld = modelMatrix * surfaceWorld;
+      vec2 surfaceUv = surfaceWorld.xz / ${metresPerTile.toFixed(3)};
+      #ifdef USE_MAP
+        vMapUv = surfaceUv;
+      #endif
+      #ifdef USE_BUMPMAP
+        vBumpMapUv = surfaceUv;
+      #endif
+      #ifdef USE_ROUGHNESSMAP
+        vRoughnessMapUv = surfaceUv;
+      #endif`);
+  };
+  material.customProgramCacheKey = () => `world-surface-${kind}-${metresPerTile}`;
+  return material;
 }
 
 export function planarUV(geometry: THREE.BufferGeometry, metresPerTile = 4): THREE.BufferGeometry {
@@ -104,7 +142,7 @@ export function roadPlaneGeometry(width: number, length: number): THREE.PlaneGeo
 export function environmentTexture(): THREE.CanvasTexture {
   const { image, ctx } = canvas(512);
   const sky = ctx.createLinearGradient(0, 0, 0, 512);
-  sky.addColorStop(0, '#6b7c8b'); sky.addColorStop(0.45, '#e6b384'); sky.addColorStop(0.53, '#d9b58b'); sky.addColorStop(0.6, '#787061'); sky.addColorStop(1, '#33352e');
+  sky.addColorStop(0, '#799cbb'); sky.addColorStop(0.45, '#c7d5d9'); sky.addColorStop(0.53, '#d1d6cd'); sky.addColorStop(0.6, '#8b8c78'); sky.addColorStop(1, '#44483c');
   ctx.fillStyle = sky; ctx.fillRect(0, 0, 512, 512);
   // Broad, soft façade reflections for body panels and tinted glass.
   for (let i = 0; i < 12; i++) {

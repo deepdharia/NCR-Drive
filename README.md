@@ -29,8 +29,8 @@ Space jumps on foot and handbrakes in a car. F enters/exits at the right-hand
 driver's door. Exit below 15 km/h with a clear door. Drag to orbit; Tab opens
 DelhiOS; Escape pauses. Touch joystick, pedals, reverse, jump and entry buttons
 support mobile layouts. Phone and pause suspend the simulation and timers.
-The pause menu has Detailed/Performance graphics; Performance disables dynamic
-shadows and caps render resolution for slower devices. Graphics, steering and
+The pause menu cycles Balanced/Low/High graphics; Low (Performance) disables
+dynamic shadows and caps render resolution for slower devices. Graphics, steering and
 camera sensitivity are saved locally. Use **Recover to a clear road · Free** if
 stuck: it checks car/door clearance, keeps your movement mode and earned money,
 and cancels active jobs without paying them. Occupied recovery pads leave the
@@ -74,7 +74,7 @@ reset on reload. If storage is blocked, play continues with a session-only walle
 | `core` | Lifecycle, 120 Hz simulation and swept analytic collision |
 | `vehicle` | Shared controller, data-driven specs, articulated procedural view |
 | `player`, `camera`, `input` | Character, orbit/chase and keyboard/touch handoff |
-| `world`, `rendering` | Shared scenery/collision layout, dusk PBR textures and batching |
+| `world`, `rendering` | Shared scenery/collision layout, daylight PBR materials and batching |
 | `systems/TrafficSystem.ts` | Capped local graph traffic, left-hand lanes, junction yielding |
 | `systems/StoryMission.ts` | Data-driven sequential objective chapter, dwell and timer |
 | Other `systems` | Taxi/courier, storage, door interaction and navigation |
@@ -117,3 +117,15 @@ wiring with disclosed placement; `npm run test:regional-drive` uses ordinary
 keyboard controls against dist. Set `REGIONAL_DRIVE_SCOPE=noida` or `gurgaon`
 for independent normal CP-start round trips. Each completed leg checkpoints
 evidence. See [PLAYTESTS.md](docs/PLAYTESTS.md) for actual results and controller-assistance disclosure.
+
+Visual Realism V1 adds a Central Delhi daylight slice and Low/Balanced/High
+presets (pause → Graphics). See [the visual guide](docs/VISUAL_REALISM.md) for
+implemented detail, render budgets and the scenic flyover's ground-only driving
+limit. `npm run test:visual` checks controlled scenes/resources separately from
+input-driven production smoke. Physical-device FPS remains an owner test gate.
+
+Visual preview: https://ncr-drive-git-improve-visual-realism-v1-deep-07f0.vercel.app
+([draft PR #7](https://github.com/deepdharia/NCR-Drive/pull/7), based on the
+connected-world branch). Vercel's Git integration confirms deployment; remote
+playtesting from the worker is blocked by 403 access restrictions. See
+[PLAYTESTS.md](docs/PLAYTESTS.md) for verified local-build evidence and limitations.

@@ -1,5 +1,8 @@
+import { isQualityPreset } from '../rendering/QualityProfile';
+import type { QualityPreset } from '../rendering/QualityProfile';
 export interface Settings {
   performanceMode: boolean;
+  graphicsQuality?: QualityPreset;
   steeringSensitivity: number;
   cameraSensitivity: number;
 }
@@ -19,6 +22,7 @@ function parse(value: string | null): Progress | null {
     const sensitivity = (n: unknown): number => typeof n === 'number' && Number.isFinite(n) && n >= 0.5 && n <= 1.5 ? n : 1;
     return { version: 2, cash: p.cash, rides: p.rides, courierCompleted: p.courierCompleted, settings: {
       performanceMode: p.version === 2 && p.settings?.performanceMode === true,
+      ...(p.version === 2 && isQualityPreset(p.settings?.graphicsQuality) ? { graphicsQuality: p.settings.graphicsQuality, performanceMode: p.settings.graphicsQuality === 'low' } : {}),
       steeringSensitivity: sensitivity(p.version === 2 ? p.settings?.steeringSensitivity : undefined),
       cameraSensitivity: sensitivity(p.version === 2 ? p.settings?.cameraSensitivity : undefined),
     } };

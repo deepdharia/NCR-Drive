@@ -12,7 +12,8 @@
     "test": "node --import tsx --test tests/*.test.ts",
     "test:production": "node tests/production-smoke.mjs",
     "test:regional-wiring": "node tests/regional-browser-wiring.mjs",
-    "test:regional-drive": "node --import tsx tests/regional-drive.mjs"
+    "test:regional-drive": "node --import tsx tests/regional-drive.mjs",
+    "test:visual": "node tests/visual-browser.mjs"
   },
   "dependencies": { "three": "0.186.1" },
   "devDependencies": {

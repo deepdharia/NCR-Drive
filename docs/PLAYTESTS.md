@@ -298,3 +298,113 @@ provenance): [connected-world-verification.json](evidence/connected-world-verifi
 Source/tests/docs are published in draft PR #6. No main merge or production
 promotion occurred. Vercel inspection remains 403. The remaining acceptance
 work is the owner hardware/human checklist above; audio remains backlog.
+
+## Visual Realism V1 — verification in progress, 18 October 2026
+
+Parent `3b5e593`, visual branch `improve/visual-realism-v1`, draft PR #7 targeting
+the connected-world branch. First implementation milestone `e5181fb`; do not use
+that preview's initial preset-switch behaviour as final acceptance. Baseline 46
+logic cases/lint/build passed. First visual checks: all 51 named logic cases,
+lint/build pass; production smoke on `index-B5HLegy-.js` passed original courier,
+recovery, migration/settings reload, simultaneous touches and both phone bounds
+with zero errors. Later slice visibility/LOD/shadow ownership changes require
+final exact-bundle rechecks.
+
+Initial controlled visual run inspected eight scenes, wheel contact and stable
+regional/preset counts, but FAILED the cleanup assertion (two remaining internal
+geometries) and emitted WebGL comparison-sampler warnings when replacing shadow
+maps. These are retained as failures, not passes. Fixes preserve the shadow
+DepthTexture identity across size changes and explicitly own/filter/dispose the
+environment PMREM target and generator. The short first-run software timing
+numbers are not acceptance evidence because the warning-bearing renderer could
+skip draws. A focused diagnostic and the full gate will verify the fix.
+
+The existing Vercel Git integration reports READY for `e5181fb` at
+https://ncr-drive-git-improve-visual-realism-v1-deep-07f0.vercel.app
+(deployment `dpl_7m6KgnitWXu753JbUJfMmv8gghzn`, GitHub commit status SUCCESS).
+This confirms a deployment, not remote gameplay. Scoped project/API and protected
+fetch access return 403; CLI 64.5.0 found no existing credentials, and direct HTTPS
+was denied by the environment proxy at CONNECT (403). No protection settings,
+production domains, Vercel configuration or credentials were changed. Local
+production verification remains the accessible gameplay evidence.
+
+Focused resource diagnostic after the fix: PASS, eight controlled scenes, two
+full preset/region cycles, wheel contact, quality reload, zero browser warnings
+or errors. All owned geometry is disposed (counter zero); the renderer's global
+DFG_LUT leaves a stale texture counter of one, then the owned WebGL context is
+explicitly lost. Two complete preset shadow targets remain bounded during play
+and are both released on shutdown. Intermediate attempts using render-target
+resizing still produced attachment warnings and were rejected; the passing fix
+caches complete targets. Final full-run results follow below when complete.
+
+### Full visual acceptance — implementation 0287b78
+
+PASS on `index-BZgxjkF-.js`: eight controlled scene views (CP chase/overview,
+east underpass, ceremonial arch, courier plaza, Gurgaon, Yamuna and Noida), all
+three cars' round-tire ground contact, three warmed complete preset/region
+cycles, High quality reload, cleanup and WebGL context destruction. Zero browser
+errors, zero WebGL/asset errors and **zero warnings**. Each cycle ends at Noida
+with exactly 361 geometries, 98 textures, 126 draw calls / 35,242 triangles;
+counts do not grow. Disposal reaches zero owned geometries. The r186 global
+DFG_LUT retains an info texture count of one; the owned context is then destroyed
+and checked lost. No private engine import or test bypass is used.
+
+Measured environment: managed Linux x86_64, AMD EPYC 9V45 virtual CPU (three logical
+CPUs exposed), Node 24.19.0, Chromium 154.0.8037.57, ANGLE Vulkan / SwiftShader
+Device (Subzero). Fixed controlled CP scene, simulation frozen, 960×640 viewport.
+45 RAF frames/preset after draining previous GPU work; discard ten, retain 35.
+No other browser suite ran concurrently with these final samples.
+
+| Preset | Actual DPR | Frame ms p50 | Frame ms p95 | Draw calls | Triangles |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Low | 0.75 | 583.3 | 1199.9 | 115 | 142,573 |
+| Balanced | 1.0 | 983.3 | 1999.9 | 337 | 374,217 |
+| High | 1.0 | 1000.0 | 1999.9 | 383 | 406,387 |
+
+These slow software-renderer timings **do not meet or establish the desktop
+60 FPS / mobile 30 FPS targets**. They are a short diagnostic, not gameplay GPU
+profiling, M1/Android evidence or human enjoyment/pacing acceptance. Higher device
+DPR was not measured. The owner must benchmark the named physical devices using
+VISUAL_REALISM.md's route, warmup, p50/p95 and repeat-travel checklist. No hardware
+FPS or complete V1 outer-region driving claim is made.
+
+### Final gameplay and input gate — same implementation/bundle
+
+PASS: `npm run test:production` (shipped dist), `npm run test:regional-wiring`,
+`node tests/browser-smoke.mjs`, and `REGIONAL_DRIVE_SCOPE=central npm run
+test:regional-drive`. The production run completes the courier with ordinary
+inputs, recovery during active work without payout, v1/zero-cash migration,
+settings/reward reload, entry/exit, simultaneous touch steering/throttle,
+touchcancel, both phone bounds and blocked storage; zero page/console/asset
+errors. Original browser checks retain the story, taxi and all-three-car entry;
+controlled objective/player placements are disclosed in that harness. Regional
+wiring pays fare ₹2,956 and dispatch ₹2,400 once, recovers at (3100,46) without
+paying the cancelled fare, retains driving mode and reloads cash/rides/settings.
+Its three Low-profile cycles hold 180 geometries / 95 textures, 94 calls /
+19,057 triangles in the final Noida view; zero browser errors.
+
+The new short **production input drive** starts normally at CP, follows the ring
+and east radial, then crosses the corridor seam and goes beneath the scenic
+flyover. No module interception, actor placement, debugger assistance, menu
+travel or artificial clock was used. Planned leg lengths / actual software wall
+times: ring/radial 203.56m / 73.480s; east seam/underpass 161.08m / 21.904s.
+It stops beyond the span at (253.1,-3.4), reloads with cash preserved and reports
+passed with zero browser/asset errors. Distances are planned routes, not an
+odometer. This is an outbound Central Delhi slice check, **not** a repeated full
+regional drive. Both directions/required regional destinations remain covered
+by graph/clearance tests and controlled regional scenes; full V1 hardware route
+returns remain on the owner checklist.
+
+Durable actual evidence: [visual-realism-verification.json](evidence/visual-realism-verification.json).
+Review screenshots and implementation/limitations: [VISUAL_REALISM.md](VISUAL_REALISM.md).
+The exact-source CI run is 39077737804; consult its final recorded status rather
+than treating an in-progress run as success. Main/connected-world and production
+have not been merged or promoted.
+
+**Final CI SUCCESS** for implementation `0287b78ec245c8161bd197b4b6c4e8ccb53f141b`:
+https://github.com/deepdharia/NCR-Drive/actions/runs/39077737804 . Inspected every
+job/step: clean install, 51 logic cases/build, original browser, production smoke,
+regional wiring, full visual gate and evidence artifact upload all succeeded.
+Later delivery commits contain documentation/evidence only; implementation and
+bundle above remain unchanged. The preview Git status for the same source is
+SUCCESS; authenticated remote playtesting remains inaccessible as described.
