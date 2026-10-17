@@ -37,7 +37,7 @@ try{
    const desired=Math.atan2(aim.x-p.x,aim.z-p.z),error=Math.atan2(Math.sin(desired-p.yaw),Math.cos(desired-p.yaw));
    const speed=Math.min(Math.hypot(p.x,p.z)<160?6:18,goal<22?Math.max(2,goal*0.3):18,Math.abs(error)>0.35?6:Math.abs(error)>0.15?10:18);
    await key('a',error>0.045);await key('d',error< -0.045);await key('w',p.speed<speed);await key('Space',p.speed>speed+2);
-   if(Math.hypot(p.x-previous.x,p.z-previous.z)<0.05&&goal>5)stuck++;else stuck=0;previous=p;
+   if(Math.hypot(p.x-previous.x,p.z-previous.z)<0.05&&goal>2.3)stuck++;else stuck=0;previous=p;
    if(stuck>80 && manoeuvres<3){
     // Normal driver action: back away from contact, brake, then retry the road.
     // No actor placement, recovery/menu travel or artificial clock is involved.

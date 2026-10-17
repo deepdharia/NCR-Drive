@@ -126,3 +126,9 @@ acceptance docs/PR metadata, then commit/push documentation and harness changes.
 If interrupted, inspect processes and scoped JSON rather than assuming completion.
 Keep PR draft pending owner/device acceptance. No background continuation is
 promised after a session ends.
+
+Noida scope has now crossed eastbound and visited the sector bay. A harness-only
+near-goal stuck-detection bug was corrected; one local test-controller counter
+assist triggered its existing keyboard reverse branch. No game/actor/clock state
+was written. Full disclosure and exact positions are in PLAYTESTS.md. Return is
+underway; do not mark the scope passed until its status-bearing JSON says passed.

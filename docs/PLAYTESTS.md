@@ -238,3 +238,23 @@ The harness now checkpoints each completed leg and supports independent `all`,
 normal CP spawn and drives there using ordinary inputs; it never restores actor
 positions. The remaining Noida round trip is running separately with
 `REGIONAL_DRIVE_SCOPE=noida npm run test:regional-drive`.
+
+### Noida input-driver correction
+
+The Noida scope crossed the bridge eastbound and drove west/middle/east sector
+streets, then stopped inside the Sector 18 bay at (3197.1,60.5), 2.943m from the
+bay centre. This satisfies the game's marker radius, but the test controller's
+2.3m target combined with a `goal > 5` stuck guard prevented its normal reverse
+branch. The harness guard is corrected to `goal > 2.3`.
+
+To continue the existing session, a debugger attached to the **Node test
+controller**, read only its DOM-derived position/goal, and set its local `stuck`
+counter to 81. Its existing branch then sent ordinary keyboard reverse inputs
+and moved 5.657m before retrying the park. It reached (3199.6,58.5) and continued
+the Delhi return. No game/debug reference, actor position, mission state or
+simulation clock was changed. This controller assistance is disclosed; the
+journey is physical input-driven travel, not an unassisted automation claim.
+The 299.801s bay-leg wall time includes diagnosis while stationary and is not a
+journey pacing measurement. The return needed three further ordinary reverse
+manoeuvres to leave the bay; it then progressed west on the corridor. Final
+Noida round-trip status is pending the running scoped JSON.
