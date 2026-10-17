@@ -5,9 +5,9 @@ import type { Solid } from '../core/CollisionWorld';
 /** Metres; +X east, +Z south, +Y up. Yaw atan2(dx,dz); vehicle +Z forward.
  * Each road counted once; directed lanes run on the left of their own heading. */
 export type RegionId = 'delhi' | 'gurgaon' | 'noida' | 'gurgaon-corridor' | 'yamuna-corridor';
-export interface Junction extends Point { id: string; region: RegionId }
+export interface Junction extends Point { id: string; region: RegionId; turnaround?: boolean }
 export interface Road { id: string; from: string; to: string; width: number; region: RegionId; bridge?: boolean }
-export interface Lane { id: string; road: Road; from: string; to: string; start: Point; end: Point; length: number }
+export interface Lane { id: string; offset: number; direction: 'forward' | 'reverse'; road: Road; from: string; to: string; start: Point; end: Point; length: number }
 export const junctions: Junction[] = [];
 export const roads: Road[] = [];
 function node(id: string, x: number, z: number, region: RegionId): string { junctions.push({ id, x, z, region }); return id; }
@@ -29,16 +29,18 @@ node('g-west',-2300,1900,'gurgaon'); node('g-sw',-2300,2300,'gurgaon'); node('g-
 road('g-avenue-n',g,'g-west','gurgaon',28); road('g-avenue-w','g-west','g-sw','gurgaon',28); road('g-avenue-s','g-sw','g-se','gurgaon',28); road('g-avenue-e','g-se',g,'gurgaon',28);
 node('n-ne',3400,50,'noida'); node('n-se',3400,450,'noida'); node('n-sw',3000,450,'noida'); node('n-mid-w',3000,250,'noida'); node('n-mid-e',3400,250,'noida');
 road('n-sector-n',n,'n-ne','noida',24); road('n-sector-ne','n-ne','n-mid-e','noida',24); road('n-sector-se','n-mid-e','n-se','noida',24); road('n-sector-s','n-se','n-sw','noida',24); road('n-sector-sw','n-sw','n-mid-w','noida',24); road('n-sector-nw','n-mid-w',n,'noida',24); road('n-sector-middle','n-mid-w','n-mid-e','noida',24);
+// Wide corridor mouths provide signed, flat turnaround space.
+for(const id of ['radial-0','radial-2'])junctions.find(j=>j.id===id)!.turnaround=true;
 export const junctionById = new Map(junctions.map(n => [n.id,n]));
 export function ends(r: Road): [Junction,Junction] { return [junctionById.get(r.from)!,junctionById.get(r.to)!]; }
 export const lanes: Lane[] = roads.flatMap(r => [false,true].map(reverse => {
   const [a,b] = ends(r), from = reverse ? b : a, to = reverse ? a : b, length=distance(a,b);
   const offset = r.width <= 12 ? 2.7 : 4;
   const x=(to.z-from.z)/length*offset,z=-(to.x-from.x)/length*offset;
-  return { id:`${r.id}:${reverse ? 'back' : 'out'}`, road:r,from:from.id,to:to.id,start:{x:from.x+x,z:from.z+z},end:{x:to.x+x,z:to.z+z},length };
+  return { id:`${r.id}:${reverse ? 'back' : 'out'}`, offset,direction:reverse?'reverse':'forward',road:r,from:from.id,to:to.id,start:{x:from.x+x,z:from.z+z},end:{x:to.x+x,z:to.z+z},length };
 }));
-/** All outgoing transitions permitted except immediate U-turns when an onward edge exists. */
-export function successors(lane: Lane): Lane[] { const out=lanes.filter(l=>l.from===lane.to && l.road.id!==lane.road.id); return out.length ? out : lanes.filter(l=>l.from===lane.to); }
+/** Onward transitions plus explicit wide-mouth turnarounds; dead ends allow reversal. */
+export function successors(lane: Lane): Lane[] { const out=lanes.filter(l=>l.from===lane.to && (l.road.id!==lane.road.id || junctionById.get(lane.to)?.turnaround)); return out.length ? out : lanes.filter(l=>l.from===lane.to); }
 export function projection(p: Point,a: Point,b: Point): { point: Point; t: number; distance: number } {
  const dx=b.x-a.x,dz=b.z-a.z,t=Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.z-a.z)*dz)/(dx*dx+dz*dz||1)));
  const point={x:a.x+dx*t,z:a.z+dz*t}; return {point,t,distance:distance(p,point)};
@@ -75,3 +77,5 @@ export const motorPoolBays = [
  {id:'delhi-west-motorpool',name:'DELHI · MOTOR POOL',region:'delhi' as const,x:-84,z:9,yaw:Math.PI/2},
  {id:'delhi-east-motorpool',name:'DELHI · MOTOR POOL',region:'delhi' as const,x:84,z:-9,yaw:-Math.PI/2},
 ];
+
+export const medianTrees: Solid[] = roads.filter(r=>r.region==='gurgaon'||r.region==='noida').flatMap(r=>{const [a,b]=ends(r);return [0.25,0.75].map(t=>({x:a.x+(b.x-a.x)*t,z:a.z+(b.z-a.z)*t,width:0.3,depth:0.3,height:3,yaw:0}));});

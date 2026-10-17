@@ -84,3 +84,14 @@ test('parked motor-pool bays leave CP mission lanes and vehicle doors clear',asy
  const parked=motorPoolBays.map((p,i)=>({...p,width:VEHICLE_SPECS[i+1].width,depth:VEHICLE_SPECS[i+1].length,height:1.65}));
  for(const to of [{x:92,z:0},{x:-104,z:0}]){const route=roadRoute({x:-44,z:0},to);for(let i=1;i<route.length;i++){const a=route[i-1],b=route[i],len=Math.hypot(b.x-a.x,b.z-a.z);for(let t=0;t<=1;t+=0.1)assert.ok(world.boxIsClear({x:a.x+(b.x-a.x)*t,z:a.z+(b.z-a.z)*t,yaw:len?Math.atan2(b.x-a.x,b.z-a.z):0},1.82,4.55,parked));}}
 });
+
+test('a bay on the opposite side is approached through junctions rather than crossing a median',()=>{
+ const route=roadRoute({x:-2150,z:1896},{x:-2100,z:1910});
+ assert.ok(routeLength(route)>900);assert.ok(route.some(p=>p.z>2000));
+});
+
+test('frame measurements keep only a bounded recent window and ignore invalid samples',async()=>{
+ const {FrameMetrics}=await import('../src/core/FrameMetrics');const metrics=new FrameMetrics();
+ for(let i=1;i<=1000;i++)metrics.add(i);metrics.add(NaN);metrics.add(-1);
+ assert.deepEqual(metrics.percentiles,{p50:851,p95:986});
+});

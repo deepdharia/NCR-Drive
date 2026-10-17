@@ -31,7 +31,7 @@ try{
    index=bestI;let look=4+Math.max(0,p.speed)*0.65,a=points[index-1],b=points[index],aim={x:a.x+(b.x-a.x)*bestT,z:a.z+(b.z-a.z)*bestT};
    for(let i=index;i<points.length;i++){const end=points[i],len=Math.hypot(end.x-aim.x,end.z-aim.z);if(len>=look){aim={x:aim.x+(end.x-aim.x)*look/len,z:aim.z+(end.z-aim.z)*look/len};break;}look-=len;aim=end;}
    const desired=Math.atan2(aim.x-p.x,aim.z-p.z),error=Math.atan2(Math.sin(desired-p.yaw),Math.cos(desired-p.yaw));
-   const speed=Math.min(goal<22?Math.max(2,goal*0.3):18,Math.abs(error)>0.35?6:Math.abs(error)>0.15?10:18);
+   const speed=Math.min(Math.hypot(p.x,p.z)<160?6:18,goal<22?Math.max(2,goal*0.3):18,Math.abs(error)>0.35?6:Math.abs(error)>0.15?10:18);
    await key('a',error>0.045);await key('d',error< -0.045);await key('w',p.speed<speed);await key('Space',p.speed>speed+2);
    if(Math.hypot(p.x-previous.x,p.z-previous.z)<0.05&&goal>5)stuck++;else stuck=0;previous=p;
    if(stuck>100)throw Error(`Stopped on ${label}: ${JSON.stringify(p)}, route segment ${index}, error ${error}`);

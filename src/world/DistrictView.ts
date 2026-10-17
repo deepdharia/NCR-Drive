@@ -34,7 +34,7 @@ export class DistrictView {
   private lampPositions: THREE.Vector3[] = [];
   private localObjects: THREE.Object3D[] = [];
 
-  constructor(scene: THREE.Scene, layout: DistrictLayout, mobile: boolean) {
+  constructor(private scene: THREE.Scene, layout: DistrictLayout, mobile: boolean) {
     this.group.name = 'Connaught Place'; scene.add(this.group);
     scene.background = new THREE.Color(0xd6a472); scene.fog = new THREE.FogExp2(0xd6a472, 0.008);
     scene.environment = environmentTexture(); scene.environmentIntensity = 0.65;
@@ -229,6 +229,7 @@ export class DistrictView {
   }
 
   update(focus: Point): void {
+    if(this.scene.fog instanceof THREE.FogExp2)this.scene.fog.density=Math.hypot(focus.x,focus.z)<160?0.008:0.0045;
     for(const object of this.localObjects)object.visible=Math.hypot(focus.x,focus.z)<450;
     const sorted = [...this.lampPositions].sort((a, b) => Math.hypot(a.x - focus.x, a.z - focus.z) - Math.hypot(b.x - focus.x, b.z - focus.z));
     this.lampLights.forEach((light, i) => light.position.copy(sorted[i]));

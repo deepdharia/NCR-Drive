@@ -10,7 +10,9 @@
     "preview": "vite preview --host 0.0.0.0",
     "lint": "tsc --noEmit",
     "test": "node --import tsx --test tests/*.test.ts",
-    "test:production": "node tests/production-smoke.mjs"
+    "test:production": "node tests/production-smoke.mjs",
+    "test:regional-wiring": "node tests/regional-browser-wiring.mjs",
+    "test:regional-drive": "node --import tsx tests/regional-drive.mjs"
   },
   "dependencies": { "three": "0.186.1" },
   "devDependencies": {

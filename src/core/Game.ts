@@ -192,8 +192,9 @@ export class Game {
   }
   private updateViews(dt: number): void {
     this.playerView.update(this.player, dt);
-    this.fleetViews.forEach((view, i) => view.update(this.fleet[i]));
-    this.trafficViews.forEach((view, i) => view.update(this.traffic.cars[i]));
+    const focus=this.car.driving ? this.car.position : this.player.position;
+    this.fleetViews.forEach((view,i)=>{view.group.visible=distance(this.fleet[i].position,focus)<450;if(view.group.visible)view.update(this.fleet[i]);});
+    this.trafficViews.forEach((view,i)=>{view.group.visible=distance(this.traffic.cars[i].position,focus)<450;if(view.group.visible)view.update(this.traffic.cars[i]);});
     this.regional.update(this.car.driving ? this.car.position : this.player.position);
     this.district.update(this.car.driving ? this.car.position : this.player.position); this.camera.update(dt, this.player, this.car, this.world);
   }

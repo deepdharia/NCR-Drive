@@ -67,7 +67,7 @@ software-renderer limitations belong in PLAYTESTS.md.
 
 Each road has ownership, width, endpoints and two stable directed lanes. All
 outgoing junction transitions are allowed except immediate reversal when another
-road is available; dead ends allow reversal. Dijkstra includes lane travel and
+road is available; the two wide Delhi corridor mouths and dead ends allow reversal. Dijkstra includes lane travel and
 junction connectors, rejects endpoints outside paved envelopes and takes a legal
 loop for a target behind on the same lane. Bays are off the through lane with
 short safe approaches. UI rerouting is bounded to 750ms (target changes immediate).
@@ -78,7 +78,7 @@ route and destination dots; distant local targets clamp to the radar edge.
 Traffic defaults to six vehicles, hard-capped at ten. It follows the graph at
 6m/s, sweeps collision, brakes ahead and yields by stable index at junctions.
 Distant recycling occurs outside 650m, into clear locations 300–500m from focus,
-away from outer destination bays and other actors. Nearby blocked cars wait;
+away from outer destination bays and other actors, with one attempt/car/second. Nearby blocked cars wait;
 there is no near-player teleport or extra queue allocation. This deliberately
 simple model has no dynamic detours or sophisticated traffic signals.
 
@@ -86,7 +86,8 @@ Collision uses a global 48m spatial hash with every spanning cell populated.
 Only local cells enter the original swept narrow phase. All collision stays
 available globally, independent of visibility/speed; no streaming race can omit
 a boundary barrier. Regional scenery uses shared box/plane geometry, instanced
-buildings and markings and bounded chunk visibility. Lightweight graph and mission
+buildings and markings, sparse planted median islands and bounded chunk visibility.
+Vehicle views also activate only within 450m; their metadata/colliders stay global. Lightweight graph and mission
 metadata stay global. Render resources are created once and disposed by Game's
 owned-resource cleanup. Pause exposes a bounded 300-frame p50/p95 window and
 render calls/triangles/geometries/textures for device test collection.

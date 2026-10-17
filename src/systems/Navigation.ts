@@ -16,7 +16,7 @@ export function roadRoute(from: Point, to: Point): Point[] {
 }
 function laneRoute(from: Point, to: Point): Point[] {
  const candidates=(p: Point)=>lanes.map(l=>({l,...projection(p,l.start,l.end)})).filter(s=>s.distance<=s.l.road.width/2+2 && projection(p,...ends(s.l.road)).distance<=s.l.road.width/2-0.8).sort((a,b)=>a.distance-b.distance).slice(0,4);
- const starts=candidates(from), allGoals=candidates(to), goals=allGoals.filter(g=>g.distance <= (allGoals[0]?.distance ?? 0)+0.25); if(!starts.length||!goals.length)return [];
+ const allStarts=candidates(from),starts=allStarts.filter(s=>s.distance<=(allStarts[0]?.distance??0)+0.25), allGoals=candidates(to), goals=allGoals.filter(g=>g.distance <= (allGoals[0]?.distance ?? 0)+0.25); if(!starts.length||!goals.length)return [];
  let best: Point[]=[];let bestLength=Infinity;
  for(const start of starts) for(const goal of goals){
   if(start.l===goal.l && start.t<=goal.t){const route=[from,start.point,goal.point,to];const len=routeLength(route);if(len<bestLength){best=route;bestLength=len;}continue;}

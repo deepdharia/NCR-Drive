@@ -190,6 +190,7 @@ export class GameUI {
       this.text('[data-distance]', `${Math.ceil(story.remaining)}s · ${metres} m · ${story.step.mode === 'foot' ? 'Exit car · hand over on foot' : 'Stop in car'} · Hold still 1.5s`);
     }
     for (const action of ['journey','regionalTaxi','noidaTaxi']) this.element<HTMLButtonElement>(`[data-action="${action}"]`).disabled = taxi.active || courier || story.active;
+    if(target && !route.length)this.text('[data-distance]','No safe road route · return to a signed roadway');
     this.maps.forEach(map => map.draw(position, driving ? car.yaw : player.yaw, car.position, target, route, taxi.state === 'pickup'));
   }
 

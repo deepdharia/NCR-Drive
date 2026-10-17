@@ -120,3 +120,17 @@ paved roadside bays; a regression samples original CP routes against those parke
 colliders. This was a genuine route usability finding. No outer-region completion
 is inferred from that attempt. The route harness also now seeds a career only
 when absent, so its reload assertion checks persistence rather than resetting it.
+
+Focused regional browser wiring PASSED on the integrated world: Delhi→Gurgaon
+fare paid ₹2,965 once (₹17,965 wallet, one ride), Regional Dispatch added ₹2,400
+once (₹20,365), Noida recovery at (3100,46) kept driving mode and cancelled the
+optional Noida fare without payout. Reward, rides and sensitivities survived
+reload. Three controlled warmed scene cycles held 355 geometries / 90 textures,
+265 draws / 106,379 triangles at the final Noida scene. These are controlled
+placement/resource checks, not continuous travel or device FPS. Later scenery
+and vehicle distance activation changes require collecting final counters again.
+Zero page/console errors in that run.
+
+The ordinary-input driver later overshot a tight CP radial exit at corridor speed
+and stopped against the arcades; it is now capped to 6m/s inside central Delhi.
+This is not evidence of a completed regional leg. Slow appropriately at CP exits.
