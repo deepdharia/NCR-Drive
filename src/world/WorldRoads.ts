@@ -37,7 +37,14 @@ export const lanes: Lane[] = roads.flatMap(r => [false,true].map(reverse => {
   const [a,b] = ends(r), from = reverse ? b : a, to = reverse ? a : b, length=distance(a,b);
   const offset = r.width <= 12 ? 2.7 : 4;
   const x=(to.z-from.z)/length*offset,z=-(to.x-from.x)/length*offset;
-  return { id:`${r.id}:${reverse ? 'back' : 'out'}`, offset,direction:reverse?'reverse':'forward',road:r,from:from.id,to:to.id,start:{x:from.x+x,z:from.z+z},end:{x:to.x+x,z:to.z+z},length };
+  // Outer lanes stop at junction ports. Connecting port to port makes a
+  // forward turn; driving to the node centre first would turn back into the
+  // following car on a left turn. CP geometry keeps its established samples.
+  const trim=r.region==='delhi'?0:Math.min(r.width/2,length*0.2);
+  const dx=(to.x-from.x)/length,dz=(to.z-from.z)/length;
+  const start={x:from.x+x+dx*trim,z:from.z+z+dz*trim};
+  const end={x:to.x+x-dx*trim,z:to.z+z-dz*trim};
+  return { id:`${r.id}:${reverse ? 'back' : 'out'}`, offset,direction:reverse?'reverse':'forward',road:r,from:from.id,to:to.id,start,end,length:distance(start,end) };
 }));
 /** Onward transitions plus explicit wide-mouth turnarounds; dead ends allow reversal. */
 export function successors(lane: Lane): Lane[] { const out=lanes.filter(l=>l.from===lane.to && (l.road.id!==lane.road.id || junctionById.get(lane.to)?.turnaround)); return out.length ? out : lanes.filter(l=>l.from===lane.to); }

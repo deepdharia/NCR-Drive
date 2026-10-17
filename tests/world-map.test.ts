@@ -87,7 +87,7 @@ test('parked motor-pool bays leave CP mission lanes and vehicle doors clear',asy
 
 test('a bay on the opposite side is approached through junctions rather than crossing a median',()=>{
  const route=roadRoute({x:-2150,z:1896},{x:-2100,z:1910});
- assert.ok(routeLength(route)>400);assert.ok(route.some(p=>p.x>=-1905));
+ assert.ok(routeLength(route)>400);assert.ok(route.some(p=>Math.hypot(p.x+1900,p.z-1900)<=16));
 });
 
 test('frame measurements keep only a bounded recent window and ignore invalid samples',async()=>{
@@ -103,4 +103,12 @@ test('opposing outer-junction arrivals reserve before entry and both clear witho
  const focus={x:3400,z:250};
  for(let frame=0;frame<1800;frame++){const old=traffic.cars.map(c=>({...c.position}));traffic.update(1/60,world,[],focus);traffic.cars.forEach((car,i)=>{assert.ok(Math.hypot(car.position.x-old[i].x,car.position.z-old[i].z)<0.21);assert.ok(world.boxIsClear({...car.position,yaw:car.yaw},car.width,car.length,traffic.cars.filter(c=>c!==car).map(c=>c.collider)));});}
  assert.ok(traffic.cars.every(c=>Math.hypot(c.position.x-focus.x,c.position.z-focus.z)>28));
+});
+
+test('outer turn connectors continue forward instead of turning back into a following car',()=>{
+ for(const lane of lanes.filter(l=>l.road.region!=='delhi'))for(const next of successors(lane)){
+  const dx=next.start.x-lane.end.x,dz=next.start.z-lane.end.z;
+  assert.ok(dx*(lane.end.x-lane.start.x)+dz*(lane.end.z-lane.start.z)>=-0.001,`${lane.id} entry`);
+  assert.ok(dx*(next.end.x-next.start.x)+dz*(next.end.z-next.start.z)>=-0.001,`${lane.id} exit`);
+ }
 });

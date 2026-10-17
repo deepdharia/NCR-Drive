@@ -24,10 +24,11 @@ try{
  await page.keyboard.press('Tab');await page.locator('[data-action="noidaTaxi"]').click();
  await page.evaluate(()=>{const g=window.__game;g.car.position={x:3200,z:60};g.car.speed=0;});await page.keyboard.press('Escape');await page.locator('[data-action="recover"]').click();
  const recovered=await page.evaluate(()=>({position:window.__game.car.position,driving:window.__game.car.driving,taxi:window.__game.taxi.state,cash:window.__game.mission.cash}));assert.ok(recovered.position.x>=2990);assert.ok(recovered.driving);assert.equal(recovered.taxi,'available');assert.equal(recovered.cash,reward.cash+2400);evidence.push({noidaRecovery:recovered});
+ await page.evaluate(()=>{window.__game.paused=true;});
  const cdp=await page.context().newCDPSession(page);
  await cdp.send('Emulation.setDeviceMetricsOverride',{width:800,height:520,deviceScaleFactor:1,mobile:false});
  const scenes=[['delhi',{x:-44,z:0},0],['gurgaon',{x:-2100,z:1910},-Math.PI/2],['bridge',{x:1375,z:-174},Math.PI/2],['noida',{x:3200,z:60},-Math.PI/2]];
- for(const [name,position,yaw] of scenes){await page.evaluate(({position,yaw})=>{const g=window.__game;g.car.position=position;g.car.yaw=yaw;g.car.speed=g.car.acceleration=0;g.camera.reset();g.camera.rotate(-95,25,true);g.updateViews(1);g.renderer.setPixelRatio(1);g.renderer.render(g.scene,g.camera.camera);}, {position,yaw});await page.waitForTimeout(300);await page.screenshot({path:`test-results/world-${name}.png`});}
+ for(const [name,position,yaw] of scenes){await page.evaluate(({position,yaw})=>{const g=window.__game;g.car.position=position;g.car.yaw=yaw;g.car.speed=g.car.acceleration=0;g.refreshUI();g.camera.reset();g.camera.rotate(-95,25,true);g.updateViews(1);g.renderer.setPixelRatio(1);g.renderer.render(g.scene,g.camera.camera);}, {position,yaw});await page.waitForTimeout(300);await page.screenshot({path:`test-results/world-${name}.png`});}
  const counts=[];
  for(let cycle=0;cycle<3;cycle++){const result=await page.evaluate(scenes=>{const g=window.__game;for(const [,position,yaw] of scenes){g.car.position=position;g.car.yaw=yaw;g.camera.reset();g.updateViews(1);g.renderer.render(g.scene,g.camera.camera);}return{...g.renderer.info.memory,calls:g.renderer.info.render.calls,triangles:g.renderer.info.render.triangles};},scenes);counts.push(result);}
  assert.deepEqual(counts[2],counts[1]);evidence.push({controlledResourceCycles:counts});

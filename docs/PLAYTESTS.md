@@ -179,3 +179,17 @@ is not a completed round trip or evidence of the Noida legs. Preserved JSON:
 full avenue/grid loops and normal reverse manoeuvres when blocked; no placement
 or menu travel is added. The harness now waits for passenger/reward UI events
 rather than assuming a 3s wall delay is enough under software rendering.
+
+### Junction ports
+
+Later review found outer turn seams could point backwards toward following cars.
+Lanes now stop at junction-edge ports; all permitted outer connectors are tested
+for forward entry/exit, including U-turn connectors. Road proximity assertions
+use the rendered centreline envelope through junctions (lane ports deliberately
+leave a junction gap). The opposite-side bay test checks arrival at the junction
+envelope, not its exact centre. No overlap/clearance coverage was removed. All
+45 logic cases, lint/build pass. Unique road length remains 10,032.35m; revised
+route lengths are 3,132–3,900m. Prior 986308b browser evidence remains historical;
+new bundle `index-D_My0SGq.js` requires final browser refresh. Controlled resource
+cycles now pause simulation before placement/rendering to isolate resource
+activation from NPC motion and lazy plate uploads.

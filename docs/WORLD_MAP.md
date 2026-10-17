@@ -43,10 +43,10 @@ From east arcade `{92,0}`, directed route lengths to stopping bays:
 
 | Bay | Routed metres | At 18m/s, before stops/turns |
 | --- | ---: | ---: |
-| Gurgaon Cyber Plaza | 3,144.07 | 2m 55s |
-| Gurgaon Office Gardens | 3,955.39 | 3m 40s |
-| Noida Sector 18 | 3,619.21 | 3m 21s |
-| Noida Sector Gardens | 3,622.53 | 3m 21s |
+| Gurgaon Cyber Plaza | 3,132.14 | 2m 54s |
+| Gurgaon Office Gardens | 3,900.04 | 3m 37s |
+| Noida Sector 18 | 3,585.06 | 3m 19s |
+| Noida Sector Gardens | 3,587.30 | 3m 19s |
 
 These are route-length measurements and speed estimates, not human playtest times.
 The outer loops sometimes add distance to approach a bay from the correct left
@@ -65,7 +65,10 @@ software-renderer limitations belong in PLAYTESTS.md.
 
 ## Shared systems and budgets
 
-Each road has ownership, width, endpoints and two stable directed lanes. All
+Each road has ownership, width, endpoints and two stable directed lanes. Outer
+lane endpoints are trimmed to junction-edge ports, making forward connector
+turns instead of reaching the centre and turning back into following traffic.
+The rendered junction pavement still uses overlapping full road ends. All
 outgoing junction transitions are allowed except immediate reversal when another
 road is available; wide Delhi corridor mouths, outer avenue/sector junctions and dead ends allow reversal. Dijkstra includes lane travel and
 junction connectors, rejects endpoints outside paved envelopes and takes a legal

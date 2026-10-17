@@ -7,7 +7,7 @@ import { distance, angleDelta } from '../core/math';
 import { lanes, successors, destinations, junctionById } from '../world/WorldRoads';
 import type { Lane } from '../world/WorldRoads';
 
-/** Fixed-size local population. Stable index priority at junctions; never recycle near focus. */
+/** Fixed-size local population. Closest-arrival reservations at outer junctions; never recycle near focus. */
 export class TrafficSystem {
  readonly cars:VehicleController[]=[];
  private paths:Lane[]=[];
@@ -29,7 +29,7 @@ export class TrafficSystem {
   this.tick+=dt;
   const recycle=this.tick>=this.nextRecycle;
   if(recycle)this.nextRecycle=this.tick+1;
-  for(const [id,owner] of this.reservations)if(distance(this.cars[owner].position,junctionById.get(id)!)>28)this.reservations.delete(id);
+  for(const [id,owner] of this.reservations)if((this.paths[owner].from===id&&distance(this.cars[owner].position,junctionById.get(id)!)>28)||(this.paths[owner].from!==id&&this.paths[owner].to!==id))this.reservations.delete(id);
   this.cars.forEach((car,i)=>{
    let lane=this.paths[i];
    // Recycle only beyond the visible neighbourhood; at most one attempt/car/second.
@@ -50,7 +50,7 @@ export class TrafficSystem {
     if(!this.reservations.has(lane.to)){
      const node=junctionById.get(lane.to)!;
      const candidates=this.cars.map((c,index)=>({index,d:distance(c.position,node)}))
-      .filter(c=>(this.paths[c.index].to===lane.to&&c.d<24)||(this.paths[c.index].from===lane.to&&c.d<12))
+      .filter(c=>(this.paths[c.index].to===lane.to&&c.d<45)||(this.paths[c.index].from===lane.to&&c.d<20))
       .sort((a,b)=>a.d-b.d||a.index-b.index);
      this.reservations.set(lane.to,candidates[0]?.index??i);
     }

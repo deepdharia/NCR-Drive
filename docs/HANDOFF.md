@@ -6,7 +6,8 @@ Updated 17 October 2026 (Asia/Kolkata). Model-neutral continuation record.
 
 - Starting clean source and refreshed remote main: `546fff3fbddd7ad0efc6c23c5356e6729e221c2f`.
 - Review branch: `improve/connected-ncr-world`.
-- Frozen implementation: `986308b754a78d97caef4aa2b4b31fe06273cbe2`.
+- Previous frozen implementation: `986308b754a78d97caef4aa2b4b31fe06273cbe2`.
+- Current implementation is the later junction-port commit; use `git log -1` for its exact SHA.
 - Draft PR: https://github.com/deepdharia/NCR-Drive/pull/6
 - No force-push, main merge or production promotion. Git push works; GitHub CLI
   reports an invalid token, so PR management uses the connected GitHub tool.
@@ -27,7 +28,7 @@ Updated 17 October 2026 (Asia/Kolkata). Model-neutral continuation record.
 | DONE | Capped local traffic; nearest-arrival outer-junction reservations, safe following, distant recycling, bounded nearby movement; opposing-arrival regression passes |
 | DONE | Regional fare and dispatch complete/pay once through Game, Noida recovery and reward/settings/rides reload: final controlled browser wiring PASS, zero errors |
 | DONE | Three warmed controlled scene cycles: 356 geometries / 94 textures, 103 draws / 18,305 triangles in the final Noida view; no growing counts |
-| DONE | 44 named logic cases, strict lint and production build; baseline and an integrated full production smoke PASS; stable original story/fleet/taxi/mobile development smoke PASS |
+| DONE | 45 named logic cases, strict lint and production build; baseline and an integrated full production smoke PASS; stable original story/fleet/taxi/mobile development smoke PASS |
 | DONE | Ordinary-input Delhi→Gurgaon fare and regional recovery: 3,226.07m planned route, 472.287s software wall time, ₹2,815 paid once; zero browser errors |
 | IN PROGRESS | Remaining ordinary-input return/Noida legs; a return U-turn stopped the first attempt. Full avenue/grid-loop rerun underway; controlled placement is separate |
 | BLOCKED | Real M1 8GB and named Android frame times, startup, boundary hitches and human enjoyment; no such hardware attached |
@@ -91,7 +92,7 @@ npm run test:production
 node tests/browser-smoke.mjs
 ```
 
-Production entry at freeze: `dist/assets/index-CrIK6VFo.js`. The regional drive
+Production entry at freeze: `dist/assets/index-D_My0SGq.js`. The regional drive
 harness reads only displayed coordinates/heading and sends ordinary keys; no game
 reference, actor placement or artificial clock. It slows to 6m/s inside CP and
 18m/s on corridors. The wiring harness intercepts the development module and
@@ -114,3 +115,23 @@ regional wiring); update docs and PR description, then commit/push documentation
 new concrete failure appears, fix it with a focused regression and repeat only
 affected gates. Keep PR draft until acceptance evidence is reviewable. Do not
 promise background continuation after a session ends.
+
+## Junction-port correction checkpoint
+
+The Gurgaon return review showed that centre-to-centre lane seams could angle
+left-turning NPCs back into following cars. Outer lane endpoints now stop at
+junction-edge ports. All outer permitted connectors continue forward relative
+to incoming/outgoing lanes; a new exhaustive turn regression enforces this.
+Reservations now remain owned during approach and until the exiting car clears;
+spawned outgoing cars are recognised. CP samples and all rendered roads retain
+their scale/geometry. Whole-route clearance, opposing-arrival motion, all 45 logic
+cases, lint and build PASS. Road centreline total is unchanged; routed bay lengths
+were remeasured in WORLD_MAP.md. New bundle is `index-D_My0SGq.js`.
+
+The previous ordinary-input rerun was stopped so verification can use these
+corrected NPC paths. Prior outbound/fare evidence remains labelled for `986308b`;
+it is not final-code proof. Next: serial regional wiring and four-leg input-only
+loop on this checkpoint, then actual-result docs/PR updates. No new imported asset,
+save schema, control or mission framework change was made. Source commits are
+published on the existing draft branch. The chat output mount is read-only in this
+worker; source/evidence delivery uses the GitHub branch/CI, not a claimed attachment.

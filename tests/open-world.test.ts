@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { lanes, projection } from '../src/world/WorldRoads';
+import { roads, ends, projection } from '../src/world/WorldRoads';
 import { TrafficSystem } from '../src/systems/TrafficSystem';
 import { StoryMission } from '../src/systems/StoryMission';
 import { VehicleController } from '../src/vehicle/VehicleController';
@@ -17,7 +17,7 @@ test('two-way graph traffic stays on road lanes without overlapping through junc
     traffic.update(1 / 60, world, []);
     for (const car of traffic.cars) {
       assert.ok(world.boxIsClear({ ...car.position, yaw: car.yaw }, car.width, car.length, traffic.cars.filter(c => c !== car).map(c => c.collider)));
-      assert.ok(lanes.some(l => projection(car.position, l.start, l.end).distance < l.road.width / 2));
+      assert.ok(roads.some(r => projection(car.position, ...ends(r)).distance < r.width / 2));
     }
   }
   traffic.cars.forEach((car, i) => assert.ok(Math.hypot(car.position.x - initial[i].x, car.position.z - initial[i].z) > 5));
