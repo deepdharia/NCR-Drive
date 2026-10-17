@@ -193,3 +193,16 @@ route lengths are 3,132–3,900m. Prior 986308b browser evidence remains histori
 new bundle `index-D_My0SGq.js` requires final browser refresh. Controlled resource
 cycles now pause simulation before placement/rendering to isolate resource
 activation from NPC motion and lazy plate uploads.
+
+### Traffic probe reproduction and fix
+
+The 09d4f96 input run completed the outbound fare/recovery and all three Gurgaon
+return avenues, then was blocked near (-1894.8,1897.2). Three ordinary reverse
+manoeuvres did not clear the leading NPC. Isolating that NPC reproduced a false
+lookahead rail obstruction at (-1892.18,1893.25) even with no actors present.
+Clamping the probe to its current turn segment and checking the physical body
+fixes it: the same fixture proceeds onto the corridor at 12m/s. An exhaustive
+all-outer-turn movement test failed before the fix on `g-avenue-e:out` →
+`southwest-6:back` and now passes every onward transition. All 46 logic cases,
+lint/build pass. Final bundle for the next browser run: `index-B-k0R3oY.js`.
+No barriers, collision checks, actors or tests were disabled.

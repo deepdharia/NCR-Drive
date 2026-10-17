@@ -65,7 +65,10 @@ export class TrafficSystem {
    const cruise=lane.road.region==='delhi'?6:lane.road.region.endsWith('corridor')?12:8;
    const len=distance(car.position,towards);if(len<0.001)return;
    const yaw=Math.atan2(towards.x-car.position.x,towards.z-car.position.z),travel=Math.min(cruise*dt,len),dx=(towards.x-car.position.x)/len,dz=(towards.z-car.position.z)/len;
-   const clear=world.boxIsClear({x:car.position.x+dx*Math.max(6,cruise*0.8),z:car.position.z+dz*Math.max(6,cruise*0.8),yaw},car.width+0.4,car.length+2,others);
+   // Never project a probe past the turn endpoint into a roadside rail.
+   // Physical body size avoids treating a following car as a rear obstruction.
+   const look=Math.min(len,Math.max(6,cruise*0.8));
+   const clear=world.boxIsClear({x:car.position.x+dx*look,z:car.position.z+dz*look,yaw},car.width,car.length,others);
    const move=clear?world.moveBox({...car.position,yaw:car.yaw},{x:dx*travel,z:dz*travel},angleDelta(car.yaw,yaw),car.width,car.length,others):null;
    car.braking=!move||move.hit;car.speed=car.braking?0:cruise;
    if(move&&!move.hit){car.position={x:move.pose.x,z:move.pose.z};car.yaw=move.pose.yaw;car.wheelTravel+=travel;this.stuck[i]=0;}else this.stuck[i]=Math.min(30,this.stuck[i]+dt);

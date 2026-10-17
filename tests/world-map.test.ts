@@ -112,3 +112,20 @@ test('outer turn connectors continue forward instead of turning back into a foll
   assert.ok(dx*(next.end.x-next.start.x)+dz*(next.end.z-next.start.z)>=-0.001,`${lane.id} exit`);
  }
 });
+
+test('every outer traffic turn clears its junction without a false guardrail stop',()=>{
+ for(const lane of lanes.filter(l=>l.road.region!=='delhi')){
+  const choices=successors(lane).filter(l=>l.road.id!==lane.road.id);
+  for(let choice=0;choice<choices.length;choice++){
+   const next=choices[choice],traffic=new TrafficSystem(1),dx=(lane.end.x-lane.start.x)/lane.length,dz=(lane.end.z-lane.start.z)/lane.length;
+   Object.assign(traffic,{paths:[lane],entering:[false],progress:[choice]});traffic.cars[0].position={x:lane.end.x-dx*20,z:lane.end.z-dz*20};traffic.cars[0].yaw=Math.atan2(dx,dz);
+   const focus=ends(lane.road).find(n=>n.id===lane.to)!;let cleared=false;
+   for(let frame=0;frame<1200;frame++){
+    traffic.update(1/60,world,[],focus);
+    const state=traffic as unknown as {paths:typeof lanes;entering:boolean[]};
+    if(state.paths[0]===next&&!state.entering[0]&&projection(traffic.cars[0].position,next.start,next.end).t*next.length>30){cleared=true;break;}
+   }
+   assert.ok(cleared,`${lane.id} → ${next.id} must continue forward clear of rails`);
+  }
+ }
+});

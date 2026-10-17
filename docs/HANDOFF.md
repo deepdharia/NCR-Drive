@@ -6,8 +6,8 @@ Updated 17 October 2026 (Asia/Kolkata). Model-neutral continuation record.
 
 - Starting clean source and refreshed remote main: `546fff3fbddd7ad0efc6c23c5356e6729e221c2f`.
 - Review branch: `improve/connected-ncr-world`.
-- Previous frozen implementation: `986308b754a78d97caef4aa2b4b31fe06273cbe2`.
-- Current implementation is the later junction-port commit; use `git log -1` for its exact SHA.
+- Frozen implementation: `09d4f96d456ce88d38463a9f0debebca75a5a418`.
+- Earlier outbound evidence is explicitly labelled for `986308b`.
 - Draft PR: https://github.com/deepdharia/NCR-Drive/pull/6
 - No force-push, main merge or production promotion. Git push works; GitHub CLI
   reports an invalid token, so PR management uses the connected GitHub tool.
@@ -135,3 +135,33 @@ loop on this checkpoint, then actual-result docs/PR updates. No new imported ass
 save schema, control or mission framework change was made. Source commits are
 published on the existing draft branch. The chat output mount is read-only in this
 worker; source/evidence delivery uses the GitHub branch/CI, not a claimed attachment.
+
+CI 39056669154 is SUCCESS for 09d4f96: clean install, 45 logic cases/build,
+original gameplay browser, production smoke and regional wiring. Final local
+regional wiring also PASS (₹2,956 clean fare, ₹2,400 dispatch, Noida recovery,
+reload; stable 356 geometries / 94 textures, 103 draws / 18,305 triangles).
+The active ordinary-input loop is tool session 23668 in this execution; it is
+currently on the Gurgaon outbound. Source is clean/committed; only subsequent
+result-document updates are pending. If interrupted, check the process and
+JSON results rather than assuming the active run finished.
+
+## Final traffic-probe correction
+
+The 09d4f96 loop drove the outbound/fare/recovery and Gurgaon west/south/east
+avenues, then stopped behind an NPC at the parkway entrance. An isolated one-car
+reproduction confirmed a false guardrail hit: lookahead extrapolated past the
+turn endpoint. The probe now clamps to the current movement segment and uses
+the physical body, avoiding both a false rail hit and a false rear obstruction
+from a following car. Swept movement remains the final guard. A new exhaustive
+movement test exercises every outer onward turn and requires each car to clear
+the junction; it failed on the exact Gurgaon→parkway transition before the fix,
+then passes after it. The isolated NPC now proceeds at 12m/s.
+
+All 46 named logic cases, lint and build PASS. Bundle entry is now
+`index-B-k0R3oY.js`; road geometry, route lengths, jobs, saves and player controls
+are unchanged. Source freeze is the commit containing this correction. Previous
+CI runs remain historical; refresh final browser/CI evidence for this commit.
+The attempted loop's partial JSON is retained as
+`test-results/verified-city-loop-09d4f96.json`; do not call it a round trip.
+Next: serial regional wiring and complete input-only loop on the corrected
+probe build, then result-document/PR updates.
