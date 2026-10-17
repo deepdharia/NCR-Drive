@@ -236,8 +236,8 @@ as a completed four-leg suite.
 The harness now checkpoints each completed leg and supports independent `all`,
 `gurgaon` and `noida` scopes via REGIONAL_DRIVE_SCOPE. Every scope starts at the
 normal CP spawn and drives there using ordinary inputs; it never restores actor
-positions. The remaining Noida round trip is running separately with
-`REGIONAL_DRIVE_SCOPE=noida npm run test:regional-drive`.
+positions. The Noida round trip subsequently completed separately with
+`REGIONAL_DRIVE_SCOPE=noida npm run test:regional-drive`; final results are below.
 
 ### Noida input-driver correction
 
@@ -256,5 +256,45 @@ simulation clock was changed. This controller assistance is disclosed; the
 journey is physical input-driven travel, not an unassisted automation claim.
 The 299.801s bay-leg wall time includes diagnosis while stationary and is not a
 journey pacing measurement. The return needed three further ordinary reverse
-manoeuvres to leave the bay; it then progressed west on the corridor. Final
-Noida round-trip status is pending the running scoped JSON.
+manoeuvres to leave the bay; it then progressed west on the corridor and
+completed the Delhi return. The final scoped JSON reports passed (details below).
+
+## Final delivery — 18 October 2026 (Asia/Kolkata)
+
+Implementation `c844016`, bundle `index-B-k0R3oY.js`: both regional round trips
+are now physically driven with ordinary keyboard controls, in two independent
+normal CP-start browser sessions. No actor placement or artificial clock was
+used in these drives. The earlier interrupted Gurgaon session had already
+completed Delhi→Gurgaon→Delhi, its fare, local recovery and avenue loop. The
+Noida scope has now finished the sector loop/bay, both bridge directions, the
+Delhi return and reload. Its scoped status is **passed**, with **zero browser,
+console or failed-asset errors**. One test-controller counter assist at the bay
+triggered normal reversing; the exact disclosure above remains applicable.
+
+| Noida input leg | Planned metres | Software wall seconds |
+| --- | ---: | ---: |
+| CP start → east departure | 203.56 | 85.499 |
+| Delhi → Noida sector west | 3,202.85 | 382.993 |
+| Noida middle avenue | 245.56 | 23.120 |
+| Noida east avenue | 265.11 | 21.204 |
+| Sector 18 bay approach | 260.41 | 299.801 (includes stationary harness diagnosis) |
+| Noida → Delhi | 3,199.16 | 606.843 |
+
+These are route-plan lengths and actual software wall times, not an odometer,
+real-device pacing or enjoyment evidence. Both headless round trips involved
+conservative controls and traffic stops; **the 3–6 minute target is not validated
+on real hardware**. Do not claim stable 30 FPS or infer M1/Android performance.
+
+All 46 named logic cases, strict lint/build and final-code CI are green. CI run
+39058094120 passed clean install, logic/build, original gameplay browser smoke,
+production smoke and regional wiring. Current controlled wiring also passed
+fare/dispatch once-only rewards, Noida recovery, cash/rides/settings reload and
+three warmed render-resource cycles (356 geometries, 94 textures, 103 calls and
+18,305 triangles in the final Noida view). Controlled cycles are separate from
+real-travel frame-time/heap profiling, which remains a device-test gap.
+
+Durable review evidence (including exact limitations and interrupted-session
+provenance): [connected-world-verification.json](evidence/connected-world-verification.json).
+Source/tests/docs are published in draft PR #6. No main merge or production
+promotion occurred. Vercel inspection remains 403. The remaining acceptance
+work is the owner hardware/human checklist above; audio remains backlog.

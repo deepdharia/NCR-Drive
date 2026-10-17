@@ -30,7 +30,7 @@ Updated 18 October 2026 (Asia/Kolkata). Model-neutral continuation record.
 | DONE | Regional fare/dispatch pay once through Game; Noida recovery and reward/settings/rides reload PASS in controlled browser wiring, zero errors |
 | DONE | Three warmed controlled cycles: 356 geometries / 94 textures; final Noida view 103 draws / 18,305 triangles, no growing counts |
 | DONE | All 46 named logic cases, lint/build; CI clean install, original gameplay browser, production smoke and regional wiring all PASS |
-| IN PROGRESS | Current-build continuous keyboard Delhi→Gurgaon→Delhi and Delhi→Noida→Delhi; earlier partial attempts are labelled by commit in PLAYTESTS.md |
+| DONE | Both regional round trips with ordinary keyboard inputs in two normal CP-start sessions; full sector/avenue tours, bridge both ways, fare/recovery and reload checks; controller assistance disclosed in evidence |
 | BLOCKED | Real M1 8GB / named Android FPS, startup, boundary hitches, human handling/enjoyment and pacing: no physical devices attached |
 
 ## Architecture and policies
@@ -102,33 +102,32 @@ before the fix and now passes every transition. No barriers/tests/systems were
 disabled. Partial evidence is retained as `verified-outbound-986308b.json` and
 `verified-city-loop-09d4f96.json` under test-results; neither is a completed loop.
 
-Current-code Delhi→Gurgaon→Delhi is complete, including a paid fare, local
-regional recovery and full avenue tour. The process was interrupted after the
-Delhi return and before the Noida legs. Exact live-output values and limitations
-are recorded in PLAYTESTS.md and `verified-gurgaon-roundtrip-c844016.json`. Do not
-claim that interrupted process completed the four-leg suite.
+## Final delivery evidence
 
-Active local run: execution tool session **85709**, Noida scope on unchanged
-implementation c844016. It starts at the normal CP spawn, drives to the east
-approach, then Noida sector/bridge routes and back. No actor placement or clock
-changes. Each completed leg now checkpoints a status-bearing scoped JSON, so
-interruption cannot turn a partial run into an apparent pass. Commands:
+Both regional round trips are complete on implementation c844016. They ran in
+separate normal CP-spawn sessions after an interruption; no actor placement or
+artificial clock was used for the driving. The Gurgaon session completed its
+fare, local recovery and avenue tour before interruption. Its observed leg values
+are transcribed from live outputs; its final browser-error aggregate is unavailable.
+The Noida scope completed sector streets, the bay, both bridge directions, the
+Delhi return and reload; its final status is passed with zero browser/asset errors.
 
-```sh
-REGIONAL_DRIVE_SCOPE=noida npm run test:regional-drive
-# Default all scope remains available; gurgaon scope runs that round trip.
-```
+A near-bay harness bug needed one test-controller counter assist to trigger its
+existing keyboard reverse branch. Game/actor/mission/clock state was untouched.
+The harness guard is fixed for future runs. This assistance and the stationary
+diagnosis time are explicit in PLAYTESTS.md and the durable evidence record:
+`docs/evidence/connected-world-verification.json`. Do not call this an unassisted
+automation run or a human playtest. Earlier failed/partial attempts remain labelled.
 
-Pending local changes: test harness scope/checkpoint support plus result docs;
-game source remains committed/pushed at c844016 and all 46 tests/CI are green.
-Next: finish the Noida input run, inspect its actual status/legs/errors, update
-acceptance docs/PR metadata, then commit/push documentation and harness changes.
-If interrupted, inspect processes and scoped JSON rather than assuming completion.
-Keep PR draft pending owner/device acceptance. No background continuation is
-promised after a session ends.
+No active browser work remains. All source, tests, topology, provenance and
+verification records are on draft PR #6; obtain the final documentation head with
+`git log -1`. The implementation SHA/bundle above is unchanged by later docs and
+test-harness commits. Main remains untouched.
 
-Noida scope has now crossed eastbound and visited the sector bay. A harness-only
-near-goal stuck-detection bug was corrected; one local test-controller counter
-assist triggered its existing keyboard reverse branch. No game/actor/clock state
-was written. Full disclosure and exact positions are in PLAYTESTS.md. Return is
-underway; do not mark the scope passed until its status-bearing JSON says passed.
+Owner next step: run the concise M1/Android checklist in PLAYTESTS.md. Actual
+30 FPS, frame-time/retention/hitch budgets, enjoyment and 3–6 minute ordinary-speed
+pacing are not validated. Headless wall times include slow rendering, conservative
+turns/traffic and harness diagnosis and exceed the design target; do not present
+them as real-device drive times. Supplied Vercel preview remains unverified (403).
+Audio remains backlog. Keep the PR draft until owner/device acceptance; no
+background continuation is promised after this session ends.

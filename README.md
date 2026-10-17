@@ -111,3 +111,9 @@ original stylized prototype, not an accurate city reconstruction or store-ready 
 
 Three.js is MIT licensed. No third-party game assets or proprietary map imagery
 are bundled.
+
+Regional checks: `npm run test:regional-wiring` verifies focused mission/recovery
+wiring with disclosed placement; `npm run test:regional-drive` uses ordinary
+keyboard controls against dist. Set `REGIONAL_DRIVE_SCOPE=noida` or `gurgaon`
+for independent normal CP-start round trips. Each completed leg checkpoints
+evidence. See [PLAYTESTS.md](docs/PLAYTESTS.md) for actual results and controller-assistance disclosure.
