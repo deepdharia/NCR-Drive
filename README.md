@@ -117,3 +117,9 @@ wiring with disclosed placement; `npm run test:regional-drive` uses ordinary
 keyboard controls against dist. Set `REGIONAL_DRIVE_SCOPE=noida` or `gurgaon`
 for independent normal CP-start round trips. Each completed leg checkpoints
 evidence. See [PLAYTESTS.md](docs/PLAYTESTS.md) for actual results and controller-assistance disclosure.
+
+Visual Realism V1 adds a Central Delhi daylight slice and Low/Balanced/High
+presets (pause → Graphics). See [the visual guide](docs/VISUAL_REALISM.md) for
+implemented detail, render budgets and the scenic flyover's ground-only driving
+limit. `npm run test:visual` checks controlled scenes/resources separately from
+input-driven production smoke. Physical-device FPS remains an owner test gate.

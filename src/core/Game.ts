@@ -20,6 +20,8 @@ import { createDistrictLayout } from '../world/DistrictLayout';
 import { motorPoolBays } from '../world/WorldRoads';
 import { RegionalView } from '../world/RegionalView';
 import { DistrictView } from '../world/DistrictView';
+import { CentralDelhiView } from '../world/CentralDelhiView';
+import { nextQuality, QUALITY, resolvedQuality } from '../rendering/QualityProfile';
 import { GameUI } from '../ui/GameUI';
 
 /** One owner for simulation, rendering, DOM controls and their lifecycle. */
@@ -38,6 +40,7 @@ export class Game {
   private trafficViews = this.traffic.cars.map((car, i) => new VehicleView(car.spec, `DL 2C CD ${1200 + i}`));
   private world: CollisionWorld;
   private district: DistrictView;
+  private central: CentralDelhiView;
   private regional: RegionalView;
   private camera: CameraRig;
   private input: InputController;
@@ -72,13 +75,14 @@ export class Game {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, mobile ? 1.25 : 1.5));
     this.renderer.setSize(root.clientWidth, root.clientHeight);
-    this.renderer.toneMapping = THREE.ACESFilmicToneMapping; this.renderer.toneMappingExposure = 1.25;
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping; this.renderer.toneMappingExposure = 1.0;
     this.renderer.shadowMap.enabled = true; this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this.renderer.domElement.className = 'game-canvas'; this.renderer.domElement.setAttribute('aria-label', 'NCR Drive 3D district');
     const overlay = document.createElement('div'); overlay.className = 'overlay';
     root.replaceChildren(this.renderer.domElement, overlay);
     const layout = createDistrictLayout(); this.world = new CollisionWorld(layout.solids);
-    this.district = new DistrictView(this.scene, layout, mobile);
+    this.district = new DistrictView(this.scene, layout);
+    this.central = new CentralDelhiView(this.scene);
     this.regional = new RegionalView(this.scene);
     motorPoolBays.forEach((bay,i)=>{this.fleet[i+1].position={x:bay.x,z:bay.z};this.fleet[i+1].yaw=bay.yaw;});
     this.scene.add(this.playerView.group, ...this.fleetViews.map(v => v.group), ...this.trafficViews.map(v => v.group));
@@ -93,7 +97,8 @@ export class Game {
       start: () => { this.started = true; this.syncScreen(); }, phone: () => this.togglePhone(),
       pause: () => this.togglePause(), interact: () => this.interact(),
       quality: () => {
-        this.settings.performanceMode = !this.settings.performanceMode;
+        this.settings.graphicsQuality = nextQuality(resolvedQuality(this.settings));
+        this.settings.performanceMode = this.settings.graphicsQuality === 'low';
         this.applySettings(); this.saveProgress(); this.refreshUI();
         this.renderer.render(this.scene, this.camera.camera);
       },
@@ -142,8 +147,10 @@ export class Game {
   private applySettings(): void {
     const mobile = matchMedia('(pointer: coarse)').matches;
     this.input.steeringSensitivity = this.settings.steeringSensitivity;
-    this.renderer.shadowMap.enabled = !this.settings.performanceMode;
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio, this.settings.performanceMode ? 0.75 : mobile ? 1.25 : 1.5));
+    const quality = resolvedQuality(this.settings), profile = QUALITY[quality];
+    this.renderer.shadowMap.enabled = profile.shadowSize > 0;
+    this.renderer.setPixelRatio(Math.min(devicePixelRatio, mobile ? Math.min(1.25, profile.pixelRatio) : profile.pixelRatio));
+    this.district.setQuality(quality); this.central.setQuality(quality); this.regional.setQuality(quality);
     this.ui.setSettings(this.settings);
   }
   private recover(): void {
@@ -193,8 +200,10 @@ export class Game {
   private updateViews(dt: number): void {
     this.playerView.update(this.player, dt);
     const focus=this.car.driving ? this.car.position : this.player.position;
-    this.fleetViews.forEach((view,i)=>{view.group.visible=distance(this.fleet[i].position,focus)<450;if(view.group.visible)view.update(this.fleet[i]);});
-    this.trafficViews.forEach((view,i)=>{view.group.visible=distance(this.traffic.cars[i].position,focus)<450;if(view.group.visible)view.update(this.traffic.cars[i]);});
+    const quality = resolvedQuality(this.settings);
+    this.fleetViews.forEach((view,i)=>{view.group.visible=distance(this.fleet[i].position,focus)<450;if(view.group.visible){view.update(this.fleet[i]);view.setDetail(distance(this.fleet[i].position,focus),quality);}});
+    this.trafficViews.forEach((view,i)=>{view.group.visible=distance(this.traffic.cars[i].position,focus)<450;if(view.group.visible){view.update(this.traffic.cars[i]);view.setDetail(distance(this.traffic.cars[i].position,focus),quality);}});
+    this.central.update(focus);
     this.regional.update(this.car.driving ? this.car.position : this.player.position);
     this.district.update(this.car.driving ? this.car.position : this.player.position); this.camera.update(dt, this.player, this.car, this.world);
   }

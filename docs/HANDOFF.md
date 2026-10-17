@@ -131,3 +131,27 @@ turns/traffic and harness diagnosis and exceed the design target; do not present
 them as real-device drive times. Supplied Vercel preview remains unverified (403).
 Audio remains backlog. Keep the PR draft until owner/device acceptance; no
 background continuation is promised after this session ends.
+
+## Visual Realism V1 — active increment (18 October 2026)
+
+Dedicated branch `improve/visual-realism-v1`, clean connected-world parent
+`3b5e593d1460dc8aaf8599bf416dbaff5d785f43` (remote fetched and matched HEAD).
+The connected-world evidence above describes the parent; it is not a visual-V1
+playtest. Baseline 46 tests, lint and build passed before editing. The attempted
+baseline production-browser launch failed on an executor transport disconnect.
+
+| Status | Visual acceptance |
+| --- | --- |
+| IN PROGRESS | CP surface union, junction pavements, islands, crossings and regional seam checks |
+| IN PROGRESS | Daylight/PBR, supported scenic flyover, modular facades/landmark and bounded props |
+| IN PROGRESS | Low/Balanced/High save-compatible profiles, vehicle LOD, round tires and chase camera |
+| IN PROGRESS | Final logic/build/lint, production controls/jobs/touch and controlled visual/resource checks |
+| BLOCKED | Physical desktop 60 FPS/mobile 30 FPS acceptance: no M1 or Android device attached |
+| IN PROGRESS | Preview publication: existing Vercel project discovered, scoped inspection returns 403 |
+
+The flyover is supported architectural scenery with a 6.4m clear, usable ground
+underpass. Vehicle physics remains flat; elevated driving/ramps are intentionally
+not advertised. Original ceremonial arch is India Gate inspired at a fictional
+compressed location. All assets remain original procedural work; no proprietary
+or externally downloaded imagery, geometry or fonts. No road graph/handling/
+mission changes are intended. Finish the Central Delhi slice before extra regions.

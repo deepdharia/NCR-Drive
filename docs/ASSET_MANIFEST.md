@@ -30,3 +30,22 @@ system fonts and Three.js MIT obligations continue unchanged. Geometry is metre
 scale, +Y up, +Z vehicle forward, shared box/plane resources with instanced
 buildings/markings and distance-visible chunks. Exact counts can be collected
 from pause-menu render statistics; device budgets remain subject to owner testing.
+
+## Visual Realism V1
+
+All added assets are **original procedural repository work**, freely reusable by
+the project owner; no external asset download or proprietary reference image is
+bundled. `CentralDelhiView.ts` authors metre-scale road unions, paving/curbs,
+modular facades, furniture, a supported scenic flyover/canopy and a fictional
+ceremonial arch. `ProceduralTextures.ts` authors asphalt/plaster/grass albedo,
+roughness/bump variation and world-metre projection. `DaylightRig.ts` authors the
+sky and lighting. Vehicle details/proxies extend original geometry; 0.32m tires
+remain unscaled. India Gate is an architectural inspiration, not an imported or
+surveyed mesh. Shop/direction text uses existing local system fonts; no external
+font files, commercial logos, map imagery, Mafia, Just Cause or Google assets.
+
+Materials use 256–512px generated maps, existing Three.js MIT code, shared box/
+plane resources, merged road faces and instanced modules. Refer to
+[VISUAL_REALISM.md](VISUAL_REALISM.md) for LOD/DPR/shadow budgets. The old dusk
+palette description above is historical; V1 uses neutral daylight. Real-device
+budgets remain unverified. No new licence/attribution dependency was introduced.

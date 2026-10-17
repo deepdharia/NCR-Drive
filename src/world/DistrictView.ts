@@ -1,10 +1,11 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { environmentTexture, glowTexture, planarUV, roadPlaneGeometry, roadRingGeometry, shopWindowTexture, signTexture, surfaceMaterial } from '../rendering/ProceduralTextures';
+import { planarUV, shopWindowTexture, signTexture, surfaceMaterial, worldSurfaceMaterial } from '../rendering/ProceduralTextures';
 import type { Point } from '../core/math';
 import { localToWorld } from '../core/math';
 import { COURIER_TARGET } from '../systems/CourierMission';
-import { SUN_ELEVATION } from './DistrictLayout';
+import { DaylightRig } from '../rendering/DaylightRig';
+import type { QualityPreset } from '../rendering/QualityProfile';
 import type { DistrictLayout } from './DistrictLayout';
 
 interface Placement { color?: number; x: number; y: number; z: number; yaw?: number; sx?: number; sy?: number; sz?: number }
@@ -29,91 +30,48 @@ export class DistrictView {
   readonly group = new THREE.Group();
   readonly delivery = new THREE.Group();
   readonly sun: THREE.DirectionalLight;
+  readonly lighting: DaylightRig;
   private passenger = new THREE.Group();
-  private lampLights: THREE.PointLight[] = [];
-  private lampPositions: THREE.Vector3[] = [];
   private localObjects: THREE.Object3D[] = [];
 
-  constructor(private scene: THREE.Scene, layout: DistrictLayout, mobile: boolean) {
+  constructor(scene: THREE.Scene, layout: DistrictLayout) {
     this.group.name = 'Connaught Place'; scene.add(this.group);
-    scene.background = new THREE.Color(0xd6a472); scene.fog = new THREE.FogExp2(0xd6a472, 0.008);
-    scene.environment = environmentTexture(); scene.environmentIntensity = 0.65;
-    scene.add(new THREE.HemisphereLight(0xffe4b5, 0x3a3530, 1.25));
-    this.sun = new THREE.DirectionalLight(0xffc180, 2.7);
-    const horizontal = Math.cos(SUN_ELEVATION * Math.PI / 180) * 100;
-    this.sun.position.set(-horizontal * 0.8, Math.sin(SUN_ELEVATION * Math.PI / 180) * 100, -horizontal * 0.6);
-    this.sun.castShadow = true; this.sun.shadow.mapSize.set(mobile ? 1024 : 2048, mobile ? 1024 : 2048);
-    Object.assign(this.sun.shadow.camera, { left: -85, right: 85, top: 85, bottom: -85, near: 1, far: 210 });
-    this.sun.shadow.normalBias = 0.025; this.sun.shadow.bias = -0.00015; scene.add(this.sun, this.sun.target);
-    const sky = new THREE.Mesh(new THREE.SphereGeometry(9000, 24, 16), new THREE.ShaderMaterial({
-      side: THREE.BackSide, depthWrite: false, uniforms: {
-        topColor: { value: new THREE.Color(0x657c8b) }, horizonColor: { value: new THREE.Color(0xd6a472) },
-        sunDirection: { value: this.sun.position.clone().normalize() },
-      },
-      vertexShader: 'varying vec3 direction; void main(){direction=position; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
-      fragmentShader: `
-        uniform vec3 topColor;
-        uniform vec3 horizonColor;
-        uniform vec3 sunDirection;
-        varying vec3 direction;
-        void main() {
-          float h = normalize(direction).y;
-          vec3 color = mix(horizonColor, topColor, smoothstep(0., .85, h));
-          float glow = pow(max(0., dot(normalize(direction), sunDirection)), 90.);
-          color += vec3(0.7, 0.34, 0.12) * glow;
-          gl_FragColor = vec4(color, 1.);
-          #include <tonemapping_fragment>
-          #include <colorspace_fragment>
-        }
-      `,
-    }));
-    this.group.add(sky);
+    this.lighting = new DaylightRig(scene); this.sun = this.lighting.sun;
     const stone = surfaceMaterial('paving');
-    const curbMaterial = surfaceMaterial('concrete');
     const white = surfaceMaterial('plaster');
-    const roadPaint = new THREE.MeshStandardMaterial({ color: 0xe7e3d7, roughness: 0.96 });
-    const asphalt = surfaceMaterial('asphalt', true);
-    const grass = new THREE.MeshStandardMaterial({ color: 0x6c8050, roughness: 1 });
-    const earth = new THREE.Mesh(new THREE.PlaneGeometry(6000, 7000), new THREE.MeshStandardMaterial({ color: 0x9b9872, roughness: 1 }));
+    const grass = worldSurfaceMaterial('grass');
+    const earth = new THREE.Mesh(new THREE.PlaneGeometry(6000, 7000), new THREE.MeshStandardMaterial({ color: 0x8d9076, roughness: 1 }));
     earth.rotation.x = -Math.PI / 2; earth.position.set(-1775, -0.04, 1000); earth.receiveShadow = true; this.group.add(earth);
     const eastBank=earth.clone();eastBank.position.x=4525;this.group.add(eastBank);
     this.flat(new THREE.CircleGeometry(30, 96), grass, 0.015);
-    this.flat(planarUV(new THREE.RingGeometry(30, 38, 128)), stone, 0.02);
-    this.flat(roadRingGeometry(38, 50), asphalt, 0.03);
-    this.flat(planarUV(new THREE.RingGeometry(50, 54, 128)), stone, 0.025);
     this.flat(planarUV(new THREE.RingGeometry(17, 19, 96)), stone, 0.025);
     for (let i = 0; i < 6; i++) {
       const a = i * Math.PI / 3;
-      const road = new THREE.Mesh(roadPlaneGeometry(12, 100), asphalt);
-      road.rotation.set(-Math.PI / 2, 0, -a + Math.PI / 2);
-      road.position.set(Math.cos(a) * 80, 0.028, Math.sin(a) * 80); road.receiveShadow = true; this.group.add(road);
       const path = new THREE.Mesh(planarUV(new THREE.PlaneGeometry(2.4, 14)), stone);
       path.rotation.set(-Math.PI / 2, 0, -a + Math.PI / 2);
       path.position.set(Math.cos(a) * 24, 0.025, Math.sin(a) * 24); this.group.add(path);
     }
-    const curbs: Placement[] = [];
-    for (const radius of [37.8, 50.2]) for (let i = 0; i < 240; i++) {
-      const a = i / 240 * Math.PI * 2;
-      const toSpoke = ((a + Math.PI / 6) % (Math.PI / 3)) - Math.PI / 6;
-      if (Math.abs(Math.sin(toSpoke)) * radius < 6.5) continue;
-      curbs.push({ x: Math.cos(a) * radius, y: 0.105, z: Math.sin(a) * radius, yaw: -a, sx: 1, sz: radius * Math.PI * 2 / 240 / 1.22 });
-    }
-    const curbMesh = batch(new RoundedBoxGeometry(0.38, 0.2, 1.2, 1, 0.025), curbMaterial, curbs);
-    curbMesh.name = 'Raised concrete curb stones'; this.group.add(curbMesh);
-    const markings: Placement[] = [];
-    for (let i = 0; i < 6; i++) for (let stripe = -3; stripe <= 3; stripe++) {
-      const a = i * Math.PI / 3 + stripe * 0.029;
-      markings.push({ x: Math.cos(a) * 44, y: 0.045, z: Math.sin(a) * 44, yaw: -a, sx: 10, sz: 0.62 });
-    }
-    this.group.add(batch(new THREE.BoxGeometry(1, 0.008, 1), roadPaint, markings, false));
     const walls: Placement[] = [], trims: Placement[] = [], roofs: Placement[] = [], windows: Placement[] = [], shops: Placement[] = [], arches: Placement[] = [];
     const frames: Placement[] = [], sills: Placement[] = [], mullions: Placement[] = [];
+    const rearWindows: Placement[] = [], rearShades: Placement[] = [], parapets: Placement[] = [], tanks: Placement[] = [], services: Placement[] = [];
     for (const b of layout.buildings) {
-      walls.push({ ...b, y: 4.9 });
+      walls.push({ ...b, y: 4.9, color: [0xf0eadb, 0xded8c9, 0xe9dfca][walls.length % 3] });
       for (const y of [5.2, 9.65]) {
         const p = localToWorld({ x: 0, z: 6.1 }, b, b.yaw); trims.push({ ...p, y, yaw: b.yaw });
       }
       const roof = localToWorld({ x: 0, z: 8.7 }, b, b.yaw); roofs.push({ ...roof, y: 4.95, yaw: b.yaw });
+      for (const z of [-5.9, 5.9]) {
+        const p = localToWorld({ x: 0, z }, b, b.yaw); parapets.push({ ...p, y: 9.98, yaw: b.yaw, sx: 8.7, sy: 0.36, sz: 0.18 });
+      }
+      for (const x of [-4.25, 4.25]) {
+        const p = localToWorld({ x, z: 0 }, b, b.yaw); parapets.push({ ...p, y: 9.98, yaw: b.yaw, sx: 0.18, sy: 0.36, sz: 12 });
+      }
+      const tank = localToWorld({ x: -2.4, z: -3.2 }, b, b.yaw); tanks.push({ ...tank, y: 10.48 });
+      const service = localToWorld({ x: 2.4, z: -3.5 }, b, b.yaw); services.push({ ...service, y: 10.15, yaw: b.yaw });
+      for (const x of [-2.7, 0, 2.7]) for (const y of [2.1, 6.7]) {
+        const p = localToWorld({ x, z: -6.04 }, b, b.yaw); rearWindows.push({ ...p, y, yaw: b.yaw });
+        rearShades.push({ ...p, y: y + 1.1, yaw: b.yaw });
+      }
       for (const x of [-2, 2]) {
         const p = localToWorld({ x, z: 6.03 }, b, b.yaw); windows.push({ ...p, y: 7.45, yaw: b.yaw });
         const shop = localToWorld({ x, z: 6.09 }, b, b.yaw); shops.push({ ...shop, y: 1.8, yaw: b.yaw });
@@ -130,13 +88,18 @@ export class DistrictView {
     }
     const glass = new THREE.MeshStandardMaterial({ color: 0x424b3f, roughness: 0.3, metalness: 0.2, emissive: 0xc38b49, emissiveIntensity: 0.18 });
     const windowMap = shopWindowTexture();
-    const warmWindow = new THREE.MeshStandardMaterial({ map: windowMap, emissiveMap: windowMap, color: 0xe7c38f, emissive: 0xffc37d, emissiveIntensity: 0.65, roughness: 0.3, metalness: 0.1 });
+    const warmWindow = new THREE.MeshStandardMaterial({ map: windowMap, emissiveMap: windowMap, color: 0xe7c38f, emissive: 0xffc37d, emissiveIntensity: 0.12, roughness: 0.3, metalness: 0.1 });
     warmWindow.name = 'Illuminated shop interiors';
     const windowFrames = new THREE.MeshStandardMaterial({ color: 0x264439, roughness: 0.75 });
     this.group.add(batch(new THREE.BoxGeometry(8.7, 9.8, 12), white, walls));
     this.group.add(batch(new THREE.BoxGeometry(8.9, 0.3, 0.6), stone, trims));
     this.group.add(batch(new THREE.BoxGeometry(8.8, 0.3, 6.6), white, roofs));
     this.group.add(batch(new THREE.BoxGeometry(1.65, 2.6, 0.08), glass, windows, false));
+    this.group.add(batch(new THREE.BoxGeometry(1.35, 1.9, 0.08), glass, rearWindows, false));
+    this.group.add(batch(new THREE.BoxGeometry(1.8, 0.12, 0.85), stone, rearShades));
+    this.group.add(batch(new THREE.BoxGeometry(1, 1, 1), white, parapets));
+    this.group.add(batch(new THREE.CylinderGeometry(0.6, 0.66, 1.2, 12), new THREE.MeshStandardMaterial({ color: 0x4a4b43, roughness: 0.85 }), tanks));
+    this.group.add(batch(new THREE.BoxGeometry(1.3, 0.65, 0.85), new THREE.MeshStandardMaterial({ color: 0xa5a69a, roughness: 0.7, metalness: 0.2 }), services));
     this.group.add(batch(new THREE.BoxGeometry(1.7, 2.45, 0.08), warmWindow, shops, false));
     this.group.add(batch(new THREE.BoxGeometry(0.09, 2.65, 0.13), windowFrames, frames, false));
     this.group.add(batch(new THREE.BoxGeometry(1.95, 0.12, 0.32), white, sills));
@@ -182,7 +145,7 @@ export class DistrictView {
     for (const [radius, height, y] of [[0.23, 0.22, 0.11], [0.16, 0.15, 0.65], [0.15, 0.12, 4.55]] as const) {
       this.group.add(batch(new THREE.CylinderGeometry(radius, radius * 1.12, height, 10), iron, layout.lamps.map(p => ({ ...p, y }))));
     }
-    const lantern = new THREE.MeshStandardMaterial({ color: 0xffe1a5, emissive: 0xffcc7a, emissiveIntensity: 2.1, roughness: 0.3 });
+    const lantern = new THREE.MeshStandardMaterial({ color: 0xffe1a5, emissive: 0xffcc7a, emissiveIntensity: 0.1, roughness: 0.3 });
     this.group.add(batch(new THREE.CylinderGeometry(0.22, 0.15, 0.48, 6), lantern, layout.lamps.map(p => ({ ...p, y: 4.92 })), false));
     this.group.add(batch(new THREE.ConeGeometry(0.32, 0.22, 6), iron, layout.lamps.map(p => ({ ...p, y: 5.27 }))));
     const cage: Placement[] = [];
@@ -190,16 +153,6 @@ export class DistrictView {
       const a = i / 6 * Math.PI * 2; cage.push({ x: p.x + Math.cos(a) * 0.19, y: 4.92, z: p.z + Math.sin(a) * 0.19 });
     }
     this.group.add(batch(new THREE.CylinderGeometry(0.012, 0.012, 0.49, 4), iron, cage, false));
-    const halo = new THREE.SpriteMaterial({ map: glowTexture(), color: 0xffd193, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
-    for (const p of layout.lamps) {
-      const glow = new THREE.Sprite(halo); glow.position.set(p.x, 4.95, p.z); glow.scale.set(1.5, 1.5, 1); this.group.add(glow);
-      this.lampPositions.push(new THREE.Vector3(p.x, 4.82, p.z));
-    }
-    // Fixed-size light pool: nearby lanterns illuminate paving without 12 per-pixel lights.
-    for (let i = 0; i < (mobile ? 3 : 4); i++) {
-      const light = new THREE.PointLight(0xffce8a, 24, 13, 2); this.lampLights.push(light); this.group.add(light);
-    }
-    this.update({ x: -44, z: 0 });
     const fountain = new THREE.Mesh(new THREE.CylinderGeometry(3.5, 3.5, 0.65, 32), stone); fountain.position.y = 0.325; fountain.castShadow = true; this.group.add(fountain);
     const water = new THREE.Mesh(new THREE.CircleGeometry(3.2, 32), new THREE.MeshStandardMaterial({ color: 0x749b94, roughness: 0.2, metalness: 0.3 }));
     water.rotation.x = -Math.PI / 2; water.position.y = 0.66; this.group.add(water);
@@ -218,7 +171,7 @@ export class DistrictView {
     }
     this.delivery.add(this.passenger);
     this.delivery.position.set(COURIER_TARGET.x, 0, COURIER_TARGET.z); this.delivery.visible = false; this.group.add(this.delivery);
-    this.localObjects=this.group.children.filter(child=>child!==sky && child!==earth && child!==eastBank && child!==this.delivery);
+    this.localObjects=this.group.children.filter(child=>child!==earth && child!==eastBank && child!==this.delivery);
   }
 
   setPickup(pickup: boolean): void {
@@ -228,11 +181,11 @@ export class DistrictView {
     }
   }
 
+  setQuality(quality: QualityPreset): void { this.lighting.setQuality(quality); }
+
   update(focus: Point): void {
-    if(this.scene.fog instanceof THREE.FogExp2)this.scene.fog.density=Math.hypot(focus.x,focus.z)<160?0.008:0.0045;
-    for(const object of this.localObjects)object.visible=Math.hypot(focus.x,focus.z)<450;
-    const sorted = [...this.lampPositions].sort((a, b) => Math.hypot(a.x - focus.x, a.z - focus.z) - Math.hypot(b.x - focus.x, b.z - focus.z));
-    this.lampLights.forEach((light, i) => light.position.copy(sorted[i]));
+    this.lighting.update(focus);
+    for (const object of this.localObjects) object.visible = Math.hypot(focus.x, focus.z) < 850;
   }
 
   private flat(geometry: THREE.BufferGeometry, material: THREE.Material, y: number): void {

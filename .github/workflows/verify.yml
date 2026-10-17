@@ -18,6 +18,7 @@ jobs:
       - run: node tests/browser-smoke.mjs
       - run: node tests/production-smoke.mjs
       - run: npm run test:regional-wiring
+      - run: npm run test:visual
       - uses: actions/upload-artifact@v4
         if: always()
         with:
