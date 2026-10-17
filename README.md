@@ -48,7 +48,7 @@ cars are freely drivable and remain where parked until reload.
 
 Open DelhiOS for:
 
-- **Delhi Cabs:** four rotating fares, two-second stopped pickups/drop-offs,
+- **Delhi Cabs:** rotating local and regional fares, two-second stopped pickups/drop-offs,
   distance-based payment and a ₹150 clean-driving bonus.
 - **City Stories:** *Kabir's Evening Run*. Meet Kabir at the east arcade, collect
   market paperwork and hand over on foot at Shivaji Stadium within four minutes.
@@ -103,7 +103,7 @@ against the shipped dist files: ordinary keyboard/touch controls, a driven couri
 safe recovery, save migration and settings/reward reload. It needs Playwright and
 Chromium, installed by CI. Local browser installations can set `PLAYWRIGHT_MODULE`
 to the Playwright entry module and `CHROMIUM_EXECUTABLE_PATH` to the browser binary.
-See [handoff](docs/HANDOFF.md) for exact completed checks and remaining M1 work.
+See [handoff](docs/HANDOFF.md) for exact completed checks and remaining device checks.
 
 See [audit and roadmap](docs/open-world-audit.md) for missing systems, known limits
 and the next playable milestones. See [world topology and measured lengths](docs/WORLD_MAP.md). This remains an

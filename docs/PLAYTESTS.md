@@ -73,7 +73,7 @@ SwiftShader. This is functional evidence only. No M1 Mac or physical Android is
 attached; no stable 30 FPS, hardware frame-time or enjoyment claim is established.
 
 Measured data: 10,032.35m unique centreline; directed east-arcade-to-outer-bay routes
-3,144–4,034m. See WORLD_MAP.md for region totals and speed-based time estimates.
+3,144–3,955m in the final topology. See WORLD_MAP.md for region totals and speed-based time estimates.
 
 Automated additions cover stable IDs, left offsets, connectivity in both
 directions, Gurgaon→Noida through Delhi, unreachable/water endpoints, whole-car
@@ -134,3 +134,48 @@ Zero page/console errors in that run.
 The ordinary-input driver later overshot a tight CP radial exit at corridor speed
 and stopped against the arcades; it is now capped to 6m/s inside central Delhi.
 This is not evidence of a completed regional leg. Slow appropriately at CP exits.
+
+### Frozen implementation 986308b
+
+44 named logic cases, strict lint and production build PASS. Final source bundle:
+`index-CrIK6VFo.js`. The parkway deadlock found in the ordinary-input attempt was
+fixed with reservations before junction entry; opposing arrivals now both clear
+without overlaps or nearby jumps in a regression. Traffic cruises 6/8/12m/s for
+CP/outer city/corridor rather than keeping city traffic speed on a long parkway.
+
+Final regional browser wiring PASS on frozen source: same fare/dispatch amounts,
+Noida recovery policy and reload assertions as above, zero errors. Three warmed
+cycles now hold 356 geometries / 94 textures, 103 draws / 18,305 triangles at Noida
+after vehicle distance culling. These remain controlled placements and render
+counters, not FPS evidence. Controlled full-resolution views inspected Gurgaon,
+the bridge/water below its deck and Noida. The final serial keyboard run is
+ongoing; no whole leg was complete when this record was written.
+
+Draft PR #6 is published; no main merge/promotion:
+https://github.com/deepdharia/NCR-Drive/pull/6
+CI run 39054736945 has passed clean install, logic/build and original development
+smoke; production smoke and regional wiring were still running at last inspection.
+
+CI run 39054736945 completed SUCCESS for frozen source `986308b`, including clean
+install, all logic cases/build, original development smoke, production smoke and
+regional wiring. Actual job/step results were inspected through GitHub:
+https://github.com/deepdharia/NCR-Drive/actions/runs/39054736945
+
+### Ordinary-input outbound evidence
+
+Frozen production bundle `index-CrIK6VFo.js`: Delhi pickup driven and stopped,
+then a complete Delhi→Gurgaon leg completed with keyboard controls, no actor
+placement/debug clock. Planned routed length from the actual departure point
+was 3,226.07m; software wall time 472.287s (7m52s), including conservative CP
+turns and traffic stops. This does not validate the 3–6 minute pacing target on
+real hardware; clamped simulation under slow SwiftShader and the simple input
+driver affect wall duration. The fare paid once: ₹17,815 wallet (₹2,815 fare;
+clean bonus lost). Regional recovery kept driving mode and earned cash at
+(-2200,1904). Zero browser errors.
+
+That attempt stopped on the return at a Gurgaon U-turn (-2295.3,1903.6), so it
+is not a completed round trip or evidence of the Noida legs. Preserved JSON:
+`test-results/verified-outbound-986308b.json`. A new ordinary-input run uses the
+full avenue/grid loops and normal reverse manoeuvres when blocked; no placement
+or menu travel is added. The harness now waits for passenger/reward UI events
+rather than assuming a 3s wall delay is enough under software rendering.
