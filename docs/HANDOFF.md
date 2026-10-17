@@ -74,3 +74,30 @@ The ordinary keyboard driver has exited CP and reached the Gurgaon parkway; no
 whole regional leg was complete at this checkpoint. No M1/Android performance
 claim. GitHub CLI reports its GH_TOKEN invalid; Vercel scope inspection is 403.
 Remote branch publication has not yet been attempted; local commits are retained.
+
+## Parkway playtest fix / verification freeze
+
+The keyboard run reached the southwest corridor near (-1044,999), then found a
+traffic junction deadlock. Late index yielding has been replaced with a nearest
+arrival reservation claimed 22m before outer junction entry; ownership lasts
+until the car clears 28m. Cars already inside have priority; index breaks ties.
+Nearby blocked traffic waits without teleporting. Distant recovery/recycling
+remains bounded and clear. A focused opposing-arrival test drives both cars
+through the junction, checks no overlaps and bounds every nearby movement step.
+Corridor traffic cruises at 12m/s, outer cities at 8m/s, CP retains 6m/s; lookahead
+scales with cruise speed. All 44 named cases, lint/build now pass.
+
+Final verification bundle entry: `index-CrIK6VFo.js` (production build). Source
+freeze is the commit containing this section; subsequent changes should be docs
+and evidence only unless a new concrete failure requires a fix. Branch was
+successfully pushed through Git despite `gh auth status` reporting an invalid
+CLI token. No main merge or production promotion occurred.
+
+Last stable development smoke PASSED original story, fleet switching, taxi and
+mobile bounds with no page errors. A subsequent regional wiring refresh was
+invalidated by a live traffic-source reload; the earlier complete wiring run is
+valid but its resource counters predate final culling/trees. Run browser checks
+serially on frozen source: regional wiring → ordinary-input four-leg drive →
+production regression → original development smoke. No whole regional leg is
+yet claimed. If interrupted, this is the exact next step; retain test-result
+JSONs and distinguish controlled placement from driven-route evidence.

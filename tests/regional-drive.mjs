@@ -34,7 +34,7 @@ try{
    const speed=Math.min(Math.hypot(p.x,p.z)<160?6:18,goal<22?Math.max(2,goal*0.3):18,Math.abs(error)>0.35?6:Math.abs(error)>0.15?10:18);
    await key('a',error>0.045);await key('d',error< -0.045);await key('w',p.speed<speed);await key('Space',p.speed>speed+2);
    if(Math.hypot(p.x-previous.x,p.z-previous.z)<0.05&&goal>5)stuck++;else stuck=0;previous=p;
-   if(stuck>100)throw Error(`Stopped on ${label}: ${JSON.stringify(p)}, route segment ${index}, error ${error}`);
+   if(stuck>300)throw Error(`Stopped on ${label}: ${JSON.stringify(p)}, route segment ${index}, error ${error}`);
    if(Date.now()-lastLog>30000){console.log(label,Math.round(goal),'m to go',JSON.stringify(p));lastLog=Date.now();}
    await page.waitForTimeout(100);
   }

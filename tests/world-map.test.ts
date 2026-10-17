@@ -55,7 +55,7 @@ test('spatial broad phase includes rotated multi-cell solids and swept cell boun
 });
 test('regional traffic population capped, spawns clear and follows graph lane directions',()=>{
  const traffic=new TrafficSystem(100);assert.equal(traffic.cars.length,10);const focus={x:-2100,z:1900};
- for(let frame=0;frame<900;frame++){traffic.update(1/60,world,[],focus);for(const car of traffic.cars){assert.ok(world.boxIsClear({...car.position,yaw:car.yaw},car.width,car.length));if(car.speed>0){const segments=lanes.flatMap(l=>[{a:l.start,b:l.end},...successors(l).map(n=>({a:l.end,b:n.start}))]);assert.ok(segments.some(({a,b})=>projection(car.position,a,b).distance<5&&Math.cos(car.yaw-Math.atan2(b.x-a.x,b.z-a.z))>0.5),JSON.stringify({frame,position:car.position,yaw:car.yaw}));}}}
+ for(let frame=0;frame<900;frame++){traffic.update(1/60,world,[],focus);for(const car of traffic.cars){assert.ok(car.speed<=12);assert.ok(world.boxIsClear({...car.position,yaw:car.yaw},car.width,car.length));if(car.speed>0){const segments=lanes.flatMap(l=>[{a:l.start,b:l.end},...successors(l).map(n=>({a:l.end,b:n.start}))]);assert.ok(segments.some(({a,b})=>projection(car.position,a,b).distance<5&&Math.cos(car.yaw-Math.atan2(b.x-a.x,b.z-a.z))>0.5),JSON.stringify({frame,position:car.position,yaw:car.yaw}));}}}
  assert.ok(traffic.cars.some(c=>Math.hypot(c.position.x-focus.x,c.position.z-focus.z)<650));assert.equal(traffic.cars.length,10);
 });
 test('cross-region fares and modest dispatch pay once, with routed fare sizing',()=>{
@@ -94,4 +94,13 @@ test('frame measurements keep only a bounded recent window and ignore invalid sa
  const {FrameMetrics}=await import('../src/core/FrameMetrics');const metrics=new FrameMetrics();
  for(let i=1;i<=1000;i++)metrics.add(i);metrics.add(NaN);metrics.add(-1);
  assert.deepEqual(metrics.percentiles,{p50:851,p95:986});
+});
+
+test('opposing outer-junction arrivals reserve before entry and both clear without nearby jumps',()=>{
+ const traffic=new TrafficSystem(2),paths=[lanes.find(l=>l.id==='n-sector-ne:out')!,lanes.find(l=>l.id==='n-sector-middle:out')!];
+ Object.assign(traffic,{paths,entering:[false,false]});
+ paths.forEach((l,i)=>{const dx=(l.end.x-l.start.x)/l.length,dz=(l.end.z-l.start.z)/l.length;traffic.cars[i].position={x:l.end.x-dx*30,z:l.end.z-dz*30};traffic.cars[i].yaw=Math.atan2(dx,dz);});
+ const focus={x:3400,z:250};
+ for(let frame=0;frame<1800;frame++){const old=traffic.cars.map(c=>({...c.position}));traffic.update(1/60,world,[],focus);traffic.cars.forEach((car,i)=>{assert.ok(Math.hypot(car.position.x-old[i].x,car.position.z-old[i].z)<0.21);assert.ok(world.boxIsClear({...car.position,yaw:car.yaw},car.width,car.length,traffic.cars.filter(c=>c!==car).map(c=>c.collider)));});}
+ assert.ok(traffic.cars.every(c=>Math.hypot(c.position.x-focus.x,c.position.z-focus.z)>28));
 });

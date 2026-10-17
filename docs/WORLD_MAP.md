@@ -76,7 +76,7 @@ Radar follows the player. DelhiOS displays the whole network with region names,
 route and destination dots; distant local targets clamp to the radar edge.
 
 Traffic defaults to six vehicles, hard-capped at ten. It follows the graph at
-6m/s, sweeps collision, brakes ahead and yields by stable index at junctions.
+6m/s in CP, 8m/s in outer cities and 12m/s on corridors, sweeps collision, brakes ahead and yields by stable index at junctions.
 Distant recycling occurs outside 650m, into clear locations 300–500m from focus,
 away from outer destination bays and other actors, with one attempt/car/second. Nearby blocked cars wait;
 there is no near-player teleport or extra queue allocation. This deliberately
