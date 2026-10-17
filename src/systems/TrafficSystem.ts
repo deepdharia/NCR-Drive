@@ -42,7 +42,7 @@ export class TrafficSystem {
    const others=[...obstacles,...this.cars.filter(c=>c!==car).map(c=>c.collider)];
    const target=lane.end,remaining=distance(car.position,target);
    if(!this.entering[i] && remaining<0.2){
-    const options=successors(lane);const next=options[(i+Math.floor(this.progress[i]))%options.length];
+    const legal=successors(lane),onward=legal.filter(l=>l.road.id!==lane.road.id),options=onward.length?onward:legal;const next=options[(i+Math.floor(this.progress[i]))%options.length];
     // First car in stable index order wins; reserve enough space to clear the turn.
     if(this.cars.some((c,j)=>j<i&&distance(c.position,lane.end)<12)){car.speed=0;return;}
     this.paths[i]=next;this.entering[i]=true;this.progress[i]++;lane=next;

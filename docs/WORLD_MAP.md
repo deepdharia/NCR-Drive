@@ -45,7 +45,7 @@ From east arcade `{92,0}`, directed route lengths to stopping bays:
 | --- | ---: | ---: |
 | Gurgaon Cyber Plaza | 3,144.07 | 2m 55s |
 | Gurgaon Office Gardens | 3,955.39 | 3m 40s |
-| Noida Sector 18 | 4,033.84 | 3m 44s |
+| Noida Sector 18 | 3,619.21 | 3m 21s |
 | Noida Sector Gardens | 3,622.53 | 3m 21s |
 
 These are route-length measurements and speed estimates, not human playtest times.
@@ -67,7 +67,7 @@ software-renderer limitations belong in PLAYTESTS.md.
 
 Each road has ownership, width, endpoints and two stable directed lanes. All
 outgoing junction transitions are allowed except immediate reversal when another
-road is available; the two wide Delhi corridor mouths and dead ends allow reversal. Dijkstra includes lane travel and
+road is available; wide Delhi corridor mouths, outer avenue/sector junctions and dead ends allow reversal. Dijkstra includes lane travel and
 junction connectors, rejects endpoints outside paved envelopes and takes a legal
 loop for a target behind on the same lane. Bays are off the through lane with
 short safe approaches. UI rerouting is bounded to 750ms (target changes immediate).

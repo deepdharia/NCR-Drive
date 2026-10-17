@@ -30,7 +30,7 @@ road('g-avenue-n',g,'g-west','gurgaon',28); road('g-avenue-w','g-west','g-sw','g
 node('n-ne',3400,50,'noida'); node('n-se',3400,450,'noida'); node('n-sw',3000,450,'noida'); node('n-mid-w',3000,250,'noida'); node('n-mid-e',3400,250,'noida');
 road('n-sector-n',n,'n-ne','noida',24); road('n-sector-ne','n-ne','n-mid-e','noida',24); road('n-sector-se','n-mid-e','n-se','noida',24); road('n-sector-s','n-se','n-sw','noida',24); road('n-sector-sw','n-sw','n-mid-w','noida',24); road('n-sector-nw','n-mid-w',n,'noida',24); road('n-sector-middle','n-mid-w','n-mid-e','noida',24);
 // Wide corridor mouths provide signed, flat turnaround space.
-for(const id of ['radial-0','radial-2'])junctions.find(j=>j.id===id)!.turnaround=true;
+for(const j of junctions)if(j.region==='gurgaon'||j.region==='noida'||['radial-0','radial-2',g,n].includes(j.id))j.turnaround=true;
 export const junctionById = new Map(junctions.map(n => [n.id,n]));
 export function ends(r: Road): [Junction,Junction] { return [junctionById.get(r.from)!,junctionById.get(r.to)!]; }
 export const lanes: Lane[] = roads.flatMap(r => [false,true].map(reverse => {

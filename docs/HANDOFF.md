@@ -54,3 +54,23 @@ route. No whole regional leg is claimed yet.
 
 Next: finish regional keyboard run, stable development and production regressions,
 then record exact outcomes and create the final commit/publication or patch.
+
+## Current runnable checkpoint
+
+`f42598c` contains the regional visual/culling and browser coverage increment.
+The following small pending fix enables safe U-turn transitions at wide outer
+junctions (AI still prefers onward roads), so opposite-side bay approaches do
+not require a 5.8km detour to Delhi. Tests require legal directed segments and a
+junction approach instead of cutting the median. Latest full `npm test`, strict
+lint and production build PASS; 43 named cases total (32 retained + 11 world).
+Unique road length remains 10,032.35m. Noida Sector 18 route is now 3,619.21m;
+other published bay distances are unchanged. Dist entry is `index-CHar1uIz.js`.
+
+Integrated production browser rerun PASSED all scenarios, including the formerly
+timing-out blocked-storage context, with zero page/console/asset errors. Regional
+controlled browser wiring PASSED with payout/Noida recovery/persistence and stable
+warmed resource counts; final visual/culling counter refresh remains pending.
+The ordinary keyboard driver has exited CP and reached the Gurgaon parkway; no
+whole regional leg was complete at this checkpoint. No M1/Android performance
+claim. GitHub CLI reports its GH_TOKEN invalid; Vercel scope inspection is 403.
+Remote branch publication has not yet been attempted; local commits are retained.
