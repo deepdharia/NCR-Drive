@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { lanes, projection } from '../src/world/WorldRoads';
 import { TrafficSystem } from '../src/systems/TrafficSystem';
 import { StoryMission } from '../src/systems/StoryMission';
 import { VehicleController } from '../src/vehicle/VehicleController';
@@ -9,14 +10,14 @@ import { createDistrictLayout } from '../src/world/DistrictLayout';
 import { InteractionSystem } from '../src/systems/InteractionSystem';
 import { PlayerController } from '../src/player/PlayerController';
 
-test('two-way traffic stays on clear lanes without overlapping during a full circuit', () => {
+test('two-way graph traffic stays on road lanes without overlapping through junctions', () => {
   const traffic = new TrafficSystem(), world = new CollisionWorld(createDistrictLayout().solids);
   const initial = traffic.cars.map(c => ({ ...c.position }));
   for (let frame = 0; frame < 3000; frame++) {
     traffic.update(1 / 60, world, []);
     for (const car of traffic.cars) {
       assert.ok(world.boxIsClear({ ...car.position, yaw: car.yaw }, car.width, car.length, traffic.cars.filter(c => c !== car).map(c => c.collider)));
-      assert.ok(Math.abs(Math.hypot(car.position.x, car.position.z) - 44) < 3);
+      assert.ok(lanes.some(l => projection(car.position, l.start, l.end).distance < l.road.width / 2));
     }
   }
   traffic.cars.forEach((car, i) => assert.ok(Math.hypot(car.position.x - initial[i].x, car.position.z - initial[i].z) > 5));

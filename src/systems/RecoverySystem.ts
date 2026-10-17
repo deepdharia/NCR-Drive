@@ -7,15 +7,13 @@ import type { CourierMission } from './CourierMission';
 import type { TaxiMission } from './TaxiMission';
 import type { StoryMission } from './StoryMission';
 
-// Fixed, bounded pads on the existing six radial roads. No mission target is a pad.
-export const RECOVERY_PADS: readonly BoxPose[] = [80, 112, 124].flatMap(radius =>
-  Array.from({ length: 6 }, (_, i) => {
-    const angle = i * Math.PI / 3;
-    return { x: Math.cos(angle) * radius, z: Math.sin(angle) * radius, yaw: Math.PI / 2 - angle };
-  }));
+import { recoveryPads, regionAt } from '../world/WorldRoads';
+
+// Shared regional/corridor pads retain the original CP recovery positions.
+export const RECOVERY_PADS: readonly BoxPose[] = recoveryPads;
 
 export function findRecoveryPose(world: CollisionWorld, car: VehicleController, focus: Point, obstacles: readonly Solid[]): BoxPose | undefined {
-  return [...RECOVERY_PADS].sort((a, b) => distance(a, focus) - distance(b, focus)).find(pose => {
+  return [...RECOVERY_PADS].filter(p => regionAt(p) === regionAt(focus)).sort((a, b) => distance(a, focus) - distance(b, focus)).find(pose => {
     const door = localToWorld({ x: -1.65, z: 0.35 }, pose, pose.yaw);
     const body = { ...pose, width: car.width, depth: car.length, height: car.spec.height };
     return world.boxIsClear(pose, car.width + 1, car.length + 1, obstacles) &&

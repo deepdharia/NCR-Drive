@@ -1,11 +1,12 @@
 import * as THREE from 'three';
+import { FrameMetrics } from './FrameMetrics';
 import { CollisionWorld } from './CollisionWorld';
 import { PlayerController } from '../player/PlayerController';
 import { PlayerView } from '../player/PlayerView';
 import { VehicleController } from '../vehicle/VehicleController';
 import { VEHICLE_SPECS } from '../vehicle/VehicleSpec';
 import { TrafficSystem } from '../systems/TrafficSystem';
-import { StoryMission } from '../systems/StoryMission';
+import { StoryMission, REGIONAL_JOURNEY } from '../systems/StoryMission';
 import { distance } from './math';
 import { VehicleView } from '../vehicle/VehicleView';
 import { CameraRig } from '../camera/CameraRig';
@@ -16,12 +17,14 @@ import { TaxiMission } from '../systems/TaxiMission';
 import { defaultSettings, loadProgress, writeProgress } from '../systems/ProgressStore';
 import { recoverToRoad } from '../systems/RecoverySystem';
 import { createDistrictLayout } from '../world/DistrictLayout';
+import { RegionalView } from '../world/RegionalView';
 import { DistrictView } from '../world/DistrictView';
 import { GameUI } from '../ui/GameUI';
 
 /** One owner for simulation, rendering, DOM controls and their lifecycle. */
 export class Game {
   private renderer: THREE.WebGLRenderer;
+  private metrics = new FrameMetrics();
   private scene = new THREE.Scene();
   private player = new PlayerController();
   private fleet = VEHICLE_SPECS.map(spec => new VehicleController(spec));
@@ -34,6 +37,7 @@ export class Game {
   private trafficViews = this.traffic.cars.map((car, i) => new VehicleView(car.spec, `DL 2C CD ${1200 + i}`));
   private world: CollisionWorld;
   private district: DistrictView;
+  private regional: RegionalView;
   private camera: CameraRig;
   private input: InputController;
   private interaction: InteractionSystem;
@@ -74,6 +78,7 @@ export class Game {
     root.replaceChildren(this.renderer.domElement, overlay);
     const layout = createDistrictLayout(); this.world = new CollisionWorld(layout.solids);
     this.district = new DistrictView(this.scene, layout, mobile);
+    this.regional = new RegionalView(this.scene);
     this.fleet[1].position = { x: -84, z: 3 }; this.fleet[1].yaw = Math.PI / 2;
     this.fleet[2].position = { x: 84, z: -3 }; this.fleet[2].yaw = -Math.PI / 2;
     this.scene.add(this.playerView.group, ...this.fleetViews.map(v => v.group), ...this.trafficViews.map(v => v.group));
@@ -103,7 +108,16 @@ export class Game {
       taxi: () => {
         if (this.mission.state !== 'active' && !this.story.active && this.taxi.accept()) { this.phone = false; this.syncScreen(); this.ui.toast('Fare accepted. Stop at the blue pickup marker for 2 seconds.'); }
       },
+      journey: () => {
+        if (this.taxi.active || this.mission.state === 'active' || this.story.active) return;
+        this.story = new StoryMission(REGIONAL_JOURNEY, 720, 2400); this.story.accept(); this.phone=false; this.syncScreen(); this.ui.toast(this.story.step.dialogue);
+      },
+      regionalTaxi: (noida) => {
+        if (this.mission.state === 'active' || this.story.active || !this.taxi.acceptRegional(noida)) return;
+        this.phone=false; this.syncScreen(); this.ui.toast('Regional fare accepted. Follow the blue pickup marker.');
+      },
       story: () => {
+        if (!this.story.active) this.story = new StoryMission();
         if (!this.taxi.active && this.mission.state !== 'active' && this.story.accept()) { this.phone = false; this.syncScreen(); this.ui.toast(this.story.step.dialogue); }
       },
       cancelStory: () => { this.story.cancel(); this.refreshUI(); },
@@ -180,24 +194,27 @@ export class Game {
     this.playerView.update(this.player, dt);
     this.fleetViews.forEach((view, i) => view.update(this.fleet[i]));
     this.trafficViews.forEach((view, i) => view.update(this.traffic.cars[i]));
+    this.regional.update(this.car.driving ? this.car.position : this.player.position);
     this.district.update(this.car.driving ? this.car.position : this.player.position); this.camera.update(dt, this.player, this.car, this.world);
   }
   private frame = (time: number): void => {
-    const dt = Math.min(0.1, (time - this.lastTime) / 1000); this.lastTime = time;
+    const frameMs=time-this.lastTime;
+    const dt = Math.min(0.1, frameMs / 1000); this.lastTime = time;
     this.frameId = requestAnimationFrame(this.frame);
     // Retain the scene under menus. No GPU work competes with phone scrolling.
     if (!this.started || this.paused || this.phone) return;
+    this.metrics.add(frameMs);
     const step = 1 / 120;
     this.accumulator = Math.min(0.1, this.accumulator + dt);
     while (this.accumulator >= step) {
       if (!this.car.driving) this.player.update(step, this.input.foot(), this.camera.yaw, this.world, this.car.collider, this.otherCars());
       this.car.update(step, this.input.drive(), this.world, this.otherCars());
       const pedestrian = { ...this.player.position, width: 0.8, depth: 0.8, height: 1.8, yaw: 0 };
-      this.traffic.update(step, this.world, [...this.fleet.map(c => c.collider), ...(!this.car.driving ? [pedestrian] : [])]);
+      this.traffic.update(step, this.world, [...this.fleet.map(c => c.collider), ...(!this.car.driving ? [pedestrian] : [])], this.car.driving ? this.car.position : this.player.position);
       const storyEvent = this.story.update(step, this.car.driving ? this.car.position : this.player.position, this.car.driving, this.car.driving ? this.car.kmh : this.player.speed * 3.6);
       if (storyEvent === 'step') this.ui.toast(this.story.step.dialogue);
       if (storyEvent === 'failed') this.ui.toast('Time ran out. Retry Kabir’s Evening Run in DelhiOS.');
-      if (storyEvent === 'completed') { this.mission.cash += this.story.reward; this.saveProgress(); this.ui.toast('Kabir: Right on time. ₹1,200 added to your wallet.'); }
+      if (storyEvent === 'completed') { this.mission.cash += this.story.reward; this.saveProgress(); this.ui.toast(`Kabir: Delivered. ₹${this.story.reward} added. Delhi Cabs offers the optional Gurgaon → Noida follow-up.`); }
 
       if (this.mission.update(this.car.driving ? this.car.position : this.player.position, !this.car.driving)) {
         this.saveProgress(); this.ui.toast('Parcel delivered. ₹750 added to your Delhi Wallet.'); this.refreshUI();
@@ -212,7 +229,9 @@ export class Game {
     }
     this.updateViews(dt); this.renderer.render(this.scene, this.camera.camera);
     this.uiElapsed += dt;
-    if (this.uiElapsed > 0.1) { this.uiElapsed = 0; this.refreshUI(); }
+    if (this.uiElapsed > 0.1) { this.uiElapsed = 0; this.refreshUI();
+      const frames=this.metrics.percentiles,info=this.renderer.info;
+      this.ui.renderStats(`Frame ms p50 ${frames.p50.toFixed(1)} / p95 ${frames.p95.toFixed(1)} · ${info.render.calls} draws · ${info.render.triangles} triangles · ${info.memory.geometries} geometries / ${info.memory.textures} textures`); }
   };
   private otherCars() { return [...this.fleet.filter(c => c !== this.car), ...this.traffic.cars].map(c => c.collider); }
   private selectNearbyCar(): void {

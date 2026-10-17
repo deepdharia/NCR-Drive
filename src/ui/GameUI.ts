@@ -10,12 +10,15 @@ import { roadRoute, routeLength } from '../systems/Navigation';
 import { Minimap } from './Minimap';
 import type { Settings } from '../systems/ProgressStore';
 
-interface UIActions { start: () => void; phone: () => void; pause: () => void; interact: () => void; accept: () => void; taxi: () => void; cancelTaxi: () => void; story: () => void; cancelStory: () => void; quality: () => void; recover: () => void; sensitivity: (kind: 'steeringSensitivity' | 'cameraSensitivity', value: number) => void }
+interface UIActions { journey: () => void; regionalTaxi: (noida: boolean) => void; start: () => void; phone: () => void; pause: () => void; interact: () => void; accept: () => void; taxi: () => void; cancelTaxi: () => void; story: () => void; cancelStory: () => void; quality: () => void; recover: () => void; sensitivity: (kind: 'steeringSensitivity' | 'cameraSensitivity', value: number) => void }
 const phoneIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10 18h4"/></svg>';
 
 export class GameUI {
   private abort = new AbortController();
   private maps: Minimap[];
+  private cachedRoute: {x:number;z:number}[]=[];
+  private routeTarget: object | undefined;
+  private routeTime=0;
   private toastTimer: ReturnType<typeof setTimeout> | undefined;
   constructor(readonly root: HTMLElement, input: InputController, actions: UIActions) {
     root.innerHTML = `
@@ -45,14 +48,14 @@ export class GameUI {
         <div class="phone-scroll"><h2>Good evening,<br><em>Delhi explorer.</em></h2><div class="phone-balance"><span>YOUR BALANCE</span><strong data-cash>₹15,000</strong><small data-save>Progress saved on this device</small><small data-career>0 rides · New driver</small></div>
           <div class="app-heading"><span>↗ DelhiNav</span><small>LIVE GPS</small></div><div class="phone-map"><canvas aria-label="DelhiNav GPS minimap" role="img"></canvas><div><span>●</span> Connaught Place <small data-coordinates>New Delhi, India</small></div></div>
           <div class="app-heading"><span>↗ Delhi Cabs</span><small>YOUR DRIVING CAREER</small></div>
-          <article class="taxi-card"><span class="taxi-tag">NEXT FARE</span><h3 data-taxi-route></h3><p>Stop below 2 km/h inside each marker for 2 seconds. Stay in the car for pickup and drop-off.</p><div class="gig-reward"><strong data-taxi-fare></strong><span>+ ₹150 clean-drive bonus<br>No time limit</span></div><p data-taxi-status></p><button class="primary" data-action="taxi">Accept passenger →</button><button class="cancel-fare" data-action="cancelTaxi" hidden>Cancel current fare</button></article>
-          <div class="app-heading"><span>↗ City Stories</span><small>CHAPTER 01</small></div><article class="taxi-card"><span class="story-tag">KABIR’S EVENING RUN</span><h3>One evening. Three stops.</h3><p data-story-status>Collect paperwork, cross the circle and finish a handover on foot. 4 minutes · ₹1,200.</p><button class="primary" data-action="story">Start chapter →</button><button class="cancel-fare" data-action="cancelStory" hidden>Abandon chapter</button></article>
+          <article class="taxi-card"><span class="taxi-tag">NEXT FARE</span><h3 data-taxi-route></h3><p>Stop below 2 km/h inside each marker for 2 seconds. Stay in the car for pickup and drop-off.</p><div class="gig-reward"><strong data-taxi-fare></strong><span>+ ₹150 clean-drive bonus<br>No time limit</span></div><p data-taxi-status></p><button class="primary" data-action="taxi">Accept passenger →</button><button class="cancel-fare" data-action="regionalTaxi">Delhi → Gurgaon fare</button><button class="cancel-fare" data-action="noidaTaxi">Gurgaon → Noida fare (via Delhi)</button><button class="cancel-fare" data-action="cancelTaxi" hidden>Cancel current fare</button></article>
+          <div class="app-heading"><span>↗ City Stories</span><small>CHAPTER 01</small></div><article class="taxi-card"><span class="story-tag">KABIR’S EVENING RUN</span><h3>One evening. Three stops.</h3><p data-story-status>Collect paperwork, cross the circle and finish a handover on foot. 4 minutes · ₹1,200.</p><button class="primary" data-action="story">Start chapter →</button><p>Kabir’s Regional Dispatch: Delhi pickup → Gurgaon delivery. 12 minutes · ₹2,400. Optional Noida taxi follow-up after delivery.</p><button class="cancel-fare" data-action="journey">Start regional dispatch →</button><button class="cancel-fare" data-action="cancelStory" hidden>Abandon chapter</button></article>
           <div class="app-heading"><span>↗ Motor pool</span><small>THREE CARS · FREE TO DRIVE</small></div><article class="taxi-card"><p>Gold Parvaaz: inner circle. White Raahi estate: west approach. Blue Baaz sport: east approach. Walk to the right-hand door and press F. Cars remain parked where you leave them this session.</p></article>
           <div class="app-heading"><span>◈ Hustle</span><small>LOCAL GIGS</small></div><article class="gig-card"><span class="gig-tag">YOUR FIRST GIG</span><h3>Shivaji Stadium<br>Courier Run</h3><p>One parcel. A short drive through CP. Hand it over on foot at the stadium metro.</p><div class="gig-reward"><strong>₹750</strong><span>No time limit<br>Parcel included</span></div><button class="primary" data-action="accept">Accept delivery →</button></article><p class="phone-footer">A little hustle. A bigger city.</p>
         </div><div class="phone-home"></div>
       </aside>
       <section class="pause-screen" hidden aria-label="Paused"><div><span class="eyebrow">TAKE A BREATHER</span><h2>Delhi can wait.</h2><p>Your drive will be right here.</p><button class="graphics-button" data-action="quality">Graphics: Detailed · Tap for performance</button>
-        <div class="control-settings"><label for="steering-sensitivity">Steering sensitivity <output data-steering-value>1.0×</output></label><input id="steering-sensitivity" type="range" min="0.5" max="1.5" step="0.1" value="1" data-setting="steeringSensitivity"><label for="camera-sensitivity">Camera sensitivity <output data-camera-value>1.0×</output></label><input id="camera-sensitivity" type="range" min="0.5" max="1.5" step="0.1" value="1" data-setting="cameraSensitivity"></div>
+        <small data-render-stats aria-label="Rolling render statistics">Drive to collect frame statistics.</small><div class="control-settings"><label for="steering-sensitivity">Steering sensitivity <output data-steering-value>1.0×</output></label><input id="steering-sensitivity" type="range" min="0.5" max="1.5" step="0.1" value="1" data-setting="steeringSensitivity"><label for="camera-sensitivity">Camera sensitivity <output data-camera-value>1.0×</output></label><input id="camera-sensitivity" type="range" min="0.5" max="1.5" step="0.1" value="1" data-setting="cameraSensitivity"></div>
         <p class="recovery-note" id="recovery-policy">Stuck? Recovery is free. Your nearby car returns to a clear road.<br>Active jobs are cancelled without payout. Earned money is kept.</p><button class="graphics-button" data-action="recover" aria-describedby="recovery-policy">Recover to a clear road · Free</button><p data-recovery-status role="status"></p>
         <button class="primary" data-action="pause">Back to the city →</button></div></section>`;
     const options = { signal: this.abort.signal };
@@ -67,6 +70,9 @@ export class GameUI {
         case 'recover': actions.recover(); break;
         case 'interact': actions.interact(); break;
         case 'accept': actions.accept(); break;
+        case 'journey': actions.journey(); break;
+        case 'regionalTaxi': actions.regionalTaxi(false); break;
+        case 'noidaTaxi': actions.regionalTaxi(true); break;
         case 'story': actions.story(); break;
         case 'cancelStory': actions.cancelStory(); break;
         case 'taxi': actions.taxi(); break;
@@ -110,7 +116,7 @@ export class GameUI {
     joystick.addEventListener('pointermove', move, options);
     for (const name of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) joystick.addEventListener(name, event => { if (event.pointerId === pointer) reset(); }, options);
     window.addEventListener('blur', reset, options);
-    this.maps = [...root.querySelectorAll<HTMLCanvasElement>('canvas')].map(canvas => new Minimap(canvas));
+    this.maps = [...root.querySelectorAll<HTMLCanvasElement>('canvas')].map((canvas, i) => new Minimap(canvas, i > 0));
   }
 
   private element<T extends HTMLElement = HTMLElement>(selector: string): T {
@@ -134,7 +140,7 @@ export class GameUI {
     this.text('[data-cash]', `₹${mission.cash.toLocaleString('en-IN')}`);
     this.text('[data-mode]', driving ? `${car.spec.name.toUpperCase()} / ${car.spec.role.toUpperCase()}` : 'ON FOOT / EXPLORER');
     this.text('[data-speed]', driving ? `${Math.round(car.kmh)} km/h` : 'Take the long way.');
-    this.text('[data-mode-detail]', driving ? `${Math.abs(car.speed) < 0.1 ? 'IDLE' : car.speed < 0 ? 'REVERSE' : 'DRIVE'} · ${car.spec.role}` : 'The city moves at your pace.');
+    this.text('[data-mode-detail]', driving ? `${Math.abs(car.speed) < 0.1 ? 'IDLE' : car.speed < 0 ? 'REVERSE' : 'DRIVE'} · ${car.spec.role} · HDG ${((car.yaw * 180 / Math.PI % 360 + 360) % 360).toFixed(0)}°` : 'The city moves at your pace.');
     this.text('[data-prompt]', interaction.prompt);
     for (const button of this.root.querySelectorAll<HTMLButtonElement>('[data-action="interact"]')) {
       button.disabled = !interaction.available; button.setAttribute('aria-label', driving ? 'Exit vehicle' : 'Enter vehicle');
@@ -144,7 +150,10 @@ export class GameUI {
     this.root.querySelectorAll<HTMLElement>('[data-foot]').forEach(e => { e.hidden = driving; });
     const courier = mission.state === 'active';
     const target = story.active ? story.step.target : taxi.active ? taxi.target : courier ? COURIER_TARGET : undefined;
-    const route = target ? roadRoute(position, target) : [];
+    if(target !== this.routeTarget || performance.now()-this.routeTime>750) {
+      this.cachedRoute=target ? roadRoute(position,target) : [];this.routeTarget=target;this.routeTime=performance.now();
+    }
+    const route=this.cachedRoute;
     const metres = Math.round(routeLength(route));
     const stage = taxi.state === 'pickup' ? 'Pickup' : 'Drop-off';
     const stopHint = taxi.dwell > 0 ? `Hold still · ${Math.max(0, 2 - taxi.dwell).toFixed(1)} s` : `Stop in marker · ${metres} m by road`;
@@ -173,8 +182,11 @@ export class GameUI {
       this.text('[data-job-title]', `${story.index + 1}/${story.steps.length} · ${story.step.title}`);
       this.text('[data-distance]', `${Math.ceil(story.remaining)}s · ${metres} m · ${story.step.mode === 'foot' ? 'Exit car · hand over on foot' : 'Stop in car'} · Hold still 1.5s`);
     }
+    for (const action of ['journey','regionalTaxi','noidaTaxi']) this.element<HTMLButtonElement>(`[data-action="${action}"]`).disabled = taxi.active || courier || story.active;
     this.maps.forEach(map => map.draw(position, driving ? car.yaw : player.yaw, car.position, target, route, taxi.state === 'pickup'));
   }
+
+  renderStats(value:string):void {this.text('[data-render-stats]',value);}
 
   setSettings(settings: Settings): void {
     this.text('[data-action="quality"]', settings.performanceMode ? 'Graphics: Performance · Tap for detailed' : 'Graphics: Detailed · Tap for performance');

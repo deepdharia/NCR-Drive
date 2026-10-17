@@ -1,3 +1,4 @@
+import { worldBarriers, regionalBuildings, riverBanks } from './WorldRoads';
 import type { Point } from '../core/math';
 import { localToWorld } from '../core/math';
 import type { Solid } from '../core/CollisionWorld';
@@ -28,7 +29,7 @@ export function createDistrictLayout(): DistrictLayout {
     const angle = i / 12 * Math.PI * 2 + Math.PI / 12;
     lamps.push({ x: Math.cos(angle) * 34, z: Math.sin(angle) * 34 });
   }
-  const solids: Solid[] = [...buildings, ...columns,
+  const solids: Solid[] = [...riverBanks, ...worldBarriers, ...regionalBuildings, ...buildings, ...columns,
     ...trees.map(p => ({ ...p, width: 0.4, depth: 0.4, height: 4, yaw: 0 })),
     ...lamps.map(p => ({ ...p, width: 0.2, depth: 0.2, height: 5, yaw: 0 })),
     { x: 0, z: 0, width: 7, depth: 7, height: 0.65, yaw: 0 },
