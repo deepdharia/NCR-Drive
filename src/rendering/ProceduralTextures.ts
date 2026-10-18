@@ -26,8 +26,8 @@ export function surfaceMaterial(kind: SurfaceKind, roadLines = false): THREE.Mes
   const { image, ctx } = canvas(size), height = canvas(size), roughness = canvas(size);
   const noise = random(kind.length * 3191 + size);
   const colors: Record<SurfaceKind, [number, number, number]> = {
-    asphalt: [57, 60, 61], paving: [180, 153, 123], concrete: [184, 183, 174],
-    plaster: [239, 236, 226], grass: [102, 117, 77], denim: [35, 54, 72], cloth: [199, 188, 160],
+    asphalt: [57, 60, 61], paving: [201, 191, 169], concrete: [184, 183, 174],
+    plaster: [234, 227, 211], grass: [102, 117, 77], denim: [35, 54, 72], cloth: [199, 188, 160],
   };
   const data = ctx.createImageData(size, size), bump = height.ctx.createImageData(size, size), rough = roughness.ctx.createImageData(size, size);
   const base = colors[kind];

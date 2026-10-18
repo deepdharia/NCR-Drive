@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { HumanoidView } from '../people/HumanoidView';
+import { HumanoidView, DRIVER_VARIANT } from '../people/HumanoidView';
 import { QUALITY } from '../rendering/QualityProfile';
 import type { QualityPreset } from '../rendering/QualityProfile';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
@@ -22,7 +22,7 @@ export class VehicleView {
 
   constructor(spec: VehicleSpec = VEHICLE_SPECS[0], plateNumber = 'DL 1C AB 4092') {
     this.group.name = `${spec.name} · ${plateNumber}`; this.body.name = 'Sprung hatchback body';
-    const paint = new THREE.MeshPhysicalMaterial({ color: spec.color, metalness: 0.7, roughness: 0.25, clearcoat: 0.65, clearcoatRoughness: 0.22 }); paint.name = 'Marigold metallic paint';
+    const paint = new THREE.MeshPhysicalMaterial({ color: spec.color, metalness: 0.15, roughness: 0.32, clearcoat: 0.8, clearcoatRoughness: 0.18 }); paint.name = 'Marigold metallic paint';
     const glass = new THREE.MeshStandardMaterial({ color: 0x344f59, roughness: 0.1, metalness: 0.35, transparent: true, opacity: 0.68, depthWrite: false, side: THREE.DoubleSide, envMapIntensity: 1.25 }); glass.name = 'Tinted reflective glass';
     const rubber = new THREE.MeshStandardMaterial({ color: 0x16191a, roughness: 0.96 }); rubber.name = 'Rubber and trim';
     const chrome = new THREE.MeshStandardMaterial({ color: 0xb5bac0, roughness: 0.26, metalness: 0.85 }); chrome.name = 'Alloy and chrome';
@@ -136,7 +136,7 @@ export class VehicleView {
       mergeStaticMeshes(spin); pivot.add(spin); this.detailed.add(pivot); this.wheels.push({ pivot, spin, front: z > 0 });
     }
     mergeStaticMeshes(this.body); this.detailed.add(this.body);
-    this.driver=new HumanoidView(0x877f63);this.driver.group.position.set(-0.35,0.18,-0.2);this.driver.group.scale.setScalar(0.93);this.body.add(this.driver.group);
+    this.driver=new HumanoidView(DRIVER_VARIANT);this.driver.group.position.set(-0.35,0.18,-0.2);this.body.add(this.driver.group);
     // Two-mesh traffic LOD. Detailed wheels, interior and lamps stay local.
     const proxyBody = new THREE.Mesh(new THREE.BoxGeometry(1.68, 0.62, 3.65), paint); proxyBody.position.y = 0.68;
     const proxyCabin = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.62, 1.95), glass); proxyCabin.position.set(0, 1.22, -0.28);

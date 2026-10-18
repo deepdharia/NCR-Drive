@@ -1,10 +1,24 @@
-import { HumanoidView, PEDESTRIAN_FLOOR_OFFSET } from './HumanoidView';
+import { HumanoidView, PEDESTRIAN_FLOOR_OFFSET, DRIVER_VARIANT } from './HumanoidView';
+import type { HumanVariant } from './HumanoidView';
 import { Reservations, seats, shops } from '../systems/Neighborhood';
 import { distance } from '../core/math';
 import type { Point } from '../core/math';
 import type { CollisionWorld, Solid } from '../core/CollisionWorld';
 import type { VehicleController } from '../vehicle/VehicleController';
 import * as THREE from 'three';
+/** Ten distinct market adults: full clothing/hair/skin/accessory/scale/phase variants. No teal shirts — the player keeps teal. */
+const MARKET_VARIANTS:HumanVariant[]=[
+ {shirt:0xe8e2d2,trousers:0x9a8a6a,shoes:0x4a3220,skin:0x8f5f3e,hair:0x1a1512,scale:1,accessory:'none',phase:0},
+ {shirt:0xd8cdb4,trousers:0x3a3f4a,shoes:0x2e2620,skin:0xa67a52,hair:0x9a9a9a,scale:1,accessory:'none',phase:0.3},
+ {shirt:0xd08a3a,trousers:0x33383f,shoes:0x2e2620,skin:0xa67a52,hair:0x201a14,scale:1,accessory:'none',phase:0.6},
+ {shirt:0x7a3a3a,trousers:0x2e3d52,shoes:0x1f1c1a,skin:0xb08a68,hair:0x1f1a16,scale:1.02,accessory:'cap',phase:0.9},
+ {shirt:0x4a6b4a,trousers:0x8a7a58,shoes:0x4a3220,skin:0x8a5a3b,hair:0x14100d,scale:0.98,accessory:'bag',phase:1.3},
+ {shirt:0xc97a7a,trousers:0x4a4a4a,shoes:0x2e2620,skin:0xc09a78,hair:0x2a201a,scale:1,accessory:'none',phase:0.2},
+ {shirt:0xc9a03a,trousers:0x2c3240,shoes:0x352e29,skin:0x9a6b4a,hair:0x1f1a16,scale:1.03,accessory:'cap',phase:1.7},
+ {shirt:0x2e4a6e,trousers:0xa08a68,shoes:0x4a3220,skin:0x7a4e30,hair:0x0f0d0b,scale:0.97,accessory:'bag',phase:0.5},
+ {shirt:0x6b4a7a,trousers:0x2e2e38,shoes:0x1f1c1a,skin:0xb08a68,hair:0x241c16,scale:1.01,accessory:'none',phase:1.1},
+ {shirt:0xe4e0d4,trousers:0x5a4632,shoes:0x4a3220,skin:0x8f5f3e,hair:0x1a1512,scale:0.99,accessory:'none',phase:1.5},
+];
 type State='walk'|'wait'|'order'|'seat'|'drink'|'leave'|'react'|'flee'|'vendor'|'retreated';
 interface Person {id:string;position:Point;view:HumanoidView;state:State;time:number;shop:number;target:Point;speed:number;yaw:number;seat?:string;waypoints:Point[];blocked:number;action?:string;actionTime?:number;civilianDriver?:boolean}
 /** Ten permanent adults, no camera-facing spawn/recycle. Bounded reservations and timers. */
@@ -12,14 +26,14 @@ export class StreetPeople {
  readonly group=new THREE.Group();readonly reservations=new Reservations();readonly people:Person[]=[];alert=0;
  constructor(scene:THREE.Scene){scene.add(this.group);for(let i=0;i<10;i++){
   const vendor=i<3,shop=i%3,position=vendor?{x:shops[shop].x,z:-17.6}:{x:-146-(i-3)*13,z:-10.5};
-  const view=new HumanoidView([0xa17243,0x617e87,0xa86856,0x657c49,0x8e7892][i%5]);this.group.add(view.group);view.group.position.set(position.x,PEDESTRIAN_FLOOR_OFFSET,position.z);view.update(0.2,vendor?'talk':'idle');
+  const view=new HumanoidView(MARKET_VARIANTS[i]);this.group.add(view.group);view.group.position.set(position.x,PEDESTRIAN_FLOOR_OFFSET,position.z);view.update(0.2,vendor?'talk':'idle');
   this.people.push({id:`market-adult-${i}`,position,view,state:vendor?'vendor':'walk',time:0,shop,target:vendor?position:{x:shops[shop].x,z:-12.7},speed:0,yaw:0,waypoints:[],blocked:0});
  }}
  serve(shop:number):void {const vendor=this.people[shop];vendor.action='handover';vendor.actionTime=1.2;}
  get colliders():Solid[]{return this.people.filter(p=>p.state!=='vendor').map(p=>({...p.position,width:0.6,depth:0.6,height:1.75,yaw:0}));}
  displace(id:string,point:Point,target:Point={x:point.x-3,z:point.z}):void {
   if(this.people.some(p=>p.id===id))return;
-  const view=new HumanoidView(0x877f63);view.group.scale.setScalar(0.93);this.group.add(view.group);this.people.push({id,position:{...point},view,state:'flee',time:0,shop:0,target:{...target},civilianDriver:true,speed:0,yaw:0,waypoints:[],blocked:0});this.alert=8;
+  const view=new HumanoidView(DRIVER_VARIANT);this.group.add(view.group);this.people.push({id,position:{...point},view,state:'flee',time:0,shop:0,target:{...target},civilianDriver:true,speed:0,yaw:0,waypoints:[],blocked:0});this.alert=8;
  }
  private release(p:Person):void {p.waypoints=[];this.reservations.release(p.id);p.seat=undefined;}
  private leaveSeat(p:Person,world:CollisionWorld,cars:readonly VehicleController[],player?:Point):boolean {
