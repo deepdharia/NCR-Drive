@@ -1,3 +1,4 @@
+import {distance} from '../core/math';
 import type { InputController } from '../input/InputController';
 import type { PlayerController } from '../player/PlayerController';
 import type { VehicleController } from '../vehicle/VehicleController';
@@ -14,7 +15,7 @@ import { Minimap } from './Minimap';
 import type { Settings } from '../systems/ProgressStore';
 import { nextQuality, QUALITY, resolvedQuality } from '../rendering/QualityProfile';
 
-interface UIActions { journey:()=>void; start:()=>void; phone:()=>void; pause:()=>void; interact:()=>void; accept:()=>void; story:()=>void; cancelStory:()=>void; quality:()=>void; recover:()=>void; sensitivity:(kind:'steeringSensitivity'|'cameraSensitivity',value:number)=>void; buy:()=>void; pay:()=>void; closeShop:()=>void; supply:()=>void; cancelSupply:()=>void; audio:()=>void; volume:(value:number)=>void }
+interface UIActions { journey:()=>void; start:()=>void; phone:()=>void; pause:()=>void; interact:()=>void; accept:()=>void; story:()=>void; cancelStory:()=>void; quality:()=>void; recover:()=>void; sensitivity:(kind:'steeringSensitivity'|'cameraSensitivity',value:number)=>void; buy:()=>void; pay:()=>void; closeShop:()=>void; supply:()=>void; cancelSupply:()=>void; receive:()=>void; audio:()=>void; volume:(value:number)=>void }
 
 const phoneIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10 18h4"/></svg>';
 
@@ -52,7 +53,7 @@ export class GameUI {
         <div class="phone-notch"></div><header class="phone-header"><span>DelhiOS<small>CONNECTED TO YOUR CITY</small></span><button data-action="phone" aria-label="Close phone">×</button></header>
         <div class="phone-scroll"><h2>Good evening,<br><em>Delhi explorer.</em></h2><div class="phone-balance"><span>YOUR BALANCE</span><strong data-cash>₹15,000</strong><small data-save>Progress saved on this device</small><small data-career>Local helper · Building trust</small></div>
           <div class="app-heading"><span>↗ DelhiNav</span><small>LIVE GPS</small></div><div class="phone-map"><canvas aria-label="DelhiNav GPS minimap" role="img"></canvas><div><span>●</span> <span data-map-region>Connaught Place</span> <small data-coordinates>New Delhi, India</small></div></div>
-          <div class="app-heading"><span>↗ Neighborhood</span><small>LIVING DELHI</small></div><article class="activity-card"><h3>Market Lane · बाज़ार गली</h3><p>Head west from CP. Park, walk to Neem Chai, pay with fictional game currency, sit and drink. Visit Gali Baithak for local news and Nimbu Corner for a fruit supply job.</p><p data-neighborhood></p><button class="cancel-job" data-action="cancelSupply" hidden>Cancel supply delivery</button></article>
+          <div class="app-heading"><span>↗ Neighborhood</span><small>LIVING DELHI</small></div><article class="activity-card"><h3>Market Lane · बाज़ार गली</h3><p>Head west from CP. Park, walk to Neem Chai, pay with fictional game currency, sit and drink. Visit Gali Baithak for local news and Nimbu Corner for a fruit supply job.</p><p data-neighborhood></p><button class="primary" data-action="receive" hidden>Confirm cold-store receipt · ₹650</button><button class="cancel-job" data-action="cancelSupply" hidden>Cancel supply delivery</button></article>
           <div class="app-heading"><span>↗ City Stories</span><small>CHAPTER 01</small></div><article class="activity-card"><span class="story-tag" data-story-name>KABIR’S EVENING RUN</span><h3 data-story-description>One evening. Three stops.</h3><p data-story-status>Collect paperwork, cross the circle and finish a handover on foot. 4 minutes · ₹1,200.</p><button class="primary" data-action="story">Start chapter →</button><p>Kabir’s Regional Dispatch: Delhi pickup → Gurgaon delivery. 12 minutes · ₹2,400. All three regions remain open for exploration.</p><button class="cancel-job" data-action="journey">Start regional dispatch →</button><button class="cancel-job" data-action="cancelStory" hidden>Abandon chapter</button></article>
           <div class="app-heading"><span>↗ Motor pool</span><small>THREE CARS · FREE TO DRIVE</small></div><article class="activity-card"><p>Gold Parvaaz: inner circle. Additional prototype cars: west/east approaches. Any stopped civilian car is usable. Approach its right-hand door and press F. Occupied cars need a short takeover. Taken cars remain in this session and are never recycled.</p></article>
           <div class="app-heading"><span>◈ Hustle</span><small>LOCAL GIGS</small></div><article class="gig-card"><span class="gig-tag">YOUR FIRST GIG</span><h3>Shivaji Stadium<br>Courier Run</h3><p>One parcel. A short drive through CP. Hand it over on foot at the stadium metro.</p><div class="gig-reward"><strong>₹750</strong><span>No time limit<br>Parcel included</span></div><button class="primary" data-action="accept">Accept delivery →</button></article><p class="phone-footer">A little hustle. A bigger city.</p>
@@ -82,6 +83,7 @@ export class GameUI {
         case 'pay': actions.pay(); break;
         case 'closeShop': actions.closeShop(); break;
         case 'supply': actions.supply(); break;
+        case 'receive': actions.receive(); break;
         case 'cancelSupply': actions.cancelSupply(); break;
         case 'audio': actions.audio(); break;
         case 'jump': input.requestJump(); break;
@@ -155,17 +157,18 @@ export class GameUI {
     for(const button of this.root.querySelectorAll<HTMLButtonElement>('[data-action="interact"]')){button.disabled=locked||(!prompt&&!interaction.available);button.setAttribute('aria-label',driving?'Exit vehicle':'Interact nearby');}
     this.text('[data-touch-interact]',driving?'EXIT':'USE');
     this.root.querySelectorAll<HTMLElement>('[data-driving]').forEach(e=>{e.hidden=!driving;});this.root.querySelectorAll<HTMLElement>('[data-foot]').forEach(e=>{e.hidden=driving;});
-    const courier=mission.state==='active',supply=neighborhood.job==='delivery';
+    const courier=mission.state==='active',supply=neighborhood.active,receipt=neighborhood.job==='receipt';
     const target=story.active?story.step.target:courier?COURIER_TARGET:supply?SUPPLY_TARGET:MARKET;
     if(target!==this.routeTarget||performance.now()-this.routeTime>750){this.cachedRoute=driving?roadRoute(position,target):walkingRoute(position,target);this.routeTarget=target;this.routeTime=performance.now();}
     const route=this.cachedRoute,metres=Math.round(routeLength(route));
-    this.text('[data-job-title]',story.active?story.step.title:courier?'Shivaji Stadium Courier Run':supply?'Fruit crate → Delhi Cold Store':'Explore the neighborhood');
-    this.text('[data-distance]',story.active?`${metres} m · ${Math.ceil(story.remaining)}s · ${story.step.mode==='foot'?'On-foot handover':'Stop in car'}`:courier?`${metres} m · Deliver on foot`:supply?`${metres} m · Stop in the goods bay · ₹650`:`${metres} m · Visit Neem Chai on Market Lane`);
+    this.text('[data-job-title]',story.active?story.step.title:courier?'Shivaji Stadium Courier Run':receipt?'Cold-store receipt · Follow-up':supply?'Fruit crate → Delhi Cold Store':'Explore the neighborhood');
+    this.text('[data-distance]',story.active?`${metres} m · ${Math.ceil(story.remaining)}s · ${story.step.mode==='foot'?'On-foot handover':'Stop in car'}`:courier?`${metres} m · Deliver on foot`:receipt?`${metres} m · Stop by bay → DelhiOS → Confirm receipt`:supply?`${metres} m · Stop in the goods bay · ₹650`:`${metres} m · Visit Neem Chai on Market Lane`);
     this.text('[data-coordinates]',`${position.x.toFixed(1)}, ${position.z.toFixed(1)} · ${driving?'Driving':'On foot'}`);
     this.text('[data-save]',saveAvailable?'Progress saved on this device':'Saving unavailable · Purchases and neighborhood rewards require a successful save');
     this.text('[data-career]',`Neighborhood trust ${neighborhood.data.relationship} · ${neighborhood.data.completed?'Trusted local helper':'Local explorer'}`);
     this.text('[data-neighborhood]',`Bag: ${neighborhood.data.chai} chai · ${neighborhood.data.juice} juice. ${neighborhood.message}`);
     this.element('[data-action="cancelSupply"]').hidden=!supply;
+    const receive=this.element<HTMLButtonElement>('[data-action="receive"]');receive.hidden=!receipt;receive.disabled=distance(position,SUPPLY_TARGET)>5||(driving?car.kmh:player.speed*3.6)>2;
     const busy=courier||story.active||supply;
     this.element<HTMLButtonElement>('[data-action="accept"]').disabled=mission.state!=='available'||busy;
     this.text('[data-action="accept"]',mission.state==='completed'?'Delivery complete · ₹750 earned':courier?'Delivery in progress':'Accept delivery →');

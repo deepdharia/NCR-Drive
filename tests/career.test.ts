@@ -16,12 +16,12 @@ test('failed purchase, consumption and reward storage leaves all related state u
  const n=new Neighborhood({cash:70,neighborhood:{...freshNeighborhood(),chai:1}},()=>false);
  assert.equal(n.pay(n.order('juice')!),false);assert.equal(n.cash,70);assert.equal(n.data.juice,0);
  assert.equal(n.drink(),undefined);assert.equal(n.data.chai,1);
- n.accept();assert.equal(n.update(SUPPLY_TARGET,true,0),false);assert.equal(n.job,'delivery');assert.equal(n.data.completed,false);assert.equal(n.cash,70);
+ n.accept();assert.equal(n.update(SUPPLY_TARGET,true,0),true);assert.equal(n.confirm(SUPPLY_TARGET,0),false);assert.equal(n.job,'receipt');assert.equal(n.data.completed,false);assert.equal(n.cash,70);
 });
 test('goods mission requires stopped vehicle, pays once, persists trust and cancels without payout',()=>{
  let durable;const n=new Neighborhood({cash:0,neighborhood:freshNeighborhood()},next=>{durable=next;return true;});
  assert.equal(n.update(SUPPLY_TARGET,true,0),false);assert.ok(n.accept());assert.equal(n.accept(),false);assert.equal(n.update(SUPPLY_TARGET,false,0),false);assert.equal(n.update(SUPPLY_TARGET,true,8),false);
- n.cancelJob();assert.equal(n.cash,0);assert.equal(n.update(SUPPLY_TARGET,true,0),false);n.accept();assert.ok(n.update(SUPPLY_TARGET,true,0));assert.equal(n.cash,650);assert.equal(n.data.relationship,1);assert.equal(n.update(SUPPLY_TARGET,true,0),false);
+ n.cancelJob();assert.equal(n.cash,0);assert.equal(n.update(SUPPLY_TARGET,true,0),false);n.accept();assert.ok(n.update(SUPPLY_TARGET,true,0));assert.equal(n.cash,0);assert.equal(n.job,'receipt');assert.equal(n.confirm({x:0,z:0},0),false);assert.equal(n.confirm(SUPPLY_TARGET,10),false);assert.ok(n.confirm(SUPPLY_TARGET,0));assert.equal(n.confirm(SUPPLY_TARGET,0),false);assert.equal(n.cash,650);assert.equal(n.data.relationship,1);assert.equal(n.update(SUPPLY_TARGET,true,0),false);
  const reload=new Neighborhood(durable!,()=>true);assert.equal(reload.accept(),false);assert.equal(reload.update(SUPPLY_TARGET,true,0),false);assert.equal(reload.cash,650);
 });
 test('career round trip, corruption, unknown versions, zero cash and unavailable storage',()=>{

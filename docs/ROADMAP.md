@@ -4,7 +4,7 @@
 | --- | --- |
 | Connected NCR | Retained: both corridors, Gurgaon avenue loop, Noida sector loop, Yamuna-inspired flat crossing; legal shared routes, collision broad phase, regional recovery, capped traffic |
 | Central Delhi V1 | Retained: detailed CP surface, PBR/daylight, scenic supported flyover with ground underpass, original landmarks, LOD and Low/Balanced/High |
-| Living Delhi | Integrated: 250 m market, rigged adults/original clips, bounded routines/reservations, shops, atomic fictional purchases, seating/drinking, civilian door/control transfer, once-only goods mission/trust, saved spatial sound controls. Current verification in HANDOFF/PLAYTESTS |
+| Living Delhi | Integrated: 250 m market, rigged adults/original clips, bounded routines/reservations, shops, atomic fictional purchases, seating/drinking, civilian door/control transfer, goods handover/receipt follow-up with once-only reward/trust, saved spatial sound controls. Current verification in HANDOFF/PLAYTESTS |
 | Device/art acceptance | Owner M1 8 GB + named phone: 30 FPS Low target, feet/hands/doors, sound mix, driving enjoyment and longer repeated visits. Software rendering does not close this gate |
 | Later | More authored missions/contacts, distinct finished sedan/SUV art, richer animation, recorded licensed local sound, city-wide pedestrian crossings, police pursuit and business opportunities |
 

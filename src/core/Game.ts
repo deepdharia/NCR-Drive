@@ -55,7 +55,7 @@ export class Game {
   private market!:MarketView;private people!:StreetPeople;private audio=new StreetAudio();
   private modal=false;private shopIndex=0;private payment:number|undefined;
   private seated:string|undefined;private drinkTime=0;private standing=0;private consumedAtSeat=false;private rewardRetry=0;private handover=0;
-  private get jobBusy():boolean{return this.story.active||this.mission.state==='active'||this.neighborhood.job==='delivery';}
+  private get jobBusy():boolean{return this.story.active||this.mission.state==='active'||this.neighborhood.active;}
   private saveAvailable = true;
   private saveWritable = true;
   private settings = defaultSettings();
@@ -136,6 +136,7 @@ export class Game {
       cancelStory: () => { this.story.cancel(); this.refreshUI(); },
       buy:()=>this.orderDrink(),pay:()=>this.pay(),closeShop:()=>this.closeShop(),
       supply:()=>{if(!this.jobBusy&&this.neighborhood.accept()){this.closeShop();this.ui.toast(this.neighborhood.message);}},
+      receive:()=>{const position=this.car.driving?this.car.position:this.player.position;this.neighborhood.cash=this.mission.cash;if(this.neighborhood.confirm(position,this.car.driving?this.car.kmh:this.player.speed*3.6)){this.mission.cash=this.neighborhood.cash;this.phone=false;this.syncScreen();}this.ui.toast(this.neighborhood.message);this.refreshUI();},
       cancelSupply:()=>{this.neighborhood.cancelJob();this.refreshUI();},
       audio:()=>{this.settings.muted=!this.settings.muted;this.applySettings();this.saveProgress();},
       volume:value=>{if(Number.isFinite(value)&&value>=0&&value<=1){this.settings.volume=value;this.applySettings();this.saveProgress();}},
@@ -215,7 +216,7 @@ export class Game {
   }
   private refreshUI(): void {
     this.selectNearbyCar();
-    const target = this.story.active ? this.story.step.target : this.mission.state==='active'?COURIER_TARGET:this.neighborhood.job==='delivery'?SUPPLY_TARGET:MARKET;
+    const target = this.story.active ? this.story.step.target : this.mission.state==='active'?COURIER_TARGET:this.neighborhood.active?SUPPLY_TARGET:MARKET;
     this.district.delivery.visible = distance(target,this.car.driving?this.car.position:this.player.position)>20 || this.jobBusy;
     this.district.delivery.position.set(target.x, 0, target.z);
 

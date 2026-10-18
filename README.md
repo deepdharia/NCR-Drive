@@ -2,7 +2,7 @@
 
 A browser open-world game: explore Delhi on foot, drive connected fictional NCR roads, meet local shopkeepers and help a neighborhood. Three.js + TypeScript + Vite, static Vercel deployment and local single-player saves.
 
-Market Lane extends west of Connaught Place. Park, exit, visit Neem Chai, buy a drink using fictional game currency, sit and drink, meet the Nimbu Corner vendor, take a stopped civilian car and deliver a fruit crate to the cold store. Gurgaon and Noida remain connected through Delhi, with a flat Yamuna-inspired bridge.
+Market Lane extends west of Connaught Place. Park, exit, visit Neem Chai, buy a drink using fictional game currency, sit and drink, meet the Nimbu Corner vendor, take a stopped civilian car and deliver a fruit crate to the cold store and confirm its receipt in DelhiOS. Gurgaon and Noida remain connected through Delhi, with a flat Yamuna-inspired bridge.
 
 ## Run
 
@@ -26,7 +26,7 @@ npm run preview
 - Drag: camera. Tab: DelhiOS map and retained courier/story work. Escape: pause, saved graphics/sensitivity/sound settings and free regional recovery.
 - Mobile: joystick plus separate throttle/brake/reverse/interact controls; simultaneous touch steering/throttle supported.
 
-Purchases are optional. Confirmed fictional UPI payments commit money and inventory together; cancel is free. The goods mission pays ₹650 and one trust point once. Original courier, Kabir chapter and Delhi→Gurgaon dispatch remain. Only one job runs at a time. Recovery cancels active jobs without payout. Cars and active jobs do not resume after reload; earned money, settings, cups, completed courier and neighborhood trust do.
+Purchases are optional. Confirmed fictional UPI payments commit money and inventory together; cancel is free. The goods mission pays ₹650 and one trust point once, after its cold-store receipt follow-up. Original courier, Kabir chapter and Delhi→Gurgaon dispatch remain. Only one job runs at a time. Recovery cancels active jobs without payout. Cars and active jobs do not resume after reload; earned money, settings, cups, completed courier and neighborhood trust do.
 
 The old taxi module, fares, passenger objectives, rewards and onboarding have been removed. Old v1/v2 career payloads migrate under the same storage key; earned money and unrelated progress/settings are retained. Unknown/corrupt saves and backups remain protected. Saves are per browser and site origin; a different preview hostname has separate browser storage.
 

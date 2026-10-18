@@ -85,8 +85,9 @@ try{
  assert.match(await page.locator('[data-prompt]').innerText(),/Take civilian car/);await page.screenshot({path:'test-results/living-takeover-before.png'});await page.keyboard.press('f');await page.waitForFunction(()=>document.querySelector('[data-mode]').textContent.includes('PARVAAZ'));
  await page.screenshot({path:'test-results/living-takeover-after.png'});log('Received goods mission, crossed at zebra, took occupied civilian car through ordinary door interaction.');
  // Pull out into the clear street using ordinary steering and throttle.
- await key('a',true);await key('w',true);await page.waitForFunction(()=>{const h=Number(document.querySelector('[data-mode-detail]').textContent.match(/HDG ([\d.]+)/)?.[1]);return h>=255&&h<330;});await key('w',false);await key('a',false);await stop();
+ await key('a',true);for(let i=0;i<600;i++){const p=await read(),h=(p.yaw*180/Math.PI+360)%360;if(h>=255&&h<330)break;await key('w',p.speed<3.5);await key('Space',p.speed>4.2);await page.waitForTimeout(100);}await key('w',false);await key('a',false);await stop();
  await drive({x:-342,z:4},'Fruit crate → Delhi Cold Store');
+ await page.waitForFunction(()=>document.querySelector('[data-job-title]').textContent.includes('receipt'));await page.keyboard.press('Tab');await page.locator('[data-action="receive"]').click();log('Completed Nimbu’s receipt follow-up through DelhiOS.');
  await page.waitForFunction(()=>document.querySelector('[data-cash]').textContent==='₹15,630');await page.waitForTimeout(2000);assert.equal(await page.locator('[data-cash]').first().innerText(),'₹15,630');
  await page.screenshot({path:'test-results/living-delivery.png'});
  await page.keyboard.press('Tab');assert.match(await page.locator('[data-career]').innerText(),/trust 1/);await page.keyboard.press('Tab');

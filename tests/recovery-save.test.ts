@@ -103,3 +103,15 @@ test('successful recovery cancels jobs without payout, releases motion, preserve
     assert.equal(courier.state, 'completed'); assert.equal(story.state, 'completed');
   }
 });
+
+// A parked handover is still an active job until its explicit receipt is committed.
+test('recovery cancels pending receipt follow-up without reward or trust, in both modes', () => {
+ const world=new CollisionWorld(createDistrictLayout().solids);
+ for(const driving of [true,false]){
+  const car=new VehicleController(),player=new PlayerController(),courier=new CourierMission(),neighborhood=newNeighborhood(),story=new StoryMission();
+  car.setDriving(driving);player.setActive(!driving);neighborhood.accept();neighborhood.update(SUPPLY_TARGET,true,0);
+  assert.equal(neighborhood.job,'receipt');assert.ok(recoverToRoad(world,car,player,[],courier,neighborhood,story));
+  assert.equal(neighborhood.job,'available');assert.equal(neighborhood.cash,17);assert.equal(neighborhood.data.relationship,0);
+  assert.equal(neighborhood.confirm(SUPPLY_TARGET,0),false);assert.equal(car.driving,driving);assert.equal(player.active,!driving);
+ }
+});

@@ -17,7 +17,7 @@ export interface WalletSnapshot { cash:number; neighborhood:NeighborhoodSave }
 export class Neighborhood {
  data:NeighborhoodSave; cash:number;
  private serial=0; pending: {id:number;item:Drink;price:number}|undefined;
- job:'available'|'delivery'|'completed'; message='Explore the neighborhood · Visit Neem Chai on Market Lane';
+ job:'available'|'delivery'|'receipt'|'completed'; message='Explore the neighborhood · Visit Neem Chai on Market Lane';
  constructor(snapshot:WalletSnapshot,private commit:(next:WalletSnapshot)=>boolean){this.cash=snapshot.cash;this.data={...snapshot.neighborhood};this.job=this.data.completed?'completed':'available';}
  order(item:Drink):number|undefined {if(this.pending)return;const id=++this.serial;this.pending={id,item,price:item==='chai'?20:40};return id;}
  cancel():void {this.pending=undefined;}
@@ -36,12 +36,17 @@ export class Neighborhood {
   if(!this.commit(next)){this.message='Could not save. Your drink is still in your bag.';return;}
   this.data=next.neighborhood;return item;
  }
- accept():boolean {if(this.job!=='available')return false;this.job='delivery';this.message='Nimbu Corner: Please take this sealed fruit crate to the cold store at the west end. ₹650 on delivery. No timer.';return true;}
- cancelJob():void {if(this.job==='delivery'){this.job='available';this.message='Supply run cancelled. No reward paid. Speak to Nimbu Corner to try again.';}}
+ get active():boolean{return this.job==='delivery'||this.job==='receipt';}
+ accept():boolean {if(this.job!=='available')return false;this.job='delivery';this.message='Nimbu: Our chiller has failed. Take this sealed fruit crate to the west-end cold store, then confirm their receipt in DelhiOS. ₹650 + trust. No timer.';return true;}
+ cancelJob():void {if(this.active){this.job='available';this.message='Supply run cancelled. No reward paid. Speak to Nimbu Corner to try again.';}}
  update(position:Point,driving:boolean,speed:number):boolean {
   if(this.job!=='delivery'||!driving||speed>2||distance(position,SUPPLY_TARGET)>4)return false;
+  this.job='receipt';this.message='Cold store: The seal is intact. Nimbu calls to check the handover. Open DelhiOS and confirm the receipt to finish the supply run · ₹650 + trust.';return true;
+ }
+ confirm(position:Point,speed:number):boolean {
+  if(this.job!=='receipt'||speed>2||distance(position,SUPPLY_TARGET)>5)return false;
   const next={cash:this.cash+650,neighborhood:{...this.data,completed:true,relationship:this.data.relationship+1}};
-  if(!this.commit(next)){this.message='Delivery ready. Saving unavailable; reward pending. Stay stopped to retry.';return false;}
+  if(!this.commit(next)){this.message='Receipt could not be saved. No reward paid. Stay by the bay and retry confirmation in DelhiOS.';return false;}
   this.cash=next.cash;this.data=next.neighborhood;this.job='completed';this.message='Fruit crate delivered · ₹650 earned · Nimbu Corner trust +1. Your neighborhood remembers.';return true;
  }
 }
