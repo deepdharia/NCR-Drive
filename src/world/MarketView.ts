@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { signTexture, worldSurfaceMaterial } from '../rendering/ProceduralTextures';
 import { shops, seats } from '../systems/Neighborhood';
-import { marketSolids, marketFrontages } from './MarketLayout';
+import { marketSolids, marketFrontages, marketParkingBay } from './MarketLayout';
 import { mergeStaticMeshes } from '../rendering/MeshUtils';
 export class MarketView {
  readonly group=new THREE.Group();private steam:THREE.InstancedMesh;private time=0;
@@ -13,6 +13,11 @@ export class MarketView {
   const add=(m:THREE.Material,x:number,y:number,z:number,w:number,h:number,d:number,g:THREE.BufferGeometry=box)=>{const o=new THREE.Mesh(g,m);o.position.set(x,y,z);o.scale.set(w,h,d);o.castShadow=o.receiveShadow=true;this.group.add(o);return o;};
   const label=(text:string,x:number,y:number,z:number,w:number,bg='#264e43')=>{const o=new THREE.Mesh(new THREE.PlaneGeometry(w,w/5),new THREE.MeshStandardMaterial({map:signTexture(text,undefined,bg),roughness:0.9,side:THREE.DoubleSide}));o.position.set(x,y,z);this.group.add(o);};
   add(concrete,-255,0.005,-12.7,250,0.06,7.4);add(concrete,-255,0.005,12.7,250,0.06,7.4);
+  const bay=marketParkingBay,parkingPaint=new THREE.MeshBasicMaterial({color:0xd4bd82});
+  for(const dx of [-bay.width/2,bay.width/2])add(parkingPaint,bay.x+dx,0.05,bay.z,0.1,0.02,bay.depth);
+  for(const dz of [-bay.depth/2,bay.depth/2])add(parkingPaint,bay.x,0.05,bay.z+dz,bay.width,0.02,0.1);
+  add(metal,bay.x-2,1.25,-16.55,0.12,2.5,0.12);
+  label('P · PUBLIC PARKING',bay.x,2.5,-16.5,5);
   // Flush crossing and roll-over curb paint keep existing flat ground physics safe.
   for(let i=0;i<12;i++)add(i%2?stone:dark,-244,0.05,-8.2+i*1.5,5,0.015,0.72);
   for(let i=0;i<46;i++)for(const z of [-9.15,9.15])add(i%2?stone:dark,-134-i*5.3,0.05,z,4.9,0.03,0.2);

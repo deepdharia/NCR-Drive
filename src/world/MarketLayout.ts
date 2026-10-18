@@ -1,7 +1,9 @@
 import type { Solid } from '../core/CollisionWorld';
 import { shops, seats } from '../systems/Neighborhood';
+export const marketParkingBay={id:'market-public-parking',x:-173,z:-12.5,width:3.2,depth:6};
 export const marketFrontages=Array.from({length:10},(_,i)=>-251-i*12.7).filter(x=>x>=-320||x< -361);
 export const marketSolids:Solid[]=[
+ {x:marketParkingBay.x-2,z:-16.55,width:0.12,depth:0.12,height:2.5,yaw:0},
  ...marketFrontages.map(x=>({x,z:-23,width:10.8,depth:8,height:7,yaw:0})),
  ...seats.map(s=>({x:s.x,z:s.z,width:1.1,depth:0.48,height:0.51,yaw:0})),
  ...[-145,-238,-272,-314,-368].map(x=>({x:x-1,z:12,width:0.14,depth:0.14,height:5.6,yaw:0})),

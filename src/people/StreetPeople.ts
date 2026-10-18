@@ -1,4 +1,4 @@
-import { HumanoidView } from './HumanoidView';
+import { HumanoidView, PEDESTRIAN_FLOOR_OFFSET } from './HumanoidView';
 import { Reservations, seats, shops } from '../systems/Neighborhood';
 import { distance } from '../core/math';
 import type { Point } from '../core/math';
@@ -12,7 +12,7 @@ export class StreetPeople {
  readonly group=new THREE.Group();readonly reservations=new Reservations();readonly people:Person[]=[];alert=0;
  constructor(scene:THREE.Scene){scene.add(this.group);for(let i=0;i<10;i++){
   const vendor=i<3,shop=i%3,position=vendor?{x:shops[shop].x,z:-17.6}:{x:-146-(i-3)*13,z:-10.5};
-  const view=new HumanoidView([0xa17243,0x617e87,0xa86856,0x657c49,0x8e7892][i%5]);this.group.add(view.group);view.group.position.set(position.x,0,position.z);view.update(0.2,vendor?'talk':'idle');
+  const view=new HumanoidView([0xa17243,0x617e87,0xa86856,0x657c49,0x8e7892][i%5]);this.group.add(view.group);view.group.position.set(position.x,PEDESTRIAN_FLOOR_OFFSET,position.z);view.update(0.2,vendor?'talk':'idle');
   this.people.push({id:`market-adult-${i}`,position,view,state:vendor?'vendor':'walk',time:0,shop,target:vendor?position:{x:shops[shop].x,z:-12.7},speed:0,yaw:0,waypoints:[],blocked:0});
  }}
  serve(shop:number):void {const vendor=this.people[shop];vendor.action='handover';vendor.actionTime=1.2;}
@@ -64,7 +64,7 @@ export class StreetPeople {
    }
    // Timeout clears every reservation; a blocked customer never owns a queue forever.
    if(p.state!=='vendor'&&p.time>24&&this.leaveSeat(p,world,cars,player)){this.release(p);p.state='leave';p.target={x:-240+p.shop*8,z:-10.4};p.time=0;}
-   p.view.group.position.set(p.position.x,0,p.position.z);p.view.group.rotation.y=p.yaw;
+   p.view.group.position.set(p.position.x,PEDESTRIAN_FLOOR_OFFSET,p.position.z);p.view.group.rotation.y=p.yaw;
    const anim=p.state==='vendor'?(p.shop===2?'prepare':'talk'):p.state==='drink'?(p.time<0.8?'sit_down':p.time>8?'stand':p.shop===1?'sit_smoke':'sit_drink'):p.state==='react'?'react':p.speed>0.1?(p.state==='flee'?'flee':'walk'):p.state==='order'?'talk':'wait';
    if(p.actionTime){p.actionTime=Math.max(0,p.actionTime-dt);if(!p.actionTime)p.action=undefined;}
    p.view.update(dt,p.action??anim,p.speed);

@@ -33,7 +33,7 @@ export class VehicleView {
       const mesh = new THREE.Mesh(new RoundedBoxGeometry(w, h, d, 2, Math.min(radius, w / 3, h / 3, d / 3)), material);
       mesh.position.set(x, y, z); this.body.add(mesh); return mesh;
     };
-    addBox(1.46,0.12,3.4,interior,0,0.48,0,0.03);
+    addBox(1.46,0.08,3.4,interior,0,0.41,0,0.025);
     addBox(1.46,0.43,0.85,paint,0,0.735,1.39,0.08);
     addBox(1.46,0.43,0.7,paint,0,0.735,-1.47,0.08);
     for(const side of [-1,1]){
@@ -92,8 +92,8 @@ export class VehicleView {
       addBox(0.36, 0.17, 0.08, headlight, side * 0.55, 0.80, 1.82, 0.025);
       addBox(0.28, 0.30, 0.085, this.brakeMaterial, side * 0.61, 0.77, -1.82, 0.025);
       addBox(0.12, 0.06, 0.09, new THREE.MeshStandardMaterial({ color: 0xe8ad42, emissive: 0x9a5212, emissiveIntensity: 0.35 }), side * 0.73, 0.73, 1.79, 0.015);
-      addBox(0.47,0.14,0.55,interior,side*0.36,0.69,-0.02,0.05);
-      const seat = addBox(0.47, 0.56, 0.17, interior, side * 0.36, 1.06, -0.32, 0.06); seat.rotation.x = -0.12;
+      addBox(0.47,0.14,0.55,interior,side*0.36,0.61,-0.02,0.05);
+      const seat = addBox(0.47, 0.65, 0.17, interior, side * 0.36, 1.02, -0.32, 0.06); seat.rotation.x = -0.12;
       addBox(0.30, 0.19, 0.13, interior, side * 0.36, 1.42, -0.38, 0.05);
     }
     addBox(1.65, 0.16, 0.18, paint, 0, 0.48, 1.80, 0.055);

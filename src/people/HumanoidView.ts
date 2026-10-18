@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone } from 'three/addons/utils/SkeletonUtils.js';
+export const PEDESTRIAN_FLOOR_OFFSET=0.045; // Sole -0.01 m meets the 0.035 m pavement.
 let template:THREE.Group; let clips:THREE.AnimationClip[]=[];
 export async function loadPeople():Promise<void> {const gltf=await new GLTFLoader().loadAsync('/assets/people/delhi-adult.glb');template=gltf.scene;clips=gltf.animations;}
 /** Shared geometry and skin, independent skeleton/mixer. Authored clips blend at 0.18s. */

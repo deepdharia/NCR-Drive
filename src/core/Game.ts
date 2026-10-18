@@ -196,7 +196,7 @@ export class Game {
     if(!this.car.driving){
       const shop=shops.findIndex(s=>distance(s,this.player.position)<2.6);
       if(shop>=0){this.openShop(shop);return;}
-      const seat=seats.find(s=>distance(s,this.player.position)<1.7&&!this.people.reservations.owner(s.id));
+      const seat=this.nearbySeat();
       if(seat){this.seated=seat.id;this.people.reservations.reserve(seat.id,'player');this.player.teleport(seat);this.player.yaw=seat.yaw;this.player.speed=0;this.playerView.overrideAnimation='sit_down';this.drinkTime=0;this.consumedAtSeat=false;this.refreshUI();return;}
     }
     this.selectNearbyCar();
@@ -224,7 +224,7 @@ export class Game {
   private updateViews(dt: number): void {
     if(this.handover>0)this.playerView.overrideAnimation='pay';else if(this.interaction.busy)this.playerView.overrideAnimation=this.interaction.animation;else if(!this.seated&&!this.modal)this.playerView.overrideAnimation=undefined;
     this.playerView.updatePlayer(this.player, dt);
-    if(this.interaction.busy){const t=this.interaction.progress,door=this.interaction.door,seat=localToWorld({x:-0.35,z:-0.2},this.car.position,this.car.yaw),f=this.interaction.occupiedEntry?0:this.interaction.exiting?1-t:t;this.playerView.group.visible=true;this.playerView.group.position.set(door.x+(seat.x-door.x)*f,0.18*f,door.z+(seat.z-door.z)*f);this.playerView.group.rotation.y=this.car.yaw+(this.interaction.occupiedEntry?Math.PI/2:0);}
+    if(this.interaction.busy){const t=this.interaction.progress,door=this.interaction.door,seat=localToWorld({x:-0.35,z:-0.2},this.car.position,this.car.yaw),f=this.interaction.occupiedEntry?0:this.interaction.exiting?1-t:t;this.playerView.group.visible=true;this.playerView.group.position.set(door.x+(seat.x-door.x)*f,0.045*(1-f)+0.18*f,door.z+(seat.z-door.z)*f);this.playerView.group.rotation.y=this.car.yaw+(this.interaction.occupiedEntry?Math.PI/2:0);}
     const focus=this.car.driving ? this.car.position : this.player.position;
     const quality = resolvedQuality(this.settings);
     this.fleetViews.forEach((view,i)=>{view.group.visible=distance(this.fleet[i].position,focus)<450;if(view.group.visible){view.update(this.fleet[i],dt);view.setDetail(distance(this.fleet[i].position,focus),quality);}});
@@ -301,9 +301,10 @@ export class Game {
     if(this.seated)return this.standing?'Standing up…':'Press F · Stand up';
     if(this.car.driving)return undefined;
     const shop=shops.find(s=>distance(s,this.player.position)<2.6);if(shop)return `Press F · Visit ${shop.name}`;
-    if(seats.some(s=>distance(s,this.player.position)<1.7&&!this.people.reservations.owner(s.id)))return 'Press F · Sit and enjoy a drink';
+    if(this.nearbySeat())return 'Press F · Sit and enjoy a drink';
     return undefined;
   }
+  private nearbySeat(){return seats.find(s=>this.player.grounded&&this.player.y<0.15&&distance(s,this.player.position)<1.7&&!this.people.reservations.owner(s.id)&&this.people.people.every(p=>distance(p.position,s)>=0.75)&&this.cars.every(c=>distance(c.position,s)>Math.hypot(c.width,c.length)/2+0.5));}
   private stand(force=false):void {if(!this.seated)return;if(!force){this.standing=1;this.playerView.overrideAnimation='stand';return;}this.standing=0;this.people.reservations.release('player');this.seated=undefined;this.drinkTime=0;this.playerView.overrideAnimation=undefined;this.player.speed=0;}
   private openShop(index:number):void {
     this.shopIndex=index;this.modal=true;this.player.speed=0;this.player.yaw=Math.PI;this.playerView.overrideAnimation='talk';

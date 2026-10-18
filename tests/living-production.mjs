@@ -50,6 +50,10 @@ try{
  }
 
  await drive({x:-164,z:4},'CP → Market Lane · park beside Neem Chai');
+ // Park in the signed north pull-off, keeping the through lane and later goods route clear.
+ await key('d',true);await key('w',true);await page.waitForFunction(()=>{const h=Number(document.querySelector('[data-mode-detail]').textContent.match(/HDG ([\d.]+)/)?.[1]);return h<200&&h>100;});await key('d',false);
+ for(let i=0;i<600;i++){const p=await read();if(p.z< -11)break;await key('w',p.speed<4);await key('Space',p.speed>5);await page.waitForTimeout(100);}await key('w',false);await stop();
+ assert.ok((await read()).z< -11);log('Parked off the carriageway in the marked public bay.');
  await page.keyboard.press('f');await page.waitForFunction(()=>document.querySelector('[data-mode]').textContent.includes('ON FOOT'));
  async function walk(to,label){
   let last=await read(),stuck=0;
@@ -73,7 +77,7 @@ try{
  assert.match(await page.locator('[data-prompt]').innerText(),/Take civilian car/);await page.screenshot({path:'test-results/living-takeover-before.png'});await page.keyboard.press('f');await page.waitForFunction(()=>document.querySelector('[data-mode]').textContent.includes('PARVAAZ'));
  await page.screenshot({path:'test-results/living-takeover-after.png'});log('Received goods mission, crossed at zebra, took occupied civilian car through ordinary door interaction.');
  // Pull out into the clear street using ordinary steering and throttle.
- await key('a',true);await key('w',true);await page.waitForFunction(()=>Number(document.querySelector('[data-coordinates]').textContent.split(',')[1].split(' ·')[0])<5.8);await key('w',false);await key('a',false);await stop();
+ await key('a',true);await key('w',true);await page.waitForFunction(()=>{const h=Number(document.querySelector('[data-mode-detail]').textContent.match(/HDG ([\d.]+)/)?.[1]);return h>=255&&h<330;});await key('w',false);await key('a',false);await stop();
  await drive({x:-342,z:4},'Fruit crate → Delhi Cold Store');
  await page.waitForFunction(()=>document.querySelector('[data-cash]').textContent==='₹15,630');await page.waitForTimeout(2000);assert.equal(await page.locator('[data-cash]').first().innerText(),'₹15,630');
  await page.screenshot({path:'test-results/living-delivery.png'});
