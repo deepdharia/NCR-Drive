@@ -1,0 +1,34 @@
+{
+  "method": "controlled development shop placement; final CSS-only contrast correction; real touch UI cancellation, not full journey",
+  "style": {
+    "foreground": "rgb(242, 229, 201)",
+    "background": "rgb(41, 71, 62)"
+  },
+  "sizes": [
+    {
+      "viewport": [
+        390,
+        844
+      ],
+      "modal": {
+        "x": 16,
+        "y": 230.109375,
+        "width": 358,
+        "height": 383.78125
+      }
+    },
+    {
+      "viewport": [
+        844,
+        390
+      ],
+      "modal": {
+        "x": 202,
+        "y": 23.40625,
+        "width": 440,
+        "height": 343.1875
+      }
+    }
+  ],
+  "errors": []
+}

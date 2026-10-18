@@ -9,7 +9,7 @@ import {VehicleController} from '../src/vehicle/VehicleController';
 import {PlayerController} from '../src/player/PlayerController';
 import {findRecoveryPose,recoverToRoad} from '../src/systems/RecoverySystem';
 import {CourierMission} from '../src/systems/CourierMission';
-import {TaxiMission} from '../src/systems/TaxiMission';
+import {Neighborhood,freshNeighborhood} from '../src/systems/Neighborhood';
 import {StoryMission,REGIONAL_JOURNEY} from '../src/systems/StoryMission';
 import {TrafficSystem} from '../src/systems/TrafficSystem';
 
@@ -40,11 +40,11 @@ test('all cross-region route samples have whole-car scenery clearance and stay o
 });
 test('regional recovery handles every vehicle and mode, preserves money and fails atomically',()=>{
  for(const bay of destinations)for(const spec of VEHICLE_SPECS)for(const driving of [true,false]){
-  const car=new VehicleController(spec),player=new PlayerController(),courier=new CourierMission(),taxi=new TaxiMission(),story=new StoryMission(REGIONAL_JOURNEY,720,2400);
-  car.position={...bay};car.setDriving(driving);player.teleport(bay);player.setActive(!driving);courier.cash=77;taxi.acceptRegional();story.accept();
-  assert.ok(recoverToRoad(world,car,player,[],courier,taxi,story));assert.equal(regionAt(car.position),bay.region);assert.equal(car.driving,driving);assert.equal(courier.cash,77);assert.equal(taxi.active,false);assert.equal(story.active,false);
+  const car=new VehicleController(spec),player=new PlayerController(),courier=new CourierMission(),neighborhood=new Neighborhood({cash:77,neighborhood:freshNeighborhood()},()=>true),story=new StoryMission(REGIONAL_JOURNEY,720,2400);
+  car.position={...bay};car.setDriving(driving);player.teleport(bay);player.setActive(!driving);courier.cash=77;neighborhood.accept();story.accept();
+  assert.ok(recoverToRoad(world,car,player,[],courier,neighborhood,story));assert.equal(regionAt(car.position),bay.region);assert.equal(car.driving,driving);assert.equal(courier.cash,77);assert.equal(neighborhood.job,'available');assert.equal(story.active,false);
   const blockers=recoveryPads.filter(p=>p.region===bay.region).map(p=>({...p,width:12,depth:12,height:3}));
-  const before=JSON.stringify({car,player,courier,taxi,story});assert.equal(recoverToRoad(world,car,player,blockers,courier,taxi,story),false);assert.equal(JSON.stringify({car,player,courier,taxi,story}),before);
+  const before=JSON.stringify({car,player,courier,neighborhood,story});assert.equal(recoverToRoad(world,car,player,blockers,courier,neighborhood,story),false);assert.equal(JSON.stringify({car,player,courier,neighborhood,story}),before);
   assert.ok(findRecoveryPose(world,car,bay,[]));
  }
 });
@@ -58,8 +58,7 @@ test('regional traffic population capped, spawns clear and follows graph lane di
  for(let frame=0;frame<900;frame++){traffic.update(1/60,world,[],focus);for(const car of traffic.cars){assert.ok(car.speed<=12);assert.ok(world.boxIsClear({...car.position,yaw:car.yaw},car.width,car.length));if(car.speed>0){const segments=lanes.flatMap(l=>[{a:l.start,b:l.end},...successors(l).map(n=>({a:l.end,b:n.start}))]);assert.ok(segments.some(({a,b})=>projection(car.position,a,b).distance<5&&Math.cos(car.yaw-Math.atan2(b.x-a.x,b.z-a.z))>0.5),JSON.stringify({frame,position:car.position,yaw:car.yaw}));}}}
  assert.ok(traffic.cars.some(c=>Math.hypot(c.position.x-focus.x,c.position.z-focus.z)<650));assert.equal(traffic.cars.length,10);
 });
-test('cross-region fares and modest dispatch pay once, with routed fare sizing',()=>{
- for(const noida of [false,true]){const taxi=new TaxiMission();assert.ok(taxi.acceptRegional(noida));assert.ok(routeLength(roadRoute(taxi.pickup,taxi.destination))>3000);assert.ok(taxi.fare>2500);assert.equal(taxi.update(2.1,taxi.target,true,0),'boarded');const fare=taxi.fare;assert.equal(taxi.update(2.1,taxi.target,true,0),'delivered');assert.equal(taxi.lastReward,fare+150);assert.equal(taxi.update(10,taxi.target,true,0),null);assert.equal(taxi.completed,1);}
+test('modest regional dispatch pays once',()=>{
  const story=new StoryMission(REGIONAL_JOURNEY,720,2400);story.accept();assert.equal(story.update(1.6,story.step.target,true,0),'step');assert.equal(story.update(1.6,story.step.target,true,0),'completed');assert.equal(story.reward,2400);assert.equal(story.update(1.6,story.step.target,true,0),null);
 });
 
@@ -128,4 +127,9 @@ test('every outer traffic turn clears its junction without a false guardrail sto
    assert.ok(cleared,`${lane.id} → ${next.id} must continue forward clear of rails`);
   }
  }
+});
+
+test('civilian emergency retreat points stay local in all regions and clear bridge guard rails',async()=>{
+ const {roadsideRetreat}=await import('../src/world/WorldRoads');
+ for(const point of [...destinations,{x:1375,z:-172.3},{x:-182,z:14.2}]){const retreat=roadsideRetreat(point);assert.ok(Math.hypot(retreat.x-point.x,retreat.z-point.z)<16);assert.ok(world.isClear(retreat,0.35));assert.equal(regionAt(retreat),regionAt(point));}
 });

@@ -8,11 +8,16 @@ import type { Lane } from '../world/WorldRoads';
 const courierApproach = {x:-99,z:0}, courierBay = {x:-99,z:24};
 export function roadRoute(from: Point, to: Point): Point[] {
  // The original courier is a foot handover on the stadium plaza, not a road stop.
+ // Explicit paved sidewalk approaches; no building/median shortcuts.
+ const marketApproach=(p:Point)=>p.x>=-236&&p.x<=-145&&p.z>=-14.5&&p.z<=-8.3;
+ const fromMarket=marketApproach(from),toMarket=marketApproach(to);
+ const fromBay=from.x>=-200&&from.x<=-165&&from.z>8.2&&from.z<=15;
+ const toBay=to.x>=-200&&to.x<=-165&&to.z>8.2&&to.z<=15;
  const toPlaza=distance(to,courierBay)<0.5;
  const fromPlaza=from.x>=-100 && from.x<=-96 && from.z>6 && from.z<=39;
- const route=laneRoute(fromPlaza?courierApproach:from,toPlaza?courierApproach:to);
+ const route=laneRoute(fromPlaza?courierApproach:fromMarket?{x:from.x,z:-6}:fromBay?{x:from.x,z:6}:from,toPlaza?courierApproach:toMarket?{x:to.x,z:-6}:toBay?{x:to.x,z:6}:to);
  if(!route.length)return [];
- return [...(fromPlaza?[from,{x:-99,z:13}]:[]),...route,...(toPlaza?[{x:-99,z:13},to]:[])];
+ return [...(fromPlaza?[from,{x:-99,z:13}]:fromMarket||fromBay?[from]:[]),...route,...(toPlaza?[{x:-99,z:13},to]:toMarket||toBay?[to]:[])];
 }
 function laneRoute(from: Point, to: Point): Point[] {
  const candidates=(p: Point)=>lanes.map(l=>({l,...projection(p,l.start,l.end)})).filter(s=>s.distance<=s.l.road.width/2+2 && projection(p,...ends(s.l.road)).distance<=s.l.road.width/2-0.8).sort((a,b)=>a.distance-b.distance).slice(0,4);

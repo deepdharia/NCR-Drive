@@ -3,7 +3,7 @@ import type { Point } from '../core/math';
 export interface MissionStep { title: string; dialogue: string; target: Point; mode: 'drive' | 'foot' }
 export const REGIONAL_JOURNEY: readonly MissionStep[] = [
   {title:'Collect Kabir’s dispatch at the east arcade',dialogue:'Kabir: Take this dispatch to Cyber Plaza in Gurgaon. Follow the southwest signs; stop in the marked bay.',target:{x:92,z:0},mode:'drive'},
-  {title:'Deliver to Gurgaon · Cyber Plaza bay',dialogue:'Kabir: The office team is waiting at Cyber Plaza. Stop in the gold bay. After delivery, Delhi Cabs has an optional Noida fare.',target:{x:-2100,z:1910},mode:'drive'},
+  {title:'Deliver to Gurgaon · Cyber Plaza bay',dialogue:'Kabir: The office team is waiting at Cyber Plaza. Stop in the gold bay. After delivery, explore the Yamuna crossing and Noida neighborhoods.',target:{x:-2100,z:1910},mode:'drive'},
 ];
 export const OPENING_CHAPTER: readonly MissionStep[] = [
   { title: 'Meet Kabir at the east arcade', dialogue: 'Kabir: My evening delivery driver never showed. Bring a car to the east arcade.', target: { x: 92, z: 0 }, mode: 'drive' },

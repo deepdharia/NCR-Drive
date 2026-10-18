@@ -1,34 +1,13 @@
-# NCR Drive milestones
+# NCR Drive roadmap
 
-Connected-world assignment takes priority over unfinished M1 audio. Preserve all
-completed handling, recovery, progress/settings and existing jobs. No backend,
-engine change or real-world reconstruction is planned here.
-
-| Milestone | Status / gate |
+| Milestone | State |
 | --- | --- |
-| M0 source and baseline | Starting main `546fff3`, refreshed remote matches; baseline tests/lint/build and production smoke passed |
-| M1 driving/recovery/settings | Preserved; audio and real-device tuning remain backlog |
-| M2 connected NCR world | Implemented on `improve/connected-ncr-world`: 10.03km shared directed roads, Gurgaon and Noida loops, two corridors, river bridge, regional recovery/traffic/maps and jobs; functional routes and CI verified in HANDOFF/PLAYTESTS; hardware/human acceptance remains |
-| M3 story/career | Existing chapter plus modest Delhi→Gurgaon dispatch; larger campaign, spending and consequences deferred |
-| M4 spectacle | Pursuits/stunts remain later scope; no combat added |
-| M5 device/release | Owner M1 8GB + named Android performance/handling gate still required; no production promotion claimed |
+| Connected NCR | Retained: both corridors, Gurgaon avenue loop, Noida sector loop, Yamuna-inspired flat crossing; legal shared routes, collision broad phase, regional recovery, capped traffic |
+| Central Delhi V1 | Retained: detailed CP surface, PBR/daylight, scenic supported flyover with ground underpass, original landmarks, LOD and Low/Balanced/High |
+| Living Delhi | Integrated: 250 m market, rigged adults/original clips, bounded routines/reservations, shops, atomic fictional purchases, seating/drinking, civilian door/control transfer, goods handover/receipt follow-up with once-only reward/trust, saved spatial sound controls. Current verification in HANDOFF/PLAYTESTS |
+| Device/art acceptance | Owner M1 8 GB + named phone: 30 FPS Low target, feet/hands/doors, sound mix, driving enjoyment and longer repeated visits. Software rendering does not close this gate |
+| Later | More authored missions/contacts, distinct finished sedan/SUV art, richer animation, recorded licensed local sound, city-wide pedestrian crossings, police pursuit and business opportunities |
 
-The complete connected loop has functional browser evidence. Next acceptance
-work is actual device frame times, boundary hitches, ordinary-speed pacing and
-enjoyment. Reduce decorative density before sacrificing road/collision correctness. Audio can follow once this world
-is accepted; it must not block the connected-map increment.
+Save schema v3 retains the original key and validates/migrates v1/v2 money/settings/courier completion with backups and corruption/unknown-version safeguards. Inventory/trust/completed goods delivery persist; active jobs, locations and cars are session state. Recovery remains free and cancels active work without reward. Existing replayable chapters keep their original per-completion reward policy.
 
-Recovery remains free, regional, collision/door checked and atomic. Active jobs
-cancel without payout; completed rewards/settings persist. No active-job or saved
-location resume exists. Schema v2 and the v1 migration/backup/corruption handling
-are unchanged. Existing replay rewards remain intentional, once per completion.
-
-## Visual Realism V1
-
-The Central Delhi slice adds a continuous detailed surface, daylight/PBR,
-modular facade/service detail, original landmark/flyover scenery, round grounded
-wheels, chase-camera refinement and Low/Balanced/High profiles. Keep connected
-world gameplay unchanged. See VISUAL_REALISM.md and the latest HANDOFF/PLAYTESTS
-entry for exact acceptance evidence. Elevated **driving** and ramps remain
-unimplemented; the supported scenic span has a usable ground underpass. Expand
-art density only after owner desktop/mobile performance and visual acceptance.
+Decorative density must give way to interaction/route/collision correctness and bounded resource use. No merge to main, production promotion or hardware performance acceptance is implied by a preview.

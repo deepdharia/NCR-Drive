@@ -1,196 +1,37 @@
-# NCR Drive handoff
+# Living Delhi handoff
 
-Updated 18 October 2026 (Asia/Kolkata). Model-neutral continuation record.
-Latest increment: **Visual Realism V1**, final delivery section below; earlier
-connected-world evidence remains historical context.
+19 October 2026 (Asia/Kolkata). Branch: `improve/living-delhi`. Runtime/art checkpoint: `91c14e45730cfea9a6df253108f9dc9b55202cdb`. Approved starting source: `36ec239f22e9b087d1170fdfa4e7fed35ed3de81`, selected after refreshing branches. No pre-existing user changes were discarded. No main reset/merge or production promotion. The subsequent delivery commit changes documentation/evidence only; use `git log -1` for its exact SHA.
 
-## Exact source and delivery
+Draft PR: https://github.com/deepdharia/NCR-Drive/pull/8 (base `improve/visual-realism-v1`). Preview: https://ncr-drive-git-improve-living-delhi-deep-07f0.vercel.app/ . Vercel success was verified for91c14e4 (deploymentJCsPTgZUijp2WrdDV26dng3b7ao6). Direct preview access is blocked by the environment proxy403; deployment-inspection API scope also returns403. No preview playtest is claimed. Preserve deployment protection.
 
-- Starting clean checkout and refreshed remote main: `546fff3fbddd7ad0efc6c23c5356e6729e221c2f`.
-- Implementation: `c844016d06b812f079b472254496ef80ab54d7a3`.
-- Branch: `improve/connected-ncr-world`; draft PR https://github.com/deepdharia/NCR-Drive/pull/6
-- Current production bundle: `dist/assets/index-B-k0R3oY.js`.
-- CI SUCCESS for that exact implementation: https://github.com/deepdharia/NCR-Drive/actions/runs/39058094120
-- No force-push, main merge or production promotion. Git pushes and connected
-  GitHub PR tools work; the GitHub CLI token is invalid. Vercel preview inspection
-  returned 403 for `deep-07f0`; its source/gameplay remain unverified.
-- Chat output mount is read-only in this worker. Source/evidence delivery uses
-  the GitHub branch and CI artifacts; no downloadable chat attachment is claimed.
-- Map work supersedes the old audio-first next task. Audio remains backlog.
+## Acceptance
 
-## Acceptance checklist
-
-| Status | Item / evidence |
+| State | Evidence |
 | --- | --- |
-| DONE | Three regions, both continuous two-way corridors, flat Yamuna-inspired bridge, Gurgaon avenue loop, Noida sector grid; Gurgaon→Noida graph routes pass Delhi |
-| DONE | 10,032.35m unique centreline counted once per physical road; measured region/route lengths and units in WORLD_MAP.md |
-| DONE | Shared stable IDs, directed left-hand lanes, junction transitions, nearest same-side routing, legal reverse-goal loops and courier plaza approach; unreachable/water goals rejected |
-| DONE | Player-following local radar and phone regional overview, region labels, route distance and offscreen targets |
-| DONE | Spatial hash includes rotated/spanning solids; swept narrow phase retained; collision remains globally available independent of camera/speed |
-| DONE | Regional pads clear every car and driver door; preserve mode/progress, cancel active jobs without payout, fail atomically when all pads blocked |
-| DONE | Capped local traffic, forward junction ports, approach reservations, physical on-segment lookahead; every outer onward turn clears in an exhaustive movement regression |
-| DONE | Regional fare/dispatch pay once through Game; Noida recovery and reward/settings/rides reload PASS in controlled browser wiring, zero errors |
-| DONE | Three warmed controlled cycles: 356 geometries / 94 textures; final Noida view 103 draws / 18,305 triangles, no growing counts |
-| DONE | All 46 named logic cases, lint/build; CI clean install, original gameplay browser, production smoke and regional wiring all PASS |
-| DONE | Both regional round trips with ordinary keyboard inputs in two normal CP-start sessions; full sector/avenue tours, bridge both ways, fare/recovery and reload checks; controller assistance disclosed in evidence |
-| BLOCKED | Real M1 8GB / named Android FPS, startup, boundary hitches, human handling/enjoyment and pacing: no physical devices attached |
+| DONE | Taxi runtime/module, onboarding, phone/HUD/prompts, fare/passenger objectives/targets/rewards removed. Current source/bundle reference audit clean. Legacy fields retire without resetting money/settings/courier progress |
+| DONE | Connected250m Market Lane, chai/paan/juice, original bilingual signs, counters/props, benches/crossing/parking/cold-store bay; total unique road centreline10,282.35m. Existing NCR routes/handling/courier/story/recovery retained |
+| DONE | Local CC0 rigged adult,21 original authored clips, hand-bone cup/phone,10 persistent market adults, bounded queues/seats/particles and local displaced-driver retreat.120s simulation: no static/vehicle clearance violation, minimum customer separation0.63m |
+| DONE | Optional atomic fictional purchases/consumption, goods delivery plus explicit receipt follow-up,650 reward/trust once;60 logic tests/lint/build PASS. Same-key v3 migration retains v1/v2 money/settings, zero-cash, backup/corrupt/unknown/storage-failure safeguards |
+| DONE | Stable civilian identity/occupants/seats/owner/doors, reserved clearance-checked transfer, no dual control or stolen-car recycling. Market occupied car and Noida traffic takeover/reentry verified; driver stays local after leaving/returning |
+| DONE | Full ordinary-input shipped-dist street loop PASS: park→buy/cancel→sit/drink→paan/juice→goods task→crossing→occupied takeover→drive→DelhiOS receipt→once reward/reload. Zero browser/asset errors. No actor placement/debug API/artificial clock |
+| DONE | Focused touch purchase/landscape/portrait/focus-loss cancellation, saved mute/wallet, final secondary-button contrast and bounds. Repeated controlled region visits:477 geometries/114 textures/11 actors in each warmed cycle |
+| DONE | Final91c14e4 visual/reverse-sign/preset/resource/disposal gate:544 geometries/135 textures across warmed cycles; dispose0 geometries/1 stale DFG_LUT counter, context lost, zero errors |
+| DONE | Final91c14e4 shipped-dist production regression: ordinary courier once reward, recovery both modes, migration/backup/zero-cash, settings/reward reload, simultaneous touch/cancel, portrait/landscape, blocked storage; zero errors |
+| BLOCKED | Physical M1 8GB/Android frame times, human enjoyment/art/audio acceptance: devices unavailable. Software rendering is functional evidence only |
+| BLOCKED | Protected preview inspection/play: proxy/API403. No protection or credential changes authorized or attempted |
 
-## Architecture and policies
+## Architecture
 
-`world/WorldRoads.ts` owns metre-scale roads/junctions, directed lanes and legal
-transitions, bays/pads, barriers and regional building/trunk colliders. CP keeps
-its radius/scale, colonnades, park and mission access. Geography is original and
-fictional, not a road-accurate city replica. The road centreline total does not
-count lanes twice. Outer lane ports make forward turns inside overlapping rendered
-junction pavement; wide junctions/corridor mouths allow U-turns. NPCs prefer onward
-roads. `Navigation.ts` uses directed Dijkstra and bounded 750ms UI rerouting.
+`WorldRoads` owns shared market graph IDs; `Navigation` explicit paved approaches; `WalkingNavigation` local furniture-safe foot routes. `MarketLayout` solids match `MarketView` props/facades. `Neighborhood` owns durable purchase/consumption/delivery/receipt/reward; `ProgressStore` commits wallet and inventory/trust in one record. No real bank, financial information, external QR transaction or backend. Active jobs, locations and car ownership are session state, not resumable collections. Recovery cancels active work, including pending receipts, without payout; all-blocked recovery changes nothing.
 
-`RegionalView.ts` shares box/plane/foliage resources, instances buildings/markings
-and activates bounded chunks. CP scenery and vehicle views activate locally;
-lightweight metadata stays global. All static collision remains in a 48m spatial
-hash rather than being camera-streamed, so fast movement cannot outrun activation.
-Game's existing owned-resource disposal traverses hidden objects as well.
+`HumanoidView` shares geometry, clones skeletons/mixers, blends clips and attaches props to bones. `StreetPeople` reserves queue/seat positions, bounds waits and avoids static/vehicle/person obstacles. Market routines stay on the north pavement; displaced drivers retain local roadside targets. `VehicleController` retains identity/appearance/condition and seat occupants. `InteractionSystem` reserves1.1s, revalidates door clearance, cancels safely on interruptions and commits one controller owner. Only the right driver door is usable. `TrafficSystem` excludes reserved/non-AI/protected cars from AI and recycling. Pedestrian colliders affect both AI and player cars. `StreetAudio` has fixed synthetic spatial beds/engine/tire voices, gesture start, saved mute/volume, pause/background suspension and disposal.
 
-Traffic defaults to six, capped at ten; 6m/s CP, 8m/s outer cities, 12m/s corridors.
-Closest arrivals reserve outer junctions before entry, stable index breaks ties,
-and ownership lasts until the car exits clear. Probe positions clamp to the current
-movement segment and use physical body dimensions; swept movement is the final
-guard. Nearby blocked cars wait. Only distant cars (>650m) recycle to clear spots
-300–500m from focus, away from bays/actors, at one attempt/car/second. No dynamic
-detours or unbounded queues are claimed. Exhaustive turn tests cover actual movement,
-not only graph connectivity.
+## Verification / evidence
 
-Regional taxis use routed distance; dispatch reuses the existing story runner:
-Delhi pickup → Gurgaon bay, 12 minutes, ₹2,400, then optional Noida fare via Delhi.
-Existing courier/chapter/taxi/fleet controls remain. Spare cars occupy adjacent
-paved bays so CP lanes stay clear. Each accepted completion pays once; original
-replay-reward policy remains. Recovery is free and cancels active work without pay.
+Local final60 tests/lint/build PASS. The complete receipt production loop usedcb526af gameplay and076ef4d harness; later runtime edits are CSS button contrast and sign back-face printing only, separately inspected. Actual routes:127.734m CP→market (75.911wallseconds),160.1m car→cold-store (59.259wallseconds), off-lane parking(-169.4,-12.8). These are software functional timings, not device pacing/FPS. Reward15630 total cash after20 purchase and650 delivery, inventory0/trust1 retained on reload.
 
-ProgressStore/schema v2/key are unchanged: v1 migration, legitimate zero cash,
-backup restoration, corrupt/unknown preservation and storage failure checks pass.
-No location/road IDs are persisted. Active jobs/positions reset on reload; there
-is no active-job resume. No paid APIs, runtime backend, imported game assets,
-new engine, combat or multiplayer was added.
+Reviewed images and disclosed capture/JSON: [evidence](evidence/LIVING_DELHI.md). Capture has six real frames across10.81seconds and mostly shows the opening phase; it is not a smooth full takeover or journey recording. Successful transfer is separately asserted in the wiring JSON and shown by the cabin screenshot. Counter/feet/hand/cup/driver and modal images were inspected. Character motion remains stylized/original, not mocap; only the compact has the complete improved art pass. Sedan/SUV art, recorded Delhi ambience, richer exit animation and city-wide pedestrian crossings remain future work.
 
-## Verification and exact continuation
+Published6ad73b4 full CI PASS: https://github.com/deepdharia/NCR-Drive/actions/runs/39145306406 (retained browser, production, regional, living wiring/input loop, visual/preset/disposal). It predates the explicit receipt follow-up. Fullc722f17 CI PASS: https://github.com/deepdharia/NCR-Drive/actions/runs/39160947848 . Final91c14e4 has also passed retained browser/production/regional steps; its rerun continues at publication: https://github.com/deepdharia/NCR-Drive/actions/runs/39161675668 . This last runtime delta is reverse sign printing, verified locally with the full visual/preset/disposal and shipped production regression gates. See PLAYTESTS for final updates and software resource/profile results. Whole outer-region input journeys were not repeated in this milestone; legal graph/whole-car geometry/regional recovery/dispatch gates passed.
 
-Test environment: managed Linux x86_64, Node 24.19.0, Chromium 154.0.8037.57 /
-SwiftShader. Resource counters and functionality do not establish device FPS.
-
-```sh
-npm ci
-npm test
-npm run lint
-npm run build
-export PLAYWRIGHT_MODULE=/workspace/tools/browser/node_modules/playwright/index.mjs
-export CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium
-npm run test:regional-wiring
-npm run test:regional-drive
-npm run test:production
-node tests/browser-smoke.mjs
-```
-
-The drive harness reads displayed coordinates/heading and sends ordinary keys,
-including reverse when blocked. It does not place actors or alter the clock.
-It follows avenue/grid waypoints, waits for real passenger/reward UI states and
-checks reload. The wiring harness deliberately places actors through a development
-module interception; those results are not full driven routes. Static scene views
-are also explicitly controlled. Production has no game/debug reference.
-
-Earlier input attempts found and fixed parked-car lane blockage, late junction
-yielding, backward turn seams and a false lookahead rail obstruction. The last
-bug was reproduced with one NPC and no actors; the all-outer-turn test failed
-before the fix and now passes every transition. No barriers/tests/systems were
-disabled. Partial evidence is retained as `verified-outbound-986308b.json` and
-`verified-city-loop-09d4f96.json` under test-results; neither is a completed loop.
-
-## Final delivery evidence
-
-Both regional round trips are complete on implementation c844016. They ran in
-separate normal CP-spawn sessions after an interruption; no actor placement or
-artificial clock was used for the driving. The Gurgaon session completed its
-fare, local recovery and avenue tour before interruption. Its observed leg values
-are transcribed from live outputs; its final browser-error aggregate is unavailable.
-The Noida scope completed sector streets, the bay, both bridge directions, the
-Delhi return and reload; its final status is passed with zero browser/asset errors.
-
-A near-bay harness bug needed one test-controller counter assist to trigger its
-existing keyboard reverse branch. Game/actor/mission/clock state was untouched.
-The harness guard is fixed for future runs. This assistance and the stationary
-diagnosis time are explicit in PLAYTESTS.md and the durable evidence record:
-`docs/evidence/connected-world-verification.json`. Do not call this an unassisted
-automation run or a human playtest. Earlier failed/partial attempts remain labelled.
-
-No active browser work remains. All source, tests, topology, provenance and
-verification records are on draft PR #6; obtain the final documentation head with
-`git log -1`. The implementation SHA/bundle above is unchanged by later docs and
-test-harness commits. Main remains untouched.
-
-Owner next step: run the concise M1/Android checklist in PLAYTESTS.md. Actual
-30 FPS, frame-time/retention/hitch budgets, enjoyment and 3–6 minute ordinary-speed
-pacing are not validated. Headless wall times include slow rendering, conservative
-turns/traffic and harness diagnosis and exceed the design target; do not present
-them as real-device drive times. Supplied Vercel preview remains unverified (403).
-Audio remains backlog. Keep the PR draft until owner/device acceptance; no
-background continuation is promised after this session ends.
-
-## Visual Realism V1 — latest delivery (18 October 2026)
-
-Dedicated branch `improve/visual-realism-v1`, clean refreshed parent
-`3b5e593d1460dc8aaf8599bf416dbaff5d785f43`. Implementation
-`0287b78ec245c8161bd197b4b6c4e8ccb53f141b`, bundle
-`dist/assets/index-BZgxjkF-.js`. Draft PR #7 targets the connected-world branch:
-https://github.com/deepdharia/NCR-Drive/pull/7 . Later documentation-only commits
-do not change that game bundle; use `git log -1` for the delivery head. The older
-connected-world evidence above belongs to the parent, not a new V1 road trip.
-
-| Status | Visual acceptance / evidence |
-| --- | --- |
-| DONE | CP ring/strip union, junction pavement/curb mouths, crossings, painted refuges and wider east-avenue planted median; rendered surface coverage and all-roster clearance tests |
-| DONE | Shared world-metre PBR asphalt, plaster variation, paving/concrete/glass, neutral daylight/haze/PCF shadows and ACES; eight representative scenes inspected |
-| DONE | Modular facade/rear/roof detail, signs, furniture, original ceremonial arch and supported flyover/courier canopy; no imported/proprietary assets |
-| DONE | Round 0.32m tires, wheel/caliper/brake/body animation, variant trim, traffic proxy LOD and bounded chase look-ahead/FOV; handling unchanged |
-| DONE | Low/Balanced/High validation and v2 persistence, legacy Performance/Detailed mapping; all 51 logic tests, lint and build PASS |
-| DONE | Full visual-browser gate: zero browser/WebGL errors or warnings, all-roster tire contact, three identical warmed region/preset cycles (361 geometries / 98 textures), quality reload and owned-resource/context cleanup |
-| DONE | Final exact-bundle production, original browser and regional wiring PASS; 364.64m planned CP→east-underpass drive with ordinary keys, no actor placement/clock changes, reload and zero errors |
-| DONE | Vercel Git integration preview deployed for the implementation; GitHub status SUCCESS. Remote gameplay not verified: scoped API/protected fetch and worker HTTPS proxy return 403 |
-| BLOCKED | Physical desktop 60 FPS/mobile 30 FPS, M1/Android frame times, startup, retention, boundary hitches and human enjoyment: no real devices attached |
-
-Preview: https://ncr-drive-git-improve-visual-realism-v1-deep-07f0.vercel.app
-Implementation deployment: https://vercel.com/deep-07f0/ncr-drive/FzUCnBVR8jud9S8M7JLwoUpazbxo
-CI SUCCESS for implementation: https://github.com/deepdharia/NCR-Drive/actions/runs/39077737804
-No connected-world/main merge, force-push, Vercel configuration change or
-production promotion occurred. Vercel CLI fallback found no credentials; no
-interactive login was completed or protection settings changed.
-
-Architecture: CentralDelhiLayout supplies static overlay/proxy data;
-CentralDelhiView owns merged road/pavement faces and instanced detail;
-DaylightRig owns one prefiltered environment and two complete shadow targets.
-Caching targets avoids native depth-sampler/resize attachment hazards found in
-r186 browser tests. Low disables shadow rendering, with at most two enabled-mode
-targets retained after toggling; both are freed on shutdown. Hidden LODs remain
-in Game's disposal traversal; generator scratch data is freed before gameplay.
-Game shutdown is idempotent and destroys its owned WebGL context. The engine's
-module-global DFG_LUT leaves an info texture counter of one after disposal;
-zero owned geometries plus context loss are asserted, without private imports.
-
-The flyover is scenery with a clear 6.4m ground underpass. There are no accessible
-elevated ramps or elevated driving. Terrain/physics remain flat. The original
-ceremonial arch is India Gate inspired at a fictional compressed location.
-Foliage and the shared procedural vehicle body remain stylized; no scanned-city
-or photorealism claim. All 10.03km, connections, directed lanes, missions, saves,
-recovery pads and handling remain. Audio stays backlog.
-
-Measured only on managed Linux x86_64 (AMD EPYC 9V45, three logical CPUs exposed),
-Node 24.19.0, Chromium 154.0.8037.57 / SwiftShader. Fixed controlled CP scene,
-960×640, DPR 0.75 Low and 1.0 Balanced/High, 45 RAF frames/profile after GPU drain,
-first ten discarded. The 35 retained frames/profile are software diagnostics,
-not desktop/mobile acceptance or gameplay FPS. Actual numbers and limits live
-in PLAYTESTS.md and docs/evidence/visual-realism-verification.json.
-
-Owner next step: use VISUAL_REALISM.md's named-device checklist to test M1 and
-Android, every CP mouth and underpass both directions, route returns, touch,
-focus loss and three repeat journeys for frame times/retention/hitches. Reconnect
-the Vercel scope only if remote automated inspection is needed. Keep this PR
-draft until visual/device acceptance. Do not resume the rejected shadow resizing
-approach, and do not block this map on audio.
+Next owner step: check the linked final CI status, then playtest Low on M1 and a named Android phone, recording device/browser/settings/frame p50/p95/draws/triangles/resources during the full street loop and repeated regional travel. If CI fails, inspect that specific step before editing; do not repeat the baseline audit. No gameplay implementation is currently left unfinished. Do not reset progress or reimplement retired gameplay. Prior failed harness approaches and fixes are retained in `history/LIVING_DELHI_CHECKPOINTS.md`.

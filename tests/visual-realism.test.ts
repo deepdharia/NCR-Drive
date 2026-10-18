@@ -1,3 +1,4 @@
+import {freshNeighborhood} from '../src/systems/Neighborhood';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { centralRoadContains, centralRoadPolygons, centralSolids, FLYOVER } from '../src/world/CentralDelhiLayout';
@@ -26,7 +27,7 @@ test('rendered CP road union covers directed lanes without overlapping junction 
     const a = i * Math.PI / 3;
     pieces.push([[30, -6], [130, -6], [130, 6], [30, 6]].map(([x, z]) => ({ x: Math.cos(a) * x - Math.sin(a) * z, z: Math.sin(a) * x + Math.cos(a) * z })));
   }
-  for (const lane of lanes.filter(l => l.road.region === 'delhi')) for (let i = 0; i < 100; i++) {
+  for (const lane of lanes.filter(l => l.road.id.startsWith('cp-'))) for (let i = 0; i < 100; i++) {
     // Deliberately avoid polygon-edge ambiguity at the graph's exact endpoints.
     const t = (i + 0.37) / 100, p = { x: lane.start.x + (lane.end.x - lane.start.x) * t, z: lane.start.z + (lane.end.z - lane.start.z) * t };
     assert.ok(centralRoadContains(p));
@@ -59,14 +60,14 @@ test('visual architecture leaves routed regional jobs and returns clear for the 
     }
   }
 });
-test('three render presets round-trip within v2 and migrate old Performance/Detailed settings safely', () => {
+test('three render presets round-trip within v3 and migrate old Performance/Detailed settings safely', () => {
   const values = new Map<string, string>(), storage = { getItem: (k: string) => values.get(k) ?? null, setItem: (k: string, v: string) => { values.set(k, v); } };
   assert.equal(resolvedQuality(defaultSettings()), 'balanced');
   assert.equal(resolvedQuality({ performanceMode: true }), 'low');
   assert.equal(nextQuality(nextQuality(nextQuality('balanced'))), 'balanced');
   for (const quality of ['low', 'balanced', 'high'] as const) {
-    assert.ok(writeProgress(storage, { version: 2, cash: 0, rides: 3, courierCompleted: true, settings: { ...defaultSettings(), graphicsQuality: quality } }));
-    const loaded = loadProgress(storage); assert.equal(loaded.progress.version, 2); assert.equal(loaded.progress.cash, 0);
+    assert.ok(writeProgress(storage, { version: 3, neighborhood:freshNeighborhood(), cash: 0, courierCompleted: true, settings: { ...defaultSettings(), graphicsQuality: quality } }));
+    const loaded = loadProgress(storage); assert.equal(loaded.progress.version, 3); assert.equal(loaded.progress.cash, 0);
     assert.equal(resolvedQuality(loaded.progress.settings), quality); assert.equal(loaded.progress.settings.performanceMode, quality === 'low');
   }
   storage.setItem(PROGRESS_KEY, JSON.stringify({ version: 2, cash: 17, rides: 0, courierCompleted: false, settings: { ...defaultSettings(), graphicsQuality: 'ultra' } }));

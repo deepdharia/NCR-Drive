@@ -1,0 +1,230 @@
+{
+  "evidence": [
+    {
+      "twoMinuteControlledRoutineSimulation": {
+        "states": [
+          "vendor",
+          "leave",
+          "walk",
+          "wait",
+          "order",
+          "seat",
+          "drink"
+        ],
+        "minDistance": 0.6301062505879469,
+        "closest": {
+          "frame": 447,
+          "a": "market-adult-4",
+          "b": "market-adult-5",
+          "states": [
+            "walk",
+            "walk"
+          ],
+          "positions": [
+            {
+              "x": -181.6756292657079,
+              "z": -10.631472945970447
+            },
+            {
+              "x": -181.74661935577325,
+              "z": -11.257567422980518
+            }
+          ]
+        },
+        "blocked": 0,
+        "reservations": 1,
+        "population": 10,
+        "actors": [
+          {
+            "id": "market-adult-0",
+            "state": "vendor",
+            "time": 122.03329999999563,
+            "position": {
+              "x": -164,
+              "z": -17.6
+            },
+            "target": {
+              "x": -164,
+              "z": -17.6
+            }
+          },
+          {
+            "id": "market-adult-1",
+            "state": "vendor",
+            "time": 122.03329999999563,
+            "position": {
+              "x": -190,
+              "z": -17.6
+            },
+            "target": {
+              "x": -190,
+              "z": -17.6
+            }
+          },
+          {
+            "id": "market-adult-2",
+            "state": "vendor",
+            "time": 122.03329999999563,
+            "position": {
+              "x": -218,
+              "z": -17.6
+            },
+            "target": {
+              "x": -218,
+              "z": -17.6
+            }
+          },
+          {
+            "id": "market-adult-3",
+            "state": "walk",
+            "time": 12.899999999999965,
+            "position": {
+              "x": -203.9399883625813,
+              "z": -11.540185654997565
+            },
+            "target": {
+              "x": -164,
+              "z": -12.7
+            }
+          },
+          {
+            "id": "market-adult-4",
+            "state": "leave",
+            "time": 6.966666666666652,
+            "position": {
+              "x": -208.24777154154657,
+              "z": -10.806813920754207
+            },
+            "target": {
+              "x": -232,
+              "z": -10.5
+            }
+          },
+          {
+            "id": "market-adult-5",
+            "state": "seat",
+            "time": 3.8333333333333295,
+            "position": {
+              "x": -222.87333458283516,
+              "z": -11.522533272339832
+            },
+            "target": {
+              "x": -228,
+              "z": -11.3
+            },
+            "seat": "juice-a"
+          },
+          {
+            "id": "market-adult-6",
+            "state": "leave",
+            "time": 2.7,
+            "position": {
+              "x": -186.57762708930434,
+              "z": -11.600230378597379
+            },
+            "target": {
+              "x": -240,
+              "z": -10.4
+            }
+          },
+          {
+            "id": "market-adult-7",
+            "state": "leave",
+            "time": 4.966666666666659,
+            "position": {
+              "x": -164.55977743978136,
+              "z": -10.90651510428806
+            },
+            "target": {
+              "x": -232,
+              "z": -10.4
+            }
+          },
+          {
+            "id": "market-adult-8",
+            "state": "leave",
+            "time": 1.7333333333333354,
+            "position": {
+              "x": -207.9169319300676,
+              "z": -12.343036520204567
+            },
+            "target": {
+              "x": -224,
+              "z": -10.4
+            }
+          },
+          {
+            "id": "market-adult-9",
+            "state": "walk",
+            "time": 13.56666666666663,
+            "position": {
+              "x": -198.24837423781108,
+              "z": -12.587502772054332
+            },
+            "target": {
+              "x": -190,
+              "z": -12.7
+            }
+          }
+        ]
+      }
+    },
+    {
+      "capture": "living-capture/",
+      "frames": 6,
+      "method": "controlled initial door placement; ordinary F takeover; variable software-rendered frame times"
+    },
+    {
+      "controlledVisitCycles": [
+        {
+          "geometries": 477,
+          "textures": 114,
+          "actors": 11
+        },
+        {
+          "geometries": 477,
+          "textures": 114,
+          "actors": 11
+        },
+        {
+          "geometries": 477,
+          "textures": 114,
+          "actors": 11
+        }
+      ]
+    },
+    {
+      "controlledNoidaTrafficTakeover": {
+        "car": "civilian-4",
+        "owner": "player",
+        "protected": true,
+        "driver": {
+          "x": 3197.5012508757077,
+          "z": 60.1610236163812
+        },
+        "actors": 12
+      },
+      "reentry": "No duplicate driver actor"
+    },
+    {
+      "regionalDriverAfterReturn": {
+        "before": {
+          "x": 3197.5012508757077,
+          "z": 60.1610236163812
+        },
+        "after": {
+          "x": 3197.5012508757077,
+          "z": 60.1610236163812
+        },
+        "target": {
+          "x": 3197.5012508757077,
+          "z": 60.1610236163812
+        },
+        "state": "retreated"
+      }
+    },
+    "Focused touch juice purchase, portrait modal bounds, uncommitted payment focus-loss cancellation and saved mute/wallet passed. Controlled shop placement, not mobile travel."
+  ],
+  "errors": [],
+  "method": "controlled development placement/simulation; not full ordinary-input loop or hardware FPS"
+}

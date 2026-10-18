@@ -31,6 +31,9 @@ node('n-ne',3400,50,'noida'); node('n-se',3400,450,'noida'); node('n-sw',3000,45
 road('n-sector-n',n,'n-ne','noida',24); road('n-sector-ne','n-ne','n-mid-e','noida',24); road('n-sector-se','n-mid-e','n-se','noida',24); road('n-sector-s','n-se','n-sw','noida',24); road('n-sector-sw','n-sw','n-mid-w','noida',24); road('n-sector-nw','n-mid-w',n,'noida',24); road('n-sector-middle','n-mid-w','n-mid-e','noida',24);
 // Wide corridor mouths provide signed, flat turnaround space.
 for(const j of junctions)if(j.region==='gurgaon'||j.region==='noida'||['radial-0','radial-2',g,n].includes(j.id))j.turnaround=true;
+// Living Delhi: a 250 m market street; unchanged vehicle/world scale.
+node('market-west',-380,0,'delhi'); road('market-lane','radial-3','market-west','delhi',18);
+junctions.find(j=>j.id==='market-west')!.turnaround=true;
 export const junctionById = new Map(junctions.map(n => [n.id,n]));
 export function ends(r: Road): [Junction,Junction] { return [junctionById.get(r.from)!,junctionById.get(r.to)!]; }
 export const lanes: Lane[] = roads.flatMap(r => [false,true].map(reverse => {
@@ -61,12 +64,12 @@ export const destinations = [
  {id:'noida-sector18',name:'Noida · Sector 18 bay',region:'noida' as const,x:3200,z:60},
  {id:'noida-gardens',name:'Noida · Sector Gardens bay',region:'noida' as const,x:3200,z:440},
 ];
-export const recoveryPads = [...roads.filter(r=>!r.id.startsWith('cp-')).flatMap(r=>{
+export const recoveryPads = [...roads.filter(r=>!r.id.startsWith('cp-') && r.id!=='market-lane').flatMap(r=>{
  const [a,b]=ends(r),length=distance(a,b),dx=(b.x-a.x)/length,dz=(b.z-a.z)/length;
  return [0.25,0.75].map((t,i)=>({id:`${r.id}-recovery-${i}`,region:r.region,x:a.x+(b.x-a.x)*t+dz*4,z:a.z+(b.z-a.z)*t-dx*4,yaw:Math.atan2(dx,dz)}));
 }), ...[80,112,124].flatMap(radius=>Array.from({length:6},(_,i)=>{const angle=i*Math.PI/3;return {id:`cp-pad-${radius}-${i}`,region:'delhi' as RegionId,x:Math.cos(angle)*radius,z:Math.sin(angle)*radius,yaw:Math.PI/2-angle};}))];
 /** Guard rails at bridge edges: continuous flat deck, water below; no stacked surfaces. */
-export const worldBarriers: Solid[] = roads.filter(r=>!r.id.startsWith('cp-')).flatMap(r=>{
+export const worldBarriers: Solid[] = roads.filter(r=>!r.id.startsWith('cp-') && r.id!=='market-lane').flatMap(r=>{
  const [a,b]=ends(r),len=distance(a,b),yaw=Math.atan2(b.x-a.x,b.z-a.z);
  return [-1,1].map(side=>({x:(a.x+b.x)/2+Math.cos(yaw)*(r.width/2+0.8)*side,z:(a.z+b.z)/2-Math.sin(yaw)*(r.width/2+0.8)*side,width:0.6,depth:len-32,height:1,yaw}));
 });
@@ -86,3 +89,13 @@ export const motorPoolBays = [
 ];
 
 export const medianTrees: Solid[] = roads.filter(r=>r.region==='gurgaon'||r.region==='noida').flatMap(r=>{const [a,b]=ends(r);return [0.25,0.75].map(t=>({x:a.x+(b.x-a.x)*t,z:a.z+(b.z-a.z)*t,width:0.3,depth:0.3,height:3,yaw:0}));});
+
+/** Short emergency retreat local to a civilian door, including distant regions.
+ * Corridors keep adults inside their guard rails; open Delhi roads use pavements. */
+export function roadsideRetreat(point:Point):Point {
+ const r=nearestRoad(point),[a,b]=ends(r),len=distance(a,b),dx=(b.x-a.x)/len,dz=(b.z-a.z)/len,normal={x:dz,z:-dx},p=projection(point,a,b).point;
+ const signed=(point.x-p.x)*normal.x+(point.z-p.z)*normal.z,side=signed>=0?1:-1;
+ const shoulder=r.id.startsWith('cp-')||r.id==='market-lane'?r.width/2+4:r.width/2-1.6;
+ const offset=Math.max(Math.abs(signed),shoulder);
+ return {x:p.x+normal.x*side*offset-dx*3,z:p.z+normal.z*side*offset-dz*3};
+}
