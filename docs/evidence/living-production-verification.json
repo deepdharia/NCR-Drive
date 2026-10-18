@@ -1,0 +1,188 @@
+{
+  "evidence": [
+    {
+      "label": "CP → Market Lane · park beside Neem Chai",
+      "metres": 127.73417050122427,
+      "wallSeconds": 75.911,
+      "arrival": {
+        "x": -162.6,
+        "z": 4,
+        "yaw": 4.799655442984406,
+        "speed": 0
+      }
+    },
+    {
+      "parking": {
+        "x": -169.4,
+        "z": -12.8,
+        "yaw": 3.2812189937493397,
+        "speed": 0
+      },
+      "checked": "Off the carriageway beside the public pull-off; precise bay alignment is not asserted."
+    },
+    {
+      "walk": "Step clear of the parked car",
+      "arrival": {
+        "x": -165.7,
+        "z": -13.4
+      }
+    },
+    {
+      "walk": "Reach the clear pavement",
+      "arrival": {
+        "x": -166.2,
+        "z": -9.9
+      }
+    },
+    {
+      "walk": "Meet Neem Chai vendor",
+      "arrival": {
+        "x": -164.2,
+        "z": -11.9
+      }
+    },
+    "Visited vendor, cancelled free, then confirmed fictional UPI; chai delivered once for ₹20.",
+    {
+      "walk": "Find a free bench · pavement",
+      "arrival": {
+        "x": -164.2,
+        "z": -9.8
+      }
+    },
+    {
+      "walk": "Find a free bench · frontage",
+      "arrival": {
+        "x": -155.3,
+        "z": -9.8
+      }
+    },
+    {
+      "walk": "Find a free bench",
+      "arrival": {
+        "x": -155.3,
+        "z": -11.2
+      }
+    },
+    {
+      "walk": "Leave bench via pavement · pavement",
+      "arrival": {
+        "x": -154,
+        "z": -9.7
+      }
+    },
+    {
+      "walk": "Leave bench via pavement · frontage",
+      "arrival": {
+        "x": -165,
+        "z": -9.7
+      }
+    },
+    {
+      "walk": "Leave bench via pavement",
+      "arrival": {
+        "x": -165,
+        "z": -9.7
+      }
+    },
+    {
+      "walk": "Gali Baithak neighborhood news · pavement",
+      "arrival": {
+        "x": -165,
+        "z": -9.7
+      }
+    },
+    {
+      "walk": "Gali Baithak neighborhood news · frontage",
+      "arrival": {
+        "x": -190.2,
+        "z": -9.7
+      }
+    },
+    {
+      "walk": "Gali Baithak neighborhood news",
+      "arrival": {
+        "x": -189.9,
+        "z": -11.6
+      }
+    },
+    {
+      "walk": "Juice corner approach · pavement",
+      "arrival": {
+        "x": -189.9,
+        "z": -9.5
+      }
+    },
+    {
+      "walk": "Juice corner approach · frontage",
+      "arrival": {
+        "x": -214.7,
+        "z": -9.7
+      }
+    },
+    {
+      "walk": "Juice corner approach",
+      "arrival": {
+        "x": -215.2,
+        "z": -10.2
+      }
+    },
+    {
+      "walk": "Meet juice vendor",
+      "arrival": {
+        "x": -217.9,
+        "z": -11.9
+      }
+    },
+    {
+      "walk": "Marked crossing north · pavement",
+      "arrival": {
+        "x": -217.9,
+        "z": -9.8
+      }
+    },
+    {
+      "walk": "Marked crossing north · frontage",
+      "arrival": {
+        "x": -243.9,
+        "z": -9.5
+      }
+    },
+    {
+      "walk": "Marked crossing north",
+      "arrival": {
+        "x": -243.7,
+        "z": -11
+      }
+    },
+    {
+      "walk": "Cross at zebra crossing",
+      "arrival": {
+        "x": -243.9,
+        "z": 14.1
+      }
+    },
+    {
+      "walk": "Occupied civilian car door",
+      "arrival": {
+        "x": -182,
+        "z": 14.4
+      }
+    },
+    "Received goods mission, crossed at zebra, took occupied civilian car through ordinary door interaction.",
+    {
+      "label": "Fruit crate → Delhi Cold Store",
+      "metres": 160.10000000000002,
+      "wallSeconds": 59.259,
+      "arrival": {
+        "x": -340.3,
+        "z": 4,
+        "yaw": 4.694935687864747,
+        "speed": 0
+      }
+    },
+    "Completed Nimbu’s receipt follow-up through DelhiOS.",
+    "Complete production loop passed using ordinary inputs. ₹650 paid once; wallet, consumed cup and trust persisted. No browser/asset errors."
+  ],
+  "errors": [],
+  "method": "production dist; ordinary keyboard/UI only; 640x480 CSS viewport at DPR0.25 for functional software-rendered driving, not hardware FPS or art quality"
+}

@@ -11,7 +11,7 @@ export class MarketView {
   const concrete=worldSurfaceMaterial('concrete'),wood=new THREE.MeshStandardMaterial({color:0x76583a,roughness:0.9}),metal=new THREE.MeshStandardMaterial({color:0x7b8b87,metalness:0.7,roughness:0.35});
   const stone=new THREE.MeshStandardMaterial({color:0xcebea2,roughness:0.95}),leaf=new THREE.MeshStandardMaterial({color:0x506c42,roughness:1}),dark=new THREE.MeshStandardMaterial({color:0x344a43,roughness:0.9});
   const add=(m:THREE.Material,x:number,y:number,z:number,w:number,h:number,d:number,g:THREE.BufferGeometry=box)=>{const o=new THREE.Mesh(g,m);o.position.set(x,y,z);o.scale.set(w,h,d);o.castShadow=o.receiveShadow=true;this.group.add(o);return o;};
-  const label=(text:string,x:number,y:number,z:number,w:number,bg='#264e43')=>{const o=new THREE.Mesh(new THREE.PlaneGeometry(w,w/5),new THREE.MeshStandardMaterial({map:signTexture(text,undefined,bg),roughness:0.9,side:THREE.DoubleSide}));o.position.set(x,y,z);this.group.add(o);};
+  const label=(text:string,x:number,y:number,z:number,w:number,bg='#264e43')=>{const o=new THREE.Mesh(new THREE.PlaneGeometry(w,w/5),new THREE.MeshStandardMaterial({map:signTexture(text,undefined,bg),roughness:0.9,side:THREE.FrontSide}));o.position.set(x,y,z);const reverse=o.clone();reverse.rotation.y=Math.PI;reverse.position.z-=0.01;this.group.add(o,reverse);};
   add(concrete,-255,0.005,-12.7,250,0.06,7.4);add(concrete,-255,0.005,12.7,250,0.06,7.4);
   const bay=marketParkingBay,parkingPaint=new THREE.MeshBasicMaterial({color:0xd4bd82});
   for(const dx of [-bay.width/2,bay.width/2])add(parkingPaint,bay.x+dx,0.05,bay.z,0.1,0.02,bay.depth);

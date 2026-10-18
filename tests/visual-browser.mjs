@@ -25,6 +25,7 @@ try {
   const scenes = [
     ['cp-chase', { x: -44, z: 0 }, 0, null, null],
     ['cp-overview', { x: -44, z: 0 }, 0, [92, 82, 108], [0, 0, 0]],
+    ['market-sign-reverse', {x:-182,z:12.5}, Math.PI/2, [-149,4,-19], [-137,4,-12]],
     ['east-underpass', { x: 155, z: -4 }, Math.PI / 2, [140, 5, 10], [210, 5, 0]],
     ['ceremonial-arch', { x: 32, z: -95 }, 0, [12, 9, -82], [32, 8, -112]],
     ['courier-plaza', { x: -99, z: 24 }, Math.PI / 2, [-83, 7, 41], [-104, 3, 24]],
