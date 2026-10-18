@@ -89,3 +89,13 @@ export const motorPoolBays = [
 ];
 
 export const medianTrees: Solid[] = roads.filter(r=>r.region==='gurgaon'||r.region==='noida').flatMap(r=>{const [a,b]=ends(r);return [0.25,0.75].map(t=>({x:a.x+(b.x-a.x)*t,z:a.z+(b.z-a.z)*t,width:0.3,depth:0.3,height:3,yaw:0}));});
+
+/** Short emergency retreat local to a civilian door, including distant regions.
+ * Corridors keep adults inside their guard rails; open Delhi roads use pavements. */
+export function roadsideRetreat(point:Point):Point {
+ const r=nearestRoad(point),[a,b]=ends(r),len=distance(a,b),dx=(b.x-a.x)/len,dz=(b.z-a.z)/len,normal={x:dz,z:-dx},p=projection(point,a,b).point;
+ const signed=(point.x-p.x)*normal.x+(point.z-p.z)*normal.z,side=signed>=0?1:-1;
+ const shoulder=r.id.startsWith('cp-')||r.id==='market-lane'?r.width/2+4:r.width/2-1.6;
+ const offset=Math.max(Math.abs(signed),shoulder);
+ return {x:p.x+normal.x*side*offset-dx*3,z:p.z+normal.z*side*offset-dz*3};
+}

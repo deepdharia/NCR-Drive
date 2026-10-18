@@ -21,7 +21,7 @@ import type { WalletSnapshot } from '../systems/Neighborhood';
 import { defaultSettings, loadProgress, writeProgress } from '../systems/ProgressStore';
 import { recoverToRoad } from '../systems/RecoverySystem';
 import { createDistrictLayout } from '../world/DistrictLayout';
-import { motorPoolBays } from '../world/WorldRoads';
+import { motorPoolBays, roadsideRetreat } from '../world/WorldRoads';
 import { RegionalView } from '../world/RegionalView';
 import { DistrictView } from '../world/DistrictView';
 import { CentralDelhiView } from '../world/CentralDelhiView';
@@ -101,7 +101,7 @@ export class Game {
     this.scene.add(this.playerView.group, ...this.fleetViews.map(v => v.group), ...this.trafficViews.map(v => v.group));
     this.camera = new CameraRig(root.clientWidth / root.clientHeight);
     this.interaction = new InteractionSystem(this.player, this.car, this.world, () => [...this.otherCars(),...this.people.colliders]);
-    this.interaction.onDisplaced=(id,point)=>this.people.displace(id,point);
+    this.interaction.onDisplaced=(id,point)=>{const target=roadsideRetreat(point);this.people.displace(id,point,this.world.isClear(target,0.35,0,1.8,this.otherCars())?target:point);this.ui.toast('Driver retreats. Nearby neighbors are startled.');};
     this.interaction.onTransferred=()=>{this.input.reset();this.input.reverse=false;if(this.car.driving)this.camera.enterVehicle();this.refreshUI();};
     this.player.teleport({ x: this.interaction.door.x - 0.45, z: this.interaction.door.z });
     this.input = new InputController(this.renderer.domElement, {
@@ -229,7 +229,9 @@ export class Game {
     const quality = resolvedQuality(this.settings);
     this.fleetViews.forEach((view,i)=>{view.group.visible=distance(this.fleet[i].position,focus)<450;if(view.group.visible){view.update(this.fleet[i],dt);view.setDetail(distance(this.fleet[i].position,focus),quality);}});
     this.trafficViews.forEach((view,i)=>{view.group.visible=distance(this.traffic.cars[i].position,focus)<450;if(view.group.visible){view.update(this.traffic.cars[i],dt);view.setDetail(distance(this.traffic.cars[i].position,focus),quality);}});
-    this.central.update(focus);this.market.update(dt,focus);this.audio.update(focus,this.camera.yaw,this.car.position,this.car.speed,this.car.driving,this.car.braking,this.car.steering);
+    this.central.update(focus);this.market.update(dt,focus);
+    const audible=this.car.driving?this.car:this.cars.filter(c=>c.owner==='ai'&&Math.abs(c.speed)>0.1&&distance(c.position,focus)<90).sort((a,b)=>distance(a.position,focus)-distance(b.position,focus))[0];
+    this.audio.update(focus,this.camera.yaw,audible?.position??this.car.position,audible?.speed??0,!!audible,audible?.braking??false,audible?.steering??0);
     this.regional.update(this.car.driving ? this.car.position : this.player.position);
     this.district.update(this.car.driving ? this.car.position : this.player.position); this.camera.update(dt, this.player, this.car, this.world);
   }
@@ -246,9 +248,9 @@ export class Game {
     while (this.accumulator >= step) {
       this.handover=Math.max(0,this.handover-step);this.interaction.update(step);
       if (!this.car.driving && !this.seated && !this.interaction.busy && this.handover<=0) this.player.update(step, this.input.foot(), this.camera.yaw, this.world, this.car.collider, [...this.otherCars(),...this.people.colliders]);
-      if(!this.interaction.busy)this.car.update(step, this.input.drive(), this.world, this.otherCars());
+      if(!this.interaction.busy)this.car.update(step, this.input.drive(), this.world, [...this.otherCars(),...this.people.colliders]);
       const pedestrian = { ...this.player.position, width: 0.8, depth: 0.8, height: 1.8, yaw: 0 };
-      this.traffic.update(step, this.world, [...this.fleet.map(c => c.collider), ...(!this.car.driving ? [pedestrian] : [])], this.car.driving ? this.car.position : this.player.position);
+      this.traffic.update(step, this.world, [...this.fleet.map(c => c.collider), ...this.people.colliders,...(!this.car.driving ? [pedestrian] : [])], this.car.driving ? this.car.position : this.player.position);
       const focus=this.car.driving?this.car.position:this.player.position;
 
       if(this.seated&&this.standing>0){this.standing-=step;if(this.standing<=0){const exits=[{x:this.player.position.x,z:this.player.position.z+0.85},{x:this.player.position.x-1,z:this.player.position.z+0.6}];const clear=exits.find(p=>this.world.isClear(p,0.32,0,1.8,[...this.cars.map(c=>c.collider),...this.people.colliders]));if(clear){this.stand(true);this.player.teleport(clear);}else{this.standing=0;this.playerView.overrideAnimation='sit';this.ui.toast('Someone is in front of the seat. Wait, then press F to stand.');}}}

@@ -5,8 +5,8 @@ import type { Point } from '../core/math';
 import type { CollisionWorld, Solid } from '../core/CollisionWorld';
 import type { VehicleController } from '../vehicle/VehicleController';
 import * as THREE from 'three';
-type State='walk'|'wait'|'order'|'seat'|'drink'|'leave'|'react'|'flee'|'vendor';
-interface Person {id:string;position:Point;view:HumanoidView;state:State;time:number;shop:number;target:Point;speed:number;yaw:number;seat?:string;waypoints:Point[];blocked:number;action?:string;actionTime?:number}
+type State='walk'|'wait'|'order'|'seat'|'drink'|'leave'|'react'|'flee'|'vendor'|'retreated';
+interface Person {id:string;position:Point;view:HumanoidView;state:State;time:number;shop:number;target:Point;speed:number;yaw:number;seat?:string;waypoints:Point[];blocked:number;action?:string;actionTime?:number;civilianDriver?:boolean}
 /** Ten permanent adults, no camera-facing spawn/recycle. Bounded reservations and timers. */
 export class StreetPeople {
  readonly group=new THREE.Group();readonly reservations=new Reservations();readonly people:Person[]=[];alert=0;
@@ -17,9 +17,9 @@ export class StreetPeople {
  }}
  serve(shop:number):void {const vendor=this.people[shop];vendor.action='handover';vendor.actionTime=1.2;}
  get colliders():Solid[]{return this.people.filter(p=>p.state!=='vendor').map(p=>({...p.position,width:0.6,depth:0.6,height:1.75,yaw:0}));}
- displace(id:string,point:Point):void {
+ displace(id:string,point:Point,target:Point={x:point.x-3,z:point.z}):void {
   if(this.people.some(p=>p.id===id))return;
-  const view=new HumanoidView(0x8f8070);this.group.add(view.group);this.people.push({id,position:{...point},view,state:'flee',time:0,shop:0,target:{x:point.x-6,z:point.z<0?-12:16},speed:0,yaw:0,waypoints:[],blocked:0});this.alert=8;
+  const view=new HumanoidView(0x877f63);view.group.scale.setScalar(0.93);this.group.add(view.group);this.people.push({id,position:{...point},view,state:'flee',time:0,shop:0,target:{...target},civilianDriver:true,speed:0,yaw:0,waypoints:[],blocked:0});this.alert=8;
  }
  private release(p:Person):void {p.waypoints=[];this.reservations.release(p.id);p.seat=undefined;}
  private leaveSeat(p:Person,world:CollisionWorld,cars:readonly VehicleController[],player?:Point):boolean {
@@ -31,9 +31,9 @@ export class StreetPeople {
  update(dt:number,world:CollisionWorld,cars:readonly VehicleController[],focus:Point,player?:Point):void {
   this.alert=Math.max(0,this.alert-dt);
   for(const p of this.people){
-   p.time+=dt;p.view.group.visible=distance(p.position,focus)<100;if(!p.view.group.visible){if(p.state!=='vendor'&&this.leaveSeat(p,world,cars,player)){this.release(p);p.state='leave';p.time=0;p.target={x:-238+p.shop*8,z:-10.5};}continue;}
+   p.time+=dt;p.view.group.visible=distance(p.position,focus)<100;if(!p.view.group.visible){if(p.civilianDriver){this.release(p);p.state='retreated';p.time=0;p.target={...p.position};}else if(p.state!=='vendor'&&this.leaveSeat(p,world,cars,player)){this.release(p);p.state='leave';p.time=0;p.target={x:-238+p.shop*8,z:-10.5};}continue;}
    const danger=cars.find(c=>c.kmh>15&&distance(c.position,p.position)<6);
-   if(danger&&p.state!=='vendor'&&p.state!=='flee'&&p.state!=='react'&&this.leaveSeat(p,world,cars,player)){this.release(p);p.state='react';p.time=0;p.target={x:p.position.x+(p.position.x<danger.position.x?-4:4),z:p.position.z<0?-12.8:12.8};this.alert=5;}
+   if(danger&&p.state!=='vendor'&&p.state!=='flee'&&p.state!=='react'&&this.leaveSeat(p,world,cars,player)){this.release(p);p.state='react';p.time=0;const dx=p.position.x-danger.position.x,dz=p.position.z-danger.position.z,len=Math.hypot(dx,dz)||1;p.target=p.civilianDriver?{x:p.position.x+dx/len*3,z:p.position.z+dz/len*3}:{x:p.position.x+(dx<0?-4:4),z:-12.8};this.alert=5;}
    if(p.state==='react'&&p.time>0.8){p.state='flee';p.time=0;}
    if(p.state==='walk'){
     const queue=`queue-${p.shop}`;
@@ -48,7 +48,7 @@ export class StreetPeople {
    }
    else if(p.state==='drink'&&p.time>9&&this.leaveSeat(p,world,cars,player)){p.state='leave';this.release(p);p.target={x:-240+p.shop*8,z:-10.5};p.time=0;}
    else if((p.state==='leave'||p.state==='flee')&&(distance(p.position,p.target)<0.3||p.time>12)){
-    this.release(p);p.shop=(p.shop+1)%3;p.state='walk';p.target={x:shops[p.shop].x,z:-12.7};p.time=0;
+    this.release(p);if(p.civilianDriver){p.state='retreated';p.target={...p.position};}else{p.shop=(p.shop+1)%3;p.state='walk';p.target={x:shops[p.shop].x,z:-12.7};}p.time=0;
    }
    const moving=['walk','seat','leave','flee'].includes(p.state);p.speed=0;
    if(moving){
@@ -63,7 +63,7 @@ export class StreetPeople {
     }
    }
    // Timeout clears every reservation; a blocked customer never owns a queue forever.
-   if(p.state!=='vendor'&&p.time>24&&this.leaveSeat(p,world,cars,player)){this.release(p);p.state='leave';p.target={x:-240+p.shop*8,z:-10.4};p.time=0;}
+   if(p.state!=='vendor'&&p.state!=='retreated'&&p.time>24&&this.leaveSeat(p,world,cars,player)){this.release(p);p.state='leave';p.target={x:-240+p.shop*8,z:-10.4};p.time=0;}
    p.view.group.position.set(p.position.x,PEDESTRIAN_FLOOR_OFFSET,p.position.z);p.view.group.rotation.y=p.yaw;
    const anim=p.state==='vendor'?(p.shop===2?'prepare':'talk'):p.state==='drink'?(p.time<0.8?'sit_down':p.time>8?'stand':p.shop===1?'sit_smoke':'sit_drink'):p.state==='react'?'react':p.speed>0.1?(p.state==='flee'?'flee':'walk'):p.state==='order'?'talk':'wait';
    if(p.actionTime){p.actionTime=Math.max(0,p.actionTime-dt);if(!p.actionTime)p.action=undefined;}

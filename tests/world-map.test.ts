@@ -128,3 +128,8 @@ test('every outer traffic turn clears its junction without a false guardrail sto
   }
  }
 });
+
+test('civilian emergency retreat points stay local in all regions and clear bridge guard rails',async()=>{
+ const {roadsideRetreat}=await import('../src/world/WorldRoads');
+ for(const point of [...destinations,{x:1375,z:-172.3},{x:-182,z:14.2}]){const retreat=roadsideRetreat(point);assert.ok(Math.hypot(retreat.x-point.x,retreat.z-point.z)<16);assert.ok(world.isClear(retreat,0.35));assert.equal(regionAt(retreat),regionAt(point));}
+});
