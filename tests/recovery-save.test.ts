@@ -17,7 +17,7 @@ function memory() {
   const values = new Map<string, string>();
   return { values, getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => { values.set(key, value); } };
 }
-test('v1 migration preserves earned progress and legitimate low/zero balances; v2 settings round trip', () => {
+test('v1 migration preserves earned progress and legitimate low/zero balances; v3 settings round trip', () => {
   const storage = memory();
   for (const cash of [0, 1, 14999, 18000]) {
     const old = JSON.stringify({ version: 1, cash, rides: 4, courierCompleted: true });

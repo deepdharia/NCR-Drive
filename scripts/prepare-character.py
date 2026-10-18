@@ -87,10 +87,13 @@ for name in clips:
    parentQ=desired[b.parent.name] if b.parent else Quaternion()
    localRest=rest[b.parent.name].inverted()@rest[b.name] if b.parent else rest[b.name]
    desiredQ=d[b.name]@rest[b.name] if b.name in d else parentQ@localRest
+   if name in ['drink','sit_drink','smoke','sit_smoke','pay','drive'] and b.name.startswith(('index_','middle_','ring_','pinky_')) and '_leaf_' not in b.name:
+    flex=.35 if name=='pay' else .65
+    desiredQ=parentQ@localRest@Quaternion((1,0,0),flex)
    pb=rig.pose.bones[b.name];pb.rotation_mode='QUATERNION';pb.rotation_quaternion=localRest.inverted()@parentQ.inverted()@desiredQ
    pb.location=(0,0,0)
    if b.name=='root':pb.location=rest[b.name].inverted()@Vector((0,0,rootdrop))
-   if b.name in d or b.name=='root':pb.keyframe_insert(data_path='rotation_quaternion',frame=frame);pb.keyframe_insert(data_path='location',frame=frame)
+   if b.name in d or b.name=='root' or (name in ['drink','sit_drink','smoke','sit_smoke','pay','drive'] and b.name.startswith(('index_','middle_','ring_','pinky_'))):pb.keyframe_insert(data_path='rotation_quaternion',frame=frame);pb.keyframe_insert(data_path='location',frame=frame)
    desired[b.name]=desiredQ
  action.use_fake_user=True
  track=rig.animation_data.nla_tracks.new();track.name=name;track.strips.new(name,0,action)

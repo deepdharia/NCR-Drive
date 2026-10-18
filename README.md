@@ -28,7 +28,7 @@ npm run preview
 
 Purchases are optional. Confirmed fictional UPI payments commit money and inventory together; cancel is free. The goods mission pays ₹650 and one trust point once. Original courier, Kabir chapter and Delhi→Gurgaon dispatch remain. Only one job runs at a time. Recovery cancels active jobs without payout. Cars and active jobs do not resume after reload; earned money, settings, cups, completed courier and neighborhood trust do.
 
-The old taxi module, fares, passenger objectives, rewards and onboarding have been removed. Old v1/v2 career payloads migrate under the same storage key; earned money and unrelated progress/settings are retained. Unknown/corrupt saves and backups remain protected.
+The old taxi module, fares, passenger objectives, rewards and onboarding have been removed. Old v1/v2 career payloads migrate under the same storage key; earned money and unrelated progress/settings are retained. Unknown/corrupt saves and backups remain protected. Saves are per browser and site origin; a different preview hostname has separate browser storage.
 
 ## Verify
 

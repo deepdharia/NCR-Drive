@@ -60,7 +60,7 @@ test('visual architecture leaves routed regional jobs and returns clear for the 
     }
   }
 });
-test('three render presets round-trip within v2 and migrate old Performance/Detailed settings safely', () => {
+test('three render presets round-trip within v3 and migrate old Performance/Detailed settings safely', () => {
   const values = new Map<string, string>(), storage = { getItem: (k: string) => values.get(k) ?? null, setItem: (k: string, v: string) => { values.set(k, v); } };
   assert.equal(resolvedQuality(defaultSettings()), 'balanced');
   assert.equal(resolvedQuality({ performanceMode: true }), 'low');

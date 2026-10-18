@@ -10,7 +10,7 @@ let browser,page;const errors=[],evidence=[];const log=v=>{evidence.push(v);cons
 try{
  await mkdir('test-results',{recursive:true});for(let i=0;i<100;i++){try{if((await fetch(origin)).ok)break;}catch{}await new Promise(r=>setTimeout(r,100));}
  browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_EXECUTABLE_PATH||undefined,args:['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader','--disable-dev-shm-usage']});
- const context=await browser.newContext({viewport:{width:640,height:480},deviceScaleFactor:0.5});
+ const context=await browser.newContext({viewport:{width:640,height:480},deviceScaleFactor:0.25});
  await context.addInitScript(()=>{if(!localStorage.getItem('ncr-drive-career-v1'))localStorage.setItem('ncr-drive-career-v1',JSON.stringify({version:2,cash:15000,rides:7,courierCompleted:false,settings:{performanceMode:true,steeringSensitivity:1,cameraSensitivity:1}}));});
  page=await context.newPage();page.setDefaultTimeout(90000);page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});page.on('response',r=>{if(r.status()>=400)errors.push(`${r.status()} ${r.url()}`);});
  await page.goto(origin);await page.locator('[data-action="start"]').click();assert.equal(await page.locator('[data-cash]').first().innerText(),'₹15,000');
@@ -30,7 +30,7 @@ try{
    index=bestI;let look=4+Math.max(0,p.speed)*0.65,a=points[index-1],b=points[index],aim={x:a.x+(b.x-a.x)*bestT,z:a.z+(b.z-a.z)*bestT};
    for(let i=index;i<points.length;i++){const end=points[i],len=Math.hypot(end.x-aim.x,end.z-aim.z);if(len>=look){aim={x:aim.x+(end.x-aim.x)*look/len,z:aim.z+(end.z-aim.z)*look/len};break;}look-=len;aim=end;}
    const desired=Math.atan2(aim.x-p.x,aim.z-p.z),error=Math.atan2(Math.sin(desired-p.yaw),Math.cos(desired-p.yaw));
-   const speed=Math.min(Math.hypot(p.x,p.z)<160?6:18,goal<22?Math.max(2,goal*0.3):18,Math.abs(error)>0.35?6:Math.abs(error)>0.15?10:18);
+   const speed=Math.min(p.x< -130&&p.x> -390&&Math.abs(p.z)<18?5:Math.hypot(p.x,p.z)<160?6:18,goal<22?Math.max(2,goal*0.3):18,Math.abs(error)>0.35?6:Math.abs(error)>0.15?10:18);
    await key('a',error>0.045);await key('d',error< -0.045);await key('w',p.speed<speed);await key('Space',p.speed>speed+2);
    if(Math.hypot(p.x-previous.x,p.z-previous.z)<0.05&&goal>2.3)stuck++;else stuck=0;previous=p;
    if(stuck>80 && manoeuvres<3){
@@ -53,9 +53,9 @@ try{
  // Park in the signed north pull-off, keeping the through lane and later goods route clear.
  await key('d',true);await key('w',true);await page.waitForFunction(()=>{const h=Number(document.querySelector('[data-mode-detail]').textContent.match(/HDG ([\d.]+)/)?.[1]);return h<200&&h>100;});await key('d',false);
  for(let i=0;i<600;i++){const p=await read();if(p.z< -11)break;await key('w',p.speed<4);await key('Space',p.speed>5);await page.waitForTimeout(100);}await key('w',false);await stop();
- assert.ok((await read()).z< -11);log('Parked off the carriageway in the marked public bay.');
+ assert.ok((await read()).z< -11);log({parking:await read(),checked:'Off the carriageway beside the public pull-off; precise bay alignment is not asserted.'});
  await page.keyboard.press('f');await page.waitForFunction(()=>document.querySelector('[data-mode]').textContent.includes('ON FOOT'));
- async function walk(to,label){
+ async function walkDirect(to,label){
   let last=await read(),stuck=0;
   for(let i=0;i<1600;i++){
    const p=await read(),dx=to.x-p.x,dz=to.z-p.z;if(Math.hypot(dx,dz)<0.4){for(const k of ['w','s','a','d'])await key(k,false);log({walk:label,arrival:{x:p.x,z:p.z}});return;}
@@ -64,6 +64,14 @@ try{
    if(Math.hypot(p.x-last.x,p.z-last.z)<0.03)stuck++;else stuck=0;if(stuck>100)throw Error(`Walking blocked ${label}: ${JSON.stringify(p)}`);last=p;await page.waitForTimeout(100);
   }throw Error(`Walking timed out ${label}`);
  }
+ async function walk(to,label){
+  const start=await read();
+  // Use the clear curbside pavement before turning toward a frontage; do not
+  // drive the walker diagonally through the car that was just parked.
+  if(start.z< -9&&to.z< -9&&Math.abs(start.x-to.x)>3){await walkDirect({x:start.x,z:-9.7},`${label} · pavement`);await walkDirect({x:to.x,z:-9.7},`${label} · frontage`);}
+  await walkDirect(to,label);
+ }
+ const outside=await read();await walk({x:outside.x+1.8,z:outside.z},'Step clear of the parked car');await walk({x:outside.x+1.8,z:-10},'Reach the clear pavement');
  await walk({x:-164,z:-11.8},'Meet Neem Chai vendor');await page.keyboard.press('f');await page.locator('[data-action="buy"]').click();
  await page.screenshot({path:'test-results/living-payment.png'});
  await page.locator('[data-action="closeShop"]').click();assert.equal(await page.locator('[data-cash]').first().innerText(),'₹15,000');
@@ -85,4 +93,4 @@ try{
  await page.reload();await page.locator('[data-action="start"]').click();assert.equal(await page.locator('[data-cash]').first().innerText(),'₹15,630');await page.keyboard.press('Tab');assert.match(await page.locator('[data-career]').innerText(),/trust 1/);assert.match(await page.locator('[data-neighborhood]').innerText(),/0 chai/);
  assert.deepEqual(errors,[]);log('Complete production loop passed using ordinary inputs. ₹650 paid once; wallet, consumed cup and trust persisted. No browser/asset errors.');
 }catch(e){if(page){console.error(await page.locator('body').innerText());await page.screenshot({path:'test-results/living-failure.png'}).catch(()=>{});}throw e;}
-finally{await writeFile('test-results/living-production-evidence.json',JSON.stringify({evidence,errors,method:'production dist; ordinary keyboard/UI only; Linux Chromium SwiftShader, functional not hardware FPS'},null,2));await browser?.close();server.kill();}
+finally{await writeFile('test-results/living-production-evidence.json',JSON.stringify({evidence,errors,method:'production dist; ordinary keyboard/UI only; 640x480 CSS viewport at DPR0.25 for functional software-rendered driving, not hardware FPS or art quality'},null,2));await browser?.close();server.kill();}
