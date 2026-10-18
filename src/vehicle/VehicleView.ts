@@ -133,7 +133,7 @@ export class VehicleView {
       mergeStaticMeshes(spin); pivot.add(spin); this.detailed.add(pivot); this.wheels.push({ pivot, spin, front: z > 0 });
     }
     mergeStaticMeshes(this.body); this.detailed.add(this.body);
-    this.driver=new HumanoidView(0x877f63);this.driver.group.position.set(-0.35,0.28,-0.2);this.driver.group.scale.setScalar(0.93);this.body.add(this.driver.group);
+    this.driver=new HumanoidView(0x877f63);this.driver.group.position.set(-0.35,0.18,-0.2);this.driver.group.scale.setScalar(0.93);this.body.add(this.driver.group);
     // Two-mesh traffic LOD. Detailed wheels, interior and lamps stay local.
     const proxyBody = new THREE.Mesh(new THREE.BoxGeometry(1.68, 0.62, 3.65), paint); proxyBody.position.y = 0.68;
     const proxyCabin = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.62, 1.95), glass); proxyCabin.position.set(0, 1.22, -0.28);
@@ -159,7 +159,7 @@ export class VehicleView {
     this.body.position.y = Math.sin(car.wheelTravel * 2.1) * Math.min(Math.abs(car.speed) * 0.0006, 0.008);
     this.wheels.forEach(w => { w.pivot.rotation.y = w.front ? car.steering : 0; w.spin.rotation.x = car.wheelTravel / 0.32; });
     this.doors.forEach(d=>{d.pivot.rotation.y=d.side<0?-car.doorOpen*1.05:0;});
-    this.driver.group.visible=car.occupant!==null||car.driving;if(this.driver.group.visible&&this.detailed.visible)this.driver.update(dt,'sit');
+    this.driver.group.visible=(car.occupant!==null||car.driving)&&!(car.reserved&&car.occupant==='player');if(this.driver.group.visible&&this.detailed.visible)this.driver.update(dt,'sit');
     this.brakeMaterial.emissiveIntensity = car.braking ? 2.5 : 0.3;
   }
 }

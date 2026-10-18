@@ -19,15 +19,15 @@ for o in list(bpy.context.scene.objects):
  for m in mats:o.data.materials.append(m)
  for p in o.data.polygons:
   v=sum((o.matrix_world@o.data.vertices[i].co for i in p.vertices),Vector())/len(p.vertices)
-  p.material_index=5 if 'Eyes' in o.name else 4 if 'Eyebrow' in o.name else 3 if v.z<.10 else 2 if v.z<.95 else 1 if v.z<1.49 and abs(v.x)<.49 else 0
+  p.material_index=5 if 'Eyes' in o.name else 4 if 'Eyebrow' in o.name else 3 if v.z<.10 else 2 if v.z<.95 else 1 if v.z<1.56 and abs(v.x)<.53 else 0
   p.use_smooth=True
  if len(o.data.polygons)>3000:
   bpy.context.view_layer.objects.active=o
   mod=o.modifiers.new('Mobile topology','DECIMATE');mod.ratio=.58
   bpy.ops.object.modifier_apply(modifier=mod.name)
 # A close-cropped original hair cap bound to the head, rather than another actor.
-bpy.ops.mesh.primitive_uv_sphere_add(segments=16,ring_count=8,radius=1,location=(0,.02,1.665))
-hair=bpy.context.object;hair.name='Cropped hair';hair.scale=(.088,.084,.048)
+bpy.ops.mesh.primitive_uv_sphere_add(segments=16,ring_count=8,radius=1,location=(0,.02,1.775))
+hair=bpy.context.object;hair.name='Cropped hair';hair.scale=(.101,.104,.052)
 bpy.ops.object.transform_apply(location=False,rotation=False,scale=True)
 hair.data.materials.append(mats[4]);g=hair.vertex_groups.new(name='Head');g.add(list(range(len(hair.data.vertices))),1,'REPLACE')
 mod=hair.modifiers.new('Humanoid skin','ARMATURE');mod.object=rig
@@ -50,17 +50,25 @@ for name in clips:
    rootdrop=.015*math.cos(phase*2)
   if name in ['sit','sit_down','stand','enter','exit','sit_drink','sit_smoke']:
    f=1 if name in ['sit','sit_drink','sit_smoke'] else t*t*(3-2*t) if name in ['sit_down','enter'] else 1-t*t*(3-2*t)
-   rootdrop=-.48*f
+   rootdrop=-.40*f
    for side in ['l','r']:
     d['thigh_'+side]=Quaternion((1,0,0),-1.5*f);d['calf_'+side]=Quaternion((1,0,0),0);d['foot_'+side]=Quaternion((1,0,0),0)
   if name in ['talk','react','takeover','prepare']:
    d['upperarm_r']=Quaternion((1,0,0),-.45-.15*math.sin(phase))@Quaternion((0,1,0),-1.0)
    d['lowerarm_r']=Quaternion((1,0,0),-.95-.15*math.sin(phase))@Quaternion((0,1,0),-1.0)
   if name in ['drink','smoke','pay','sit_drink','sit_smoke']:
-   a=.6+.15*math.sin(phase) if name!='pay' else .35
-   d['upperarm_r']=Quaternion((1,0,0),-a)@Quaternion((0,1,0),-1.05)
-   d['lowerarm_r']=Quaternion((1,0,0),-1.8 if name!='pay' else -1.1)@Quaternion((0,1,0),-.55)
-   d['hand_r']=Quaternion((1,0,0),-1.3)@Quaternion((0,1,0),-.4)
+   # Original analytic two-bone IK: the grip reaches the cup/phone, not the wrist.
+   shoulder=rig.data.bones['upperarm_r'].head_local.copy()
+   sip=(math.sin(phase)+1)/2
+   target=Vector((-.09,-.20,1.36+.20*sip)) if name!='pay' else Vector((-.13,-.29,1.30))
+   l1=rig.data.bones['upperarm_r'].length;l2=rig.data.bones['lowerarm_r'].length
+   delta=target-shoulder;length=delta.length;axis=delta.normalized()
+   along=(l1*l1-l2*l2+length*length)/(2*length)
+   pref=Vector((-1,0,-.8));bend=(pref-axis*pref.dot(axis)).normalized()
+   elbow=shoulder+axis*along+bend*math.sqrt(max(0,l1*l1-along*along))
+   for bone,aim in [('upperarm_r',elbow-shoulder),('lowerarm_r',target-elbow),('hand_r',Vector((0,-.12,1)))]:
+    rb=rig.data.bones[bone];d[bone]=(rb.tail_local-rb.head_local).rotation_difference(aim)
+   d['Head']=Quaternion((1,0,0),.08 if name!='pay' else .18)
   if name=='turn':d['spine_03']=Quaternion((0,0,1),.22*math.sin(phase))
   desired={}
   for b in bones:

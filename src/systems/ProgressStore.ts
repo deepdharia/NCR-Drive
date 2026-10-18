@@ -43,7 +43,7 @@ export function loadProgress(storage: Reader): LoadedProgress {
     const raw = storage.getItem(PROGRESS_KEY);
     if (unsupported(raw)) return { progress: freshProgress(), writable: false, source: 'unsupported' };
     const primary = parse(raw);
-    if (primary) return { progress: primary, writable: true, source: JSON.parse(raw!).version === 1 ? 'legacy' : 'current' };
+    if (primary) return { progress: primary, writable: true, source: JSON.parse(raw!).version < 3 ? 'legacy' : 'current' };
     const backup = parse(storage.getItem(BACKUP_KEY));
     if (backup) return { progress: backup, writable: true, source: 'backup' };
     return { progress: freshProgress(), writable: raw === null, source: raw === null ? 'fresh' : 'invalid' };

@@ -49,26 +49,26 @@ try{
   throw Error(`Timed out ${label}`);
  }
 
- await drive({x:-164,z:-4},'CP → Market Lane · park beside Neem Chai');
+ await drive({x:-164,z:4},'CP → Market Lane · park beside Neem Chai');
  await page.keyboard.press('f');await page.waitForFunction(()=>document.querySelector('[data-mode]').textContent.includes('ON FOOT'));
  async function walk(to,label){
   let last=await read(),stuck=0;
   for(let i=0;i<1600;i++){
-   const p=await read(),dx=to.x-p.x,dz=to.z-p.z;if(Math.hypot(dx,dz)<0.6){for(const k of ['w','s','a','d'])await key(k,false);log({walk:label,arrival:{x:p.x,z:p.z}});return;}
+   const p=await read(),dx=to.x-p.x,dz=to.z-p.z;if(Math.hypot(dx,dz)<0.4){for(const k of ['w','s','a','d'])await key(k,false);log({walk:label,arrival:{x:p.x,z:p.z}});return;}
    // Default walking camera yaw is -90 degrees: W east, S west, A north, D south.
-   await key('w',dx>0.3);await key('s',dx< -0.3);await key('a',dz< -0.3);await key('d',dz>0.3);
+   await key('w',dx>0.18);await key('s',dx< -0.18);await key('a',dz< -0.18);await key('d',dz>0.18);
    if(Math.hypot(p.x-last.x,p.z-last.z)<0.03)stuck++;else stuck=0;if(stuck>100)throw Error(`Walking blocked ${label}: ${JSON.stringify(p)}`);last=p;await page.waitForTimeout(100);
   }throw Error(`Walking timed out ${label}`);
  }
- await walk({x:-164,z:-11.6},'Meet Neem Chai vendor');await page.keyboard.press('f');await page.locator('[data-action="buy"]').click();
+ await walk({x:-164,z:-11.8},'Meet Neem Chai vendor');await page.keyboard.press('f');await page.locator('[data-action="buy"]').click();
  await page.screenshot({path:'test-results/living-payment.png'});
  await page.locator('[data-action="closeShop"]').click();assert.equal(await page.locator('[data-cash]').first().innerText(),'₹15,000');
  await page.keyboard.press('f');await page.locator('[data-action="buy"]').click();await page.locator('[data-action="pay"]').click();assert.equal(await page.locator('[data-cash]').first().innerText(),'₹14,980');
  log('Visited vendor, cancelled free, then confirmed fictional UPI; chai delivered once for ₹20.');
  await walk({x:-154,z:-11.4},'Find a free bench');await page.waitForFunction(()=>document.querySelector('[data-prompt]').textContent.includes('Sit'));await page.keyboard.press('f');
- await page.waitForFunction(()=>document.querySelector('.toast').textContent.includes('Enjoying chai'));await page.screenshot({path:'test-results/living-chai.png'});await page.keyboard.press('f');
- await walk({x:-165,z:-9.9},'Leave bench via pavement');await walk({x:-190,z:-11.5},'Gali Baithak neighborhood news');await page.keyboard.press('f');assert.match(await page.locator('[data-shop-copy]').innerText(),/cold store/);await page.locator('[data-action="closeShop"]').click();
- await walk({x:-215,z:-10.1},'Juice corner approach');await walk({x:-218,z:-11.5},'Meet juice vendor');await page.keyboard.press('f');await page.locator('[data-action="supply"]').click();assert.match(await page.locator('[data-job-title]').innerText(),/Fruit crate/);
+ await page.waitForFunction(()=>document.querySelector('.toast').textContent.includes('Enjoying chai'));await page.screenshot({path:'test-results/living-chai.png'});await page.keyboard.press('f');await page.waitForFunction(()=>!document.querySelector('[data-prompt]').textContent.includes('Stand')&&!document.querySelector('[data-prompt]').textContent.includes('Standing'));
+ await walk({x:-165,z:-9.9},'Leave bench via pavement');await walk({x:-190,z:-11.8},'Gali Baithak neighborhood news');await page.keyboard.press('f');assert.match(await page.locator('[data-shop-copy]').innerText(),/cold store/);await page.locator('[data-action="closeShop"]').click();
+ await walk({x:-215,z:-10.1},'Juice corner approach');await walk({x:-218,z:-11.8},'Meet juice vendor');await page.keyboard.press('f');await page.locator('[data-action="supply"]').click();assert.match(await page.locator('[data-job-title]').innerText(),/Fruit crate/);
  await walk({x:-244,z:-11},'Marked crossing north');await walk({x:-244,z:14.4},'Cross at zebra crossing');await walk({x:-182,z:14.4},'Occupied civilian car door');
  assert.match(await page.locator('[data-prompt]').innerText(),/Take civilian car/);await page.screenshot({path:'test-results/living-takeover-before.png'});await page.keyboard.press('f');await page.waitForFunction(()=>document.querySelector('[data-mode]').textContent.includes('PARVAAZ'));
  await page.screenshot({path:'test-results/living-takeover-after.png'});log('Received goods mission, crossed at zebra, took occupied civilian car through ordinary door interaction.');

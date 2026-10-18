@@ -11,7 +11,9 @@ let vehicleSerial = 0;
 export class VehicleController {
   readonly id = `civilian-${++vehicleSerial}`;
   owner: 'ai' | 'parked' | 'player' = 'parked';
-  occupant: string | null = null;
+  readonly seats:{driver:string|null;frontLeft:string|null;rearRight:string|null;rearLeft:string|null}={driver:null,frontLeft:null,rearRight:null,rearLeft:null};
+  get occupant():string|null{return this.seats.driver;}
+  set occupant(value:string|null){this.seats.driver=value;}
   protected = false;
   reserved = false;
   doorOpen = 0;
@@ -65,6 +67,7 @@ export class VehicleController {
     const contact = world.moveBox({ ...this.position, yaw: this.yaw }, motion, yawRate * dt, this.width, this.length, extra);
     this.position = { x: contact.pose.x, z: contact.pose.z }; this.yaw = contact.pose.yaw;
     this.impact = contact.hit && !this.touching && Math.abs(this.speed) > 2;
+    if(this.impact)this.condition=Math.max(0.1,this.condition-0.03);
     this.touching = contact.hit;
     if (contact.hit) { this.speed = 0; this.acceleration = 0; }
     this.wheelTravel += this.speed * dt;

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { signTexture, worldSurfaceMaterial } from '../rendering/ProceduralTextures';
 import { shops, seats } from '../systems/Neighborhood';
-import { marketSolids } from './MarketLayout';
+import { marketSolids, marketFrontages } from './MarketLayout';
 import { mergeStaticMeshes } from '../rendering/MeshUtils';
 export class MarketView {
  readonly group=new THREE.Group();private steam:THREE.InstancedMesh;private time=0;
@@ -16,13 +16,13 @@ export class MarketView {
   // Flush crossing and roll-over curb paint keep existing flat ground physics safe.
   for(let i=0;i<12;i++)add(i%2?stone:dark,-244,0.05,-8.2+i*1.5,5,0.015,0.72);
   for(let i=0;i<46;i++)for(const z of [-9.15,9.15])add(i%2?stone:dark,-134-i*5.3,0.05,z,4.9,0.03,0.2);
-  for(const s of marketSolids){if(s.height<4)continue;add(s.width<1?wood:stone,s.x,s.height/2,s.z,s.width,s.height,s.depth);}
+  for(const s of marketSolids){if(s.height<4||marketFrontages.includes(s.x))continue;add(s.width<1?wood:stone,s.x,s.height/2,s.z,s.width,s.height,s.depth);}
   shops.forEach((s,i)=>{
    const awning=new THREE.MeshStandardMaterial({color:[0x597568,0x855c45,0xcc9c42][i],roughness:0.95});
    add(awning,s.x,3,-17,8.5,0.13,4.8).rotation.x=0.09;add(awning,s.x,2.72,-14.8,8.5,0.4,0.12);
    add(wood,s.x,0.52,-16.5,5.6,1.04,0.8);add(metal,s.x,1.08,-16.5,5.9,0.08,1);
    for(const dx of [-3.5,3.5])add(metal,s.x+dx,1.55,-16,0.12,3.1,0.12);
-   label(s.name,s.x,3.5,-17.4,10,['#2e594b','#6d3b2c','#7d6b24'][i]);
+   label(s.name,s.x,3.65,-14.45,10,['#2e594b','#6d3b2c','#7d6b24'][i]);
    add(dark,s.x,0.8,-18.3,5,1.6,0.12);
    label(i===0?'CHAI ₹20 · GAME CURRENCY':i===1?'LOCAL NEWS · ADULTS ONLY':'FRESH JUICE ₹40 · SUPPLY DESK',s.x,2.1,-18.2,6);
    // Shelves, kettle, cups and ingredient displays use shared primitives.
@@ -43,7 +43,7 @@ export class MarketView {
   label('DELHI COLD STORE · GOODS BAY',-342,4,-12.8,23);label('MARKET LANE · बाज़ार गली',-137,4,-12,15);
   label('DELHI →  CP  |  GURGAON  |  NOIDA',-366,3,12,15);
   // Unequal facade modules, ventilation, roof cables, shutters and pavement wear.
-  for(let i=0;i<10;i++){const x=-251-i*12.7;add(i%2?stone:concrete,x,3.5,-23,10.8,7,8);add(dark,x,1.5,-18.95,7.5,3,0.05);label(i%2?'गोदाम · STORE':'WORKSHOP · कार्यशाला',x,4,-18.9,9);}
+  for(const [i,x] of marketFrontages.entries()){add(i%2?stone:concrete,x,3.5,-23,10.8,7,8);add(dark,x,1.5,-18.95,7.5,3,0.05);label(i%2?'गोदाम · STORE':'WORKSHOP · कार्यशाला',x,4,-18.9,9);}
   for(let i=0;i<8;i++){const line=new THREE.Mesh(new THREE.CylinderGeometry(0.012,0.012,13,4),dark);line.rotation.z=Math.PI/2;line.position.set(-158-i*15,4.2,-17);this.group.add(line);}
   mergeStaticMeshes(this.group);
   this.steam=new THREE.InstancedMesh(new THREE.SphereGeometry(0.06,5,4),new THREE.MeshBasicMaterial({color:0xe7e4da,transparent:true,opacity:0.16,depthWrite:false}),8);this.group.add(this.steam);

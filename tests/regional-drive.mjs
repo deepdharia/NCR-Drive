@@ -19,7 +19,7 @@ try{
  const context=await browser.newContext({viewport:{width:640,height:480},deviceScaleFactor:0.25});
  await context.addInitScript(()=>{if(!localStorage.getItem('ncr-drive-career-v1'))localStorage.setItem('ncr-drive-career-v1',JSON.stringify({version:2,cash:15000,rides:0,courierCompleted:false,settings:{performanceMode:true,steeringSensitivity:1,cameraSensitivity:1}}));});
  page=await context.newPage();page.setDefaultTimeout(90000);page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});page.on('response',r=>{if(r.status()>=400)errors.push(`${r.status()} ${r.url()}`);});
- await page.goto('http://127.0.0.1:4176');await page.locator('[data-action="start"]').click();await page.keyboard.press('f');
+ await page.goto('http://127.0.0.1:4176');await page.locator('[data-action="start"]').click();await page.keyboard.press('f');await page.waitForFunction(()=>document.querySelector('[data-mode]').textContent.includes('PARVAAZ'));
  await page.setViewportSize({width:480,height:320});
  const held=new Set();async function key(k,on){if(on&&!held.has(k)){await page.keyboard.down(k);held.add(k);}else if(!on&&held.has(k)){await page.keyboard.up(k);held.delete(k);}}
  async function read(){return page.evaluate(()=>{const p=document.querySelector('[data-coordinates]').textContent.split(',');const heading=document.querySelector('[data-mode-detail]').textContent.match(/HDG ([\d.]+)/);return{x:parseFloat(p[0]),z:parseFloat(p[1]),yaw:Number(heading?.[1]??0)*Math.PI/180,speed:parseFloat(document.querySelector('[data-speed]').textContent)/3.6};});}

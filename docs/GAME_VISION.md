@@ -1,31 +1,11 @@
-# NCR Drive direction
+# Living Delhi direction
 
-Owner: Deep Dharia. Accepted brief: 17 October 2026 (Asia/Kolkata).
+Owner: Deep Dharia. Current brief: 18 October 2026, Asia/Kolkata.
 
-Start as a small-time Delhi driver, become a trusted local operator, then build
-a vehicle business. Satisfying driving, recurring people, purposeful streets,
-route/job choices and visible consequences carry the game. Mafia II and Just
-Cause are creative references, not assets to copy or quality claims.
+An original Indian open-world action-adventure: believable street life, exploration, satisfying driving, local relationships and memorable goods/story missions. Creative references are Mafia II's atmosphere/journeys and Just Cause's freedom; their proprietary assets and identities are not used.
 
-Core loop: discover work → choose vehicle/route → drive and react → decide →
-complete or recover → earn/spend → notice a consequence → find more work.
-Authored chapters and repeatable city work should support each other.
+Immediate loop: park → walk among people → shop → fictional game-currency payment → sit/drink → meet a vendor → take a civilian vehicle → deliver goods → earn trust. Purchases remain optional. Progression direction: local helper → trusted contact → vehicle access → small business opportunities. Only one bounded relationship and goods mission are implemented now.
 
-Keep Three.js, strict TypeScript and Vite, static Vercel-compatible delivery,
-local single-player saves and practical development on an M1 with 8 GB RAM.
-Web first; Android follows device-tested web controls/lifecycle/performance.
-No backend, accounts, paid APIs or engine migration in current scope.
+Keep the connected compressed Delhi–Gurgaon–Noida world, existing handling/on-foot controls, courier/story work, navigation, wallet, recovery and saved settings. The former fare/passenger gameplay is retired. Preserve old earned money through migration. The map is fictional geography, not an accurate replica.
 
-The connected-world increment expands the CP foundation into original compressed
-Delhi–Gurgaon–Noida routes and arrival loops. Its geography is fictional, not an
-accurate city replica. Keep journeys purposeful and legible before adding density. New content must add an action, choice,
-feedback or consequence, rather than just more coordinates or meshes.
-
-Kabir is the implemented garage/story contact. A transport organiser, journalist
-and rival contractor remain proposals. Write a concise original character bible
-before expanding the campaign. A 15–20-minute polished chapter is a playtest
-target; the current three-stop chapter has no verified human play duration.
-
-Preserve working collision, input and handoff behavior. Add road topology,
-missions, spending and pursuit in dependency order. Gunplay, aircraft, grappling,
-large destruction and expanded districts remain later decisions.
+Three.js/TypeScript/Vite, static Vercel, local single player, M1 8 GB and mobile web remain constraints. No real payments, mandatory accounts/backend, live LLM NPC control, combat or multiplayer. Android packaging follows actual device performance/lifecycle acceptance. Full police pursuit, broader pedestrian navigation and long campaigns remain later scope.

@@ -9,10 +9,10 @@ import {TrafficSystem} from '../src/systems/TrafficSystem';
 import {distance} from '../src/core/math';
 test('all civilian classes transfer occupied driver control once; repeated input and paused transitions are safe',()=>{
  for(const spec of VEHICLE_SPECS){
-  const car=new VehicleController(spec),player=new PlayerController(),world=new CollisionWorld();car.occupant='adult-driver';car.owner='ai';
+  const car=new VehicleController(spec),player=new PlayerController(),world=new CollisionWorld();car.occupant='adult-driver';car.seats.frontLeft='adult-companion';car.seats.rearLeft='adult-neighbor';car.seats.rearRight='adult-relative';car.condition=0.7;car.owner='ai';const identity=car.id;
   const i=new InteractionSystem(player,car,world);player.teleport(i.door);let displaced=0,transfers=0;i.onDisplaced=()=>displaced++;i.onTransferred=()=>transfers++;
   assert.ok(i.interact());assert.equal(i.interact(),false);assert.equal(car.owner,'ai');assert.ok(car.reserved);i.update(0.5);assert.ok(car.doorOpen>0);i.cancel();assert.equal(car.owner,'ai');assert.equal(car.occupant,'adult-driver');assert.equal(player.active,true);assert.equal(displaced,0);
-  assert.ok(i.interact());i.update(1.2);i.update(1.2);assert.equal(displaced,1);assert.equal(transfers,1);assert.equal(car.owner,'player');assert.equal(car.occupant,'player');assert.ok(car.protected);assert.equal(car.reserved,false);assert.ok(car.driving);assert.equal(player.active,false);
+  assert.ok(i.interact());i.update(1.2);i.update(1.2);assert.equal(displaced,1);assert.equal(transfers,1);assert.equal(car.owner,'player');assert.equal(car.occupant,'player');assert.equal(car.seats.frontLeft,'adult-companion');assert.equal(car.seats.rearRight,'adult-relative');assert.equal(car.condition,0.7);assert.equal(car.id,identity);assert.ok(car.protected);assert.equal(car.reserved,false);assert.ok(car.driving);assert.equal(player.active,false);
   assert.ok(i.interact());i.update(1.2);assert.equal(car.owner,'parked');assert.equal(player.active,true);assert.ok(car.protected);assert.equal(car.occupant,null);
  }
 });

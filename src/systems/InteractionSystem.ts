@@ -12,6 +12,9 @@ export class InteractionSystem {
  onTransferred:()=>void=()=>{};
  constructor(readonly player:PlayerController,public car:VehicleController,private world:CollisionWorld,private obstacles:()=>readonly Solid[]=()=>[]){}
  get busy():boolean{return !!this.transition;}
+ get progress():number{return this.transition?Math.min(1,this.transition.time/1.1):0;}
+ get exiting():boolean{return this.transition?.exit??false;}
+ get occupiedEntry():boolean{return !!this.transition?.occupant&&!this.transition.exit;}
  get animation():string|undefined{return this.transition?(this.transition.exit?'exit':this.transition.occupant?'takeover':'enter'):undefined;}
  get driving():boolean{return this.car.driving;}
  get door():Point{return localToWorld({x:-this.car.width/2-0.8,z:0.35},this.car.position,this.car.yaw);}

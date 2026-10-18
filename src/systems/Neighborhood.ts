@@ -10,7 +10,7 @@ export const shops = [
  {id:'paan',name:'Gali Baithak · गली बैठक',x:-190,z:-14,price:0},
  {id:'juice',name:'Nimbu Corner · नींबू कॉर्नर',x:-218,z:-14,price:40,item:'juice' as Drink},
 ] as const;
-export const seats = [{id:'neem-a',x:-154,z:-12,yaw:Math.PI},{id:'neem-b',x:-152.7,z:-12,yaw:Math.PI},{id:'juice-a',x:-228,z:-12,yaw:Math.PI}];
+export const seats = [{id:'neem-a',x:-154,z:-12,yaw:0},{id:'neem-b',x:-152.7,z:-12,yaw:0},{id:'paan-a',x:-199,z:-12,yaw:0},{id:'juice-a',x:-228,z:-12,yaw:0}];
 export interface WalletSnapshot { cash:number; neighborhood:NeighborhoodSave }
 /** One durable record commits wallet + item/reward together. UI requests carry a nonce.
  * Failed writes change neither in-memory money nor inventory. Active jobs never resume. */
