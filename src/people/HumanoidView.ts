@@ -9,8 +9,8 @@ export class HumanoidView {
  private cup:THREE.Mesh;private phone:THREE.Mesh;private cigarette:THREE.Mesh;private smoke:THREE.InstancedMesh;private time=0;
  constructor(color=0x417d80){
   const model=clone(template);this.group.add(model);this.mixer=new THREE.AnimationMixer(model);
-  const palette=new Map<THREE.Material,THREE.Material>();
-  model.traverse(o=>{if(o instanceof THREE.Mesh){o.castShadow=true;o.frustumCulled=false;const tint=(m:THREE.Material)=>{if(m.name==='Shirt'){if(!palette.has(m)){const next=m.clone() as THREE.MeshStandardMaterial;next.color.setHex(color);palette.set(m,next);}return palette.get(m)!;}return m;};o.material=Array.isArray(o.material)?o.material.map(tint):tint(o.material);}});
+  const palette=new Map<THREE.Material,THREE.Material>(),skeletons=new Map<string,THREE.Skeleton>();
+  model.traverse(o=>{if(o instanceof THREE.SkinnedMesh){const key=o.skeleton.bones.map(b=>b.uuid).join(',');const shared=skeletons.get(key);if(shared)o.skeleton=shared;else skeletons.set(key,o.skeleton);}if(o instanceof THREE.Mesh){o.castShadow=true;o.frustumCulled=false;const tint=(m:THREE.Material)=>{if(m.name==='Shirt'){if(!palette.has(m)){const next=m.clone() as THREE.MeshStandardMaterial;next.color.setHex(color);palette.set(m,next);}return palette.get(m)!;}return m;};o.material=Array.isArray(o.material)?o.material.map(tint):tint(o.material);}});
   clips.forEach(c=>this.actions.set(c.name,this.mixer.clipAction(c)));const handover=clips.find(c=>c.name==='talk')!.clone();handover.name='handover';this.actions.set('handover',this.mixer.clipAction(handover));
   this.cup=new THREE.Mesh(new THREE.CylinderGeometry(0.038,0.03,0.095,10),new THREE.MeshStandardMaterial({color:0xc48c59,roughness:0.9}));
   this.phone=new THREE.Mesh(new THREE.BoxGeometry(0.065,0.115,0.012),new THREE.MeshStandardMaterial({color:0x1e343b,emissive:0x427c8a,emissiveIntensity:0.3}));

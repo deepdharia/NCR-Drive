@@ -41,3 +41,9 @@ test('market approach and goods route remain clear; unreachable shops are reject
 test('queue and seat ownership is exclusive, bounded and released on transitions',()=>{
  const r=new Reservations();assert.ok(r.reserve('seat-a','a'));assert.equal(r.reserve('seat-a','b'),false);assert.ok(r.reserve('queue-1','a'));assert.equal(r.owner('seat-a'),undefined);assert.equal(r.owner('queue-1'),'a');r.release('a');r.release('a');assert.equal(r.size,0);
 });
+
+test('market walking directions avoid benches and do not require a vehicle lane loop',async()=>{
+ const {walkingRoute}=await import('../src/systems/WalkingNavigation');
+ const world=new CollisionWorld(createDistrictLayout().solids);
+ for(const [from,to] of [[{x:-154.8,z:-11.4},MARKET],[{x:-156,z:-13.6},{x:-150,z:-11}]]){const path=walkingRoute(from,to);assert.ok(path.length);for(let i=1;i<path.length;i++){const a=path[i-1],b=path[i],n=Math.ceil(Math.hypot(b.x-a.x,b.z-a.z)/0.1);for(let k=0;k<=n;k++)assert.ok(world.isClear({x:a.x+(b.x-a.x)*k/n,z:a.z+(b.z-a.z)*k/n},0.32));}assert.ok(path.reduce((s,p,i)=>s+(i?Math.hypot(p.x-path[i-1].x,p.z-path[i-1].z):0),0)<25);}
+});

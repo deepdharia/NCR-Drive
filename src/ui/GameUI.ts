@@ -7,6 +7,7 @@ import type { CourierMission } from '../systems/CourierMission';
 import type { StoryMission } from '../systems/StoryMission';
 import { MARKET, SUPPLY_TARGET } from '../systems/Neighborhood';
 import type { Neighborhood } from '../systems/Neighborhood';
+import {walkingRoute} from '../systems/WalkingNavigation';
 import { roadRoute, routeLength } from '../systems/Navigation';
 import { regionAt, regionLabels } from '../world/WorldRoads';
 import { Minimap } from './Minimap';
@@ -145,7 +146,7 @@ export class GameUI {
   update(player:PlayerController,car:VehicleController,interaction:InteractionSystem,mission:CourierMission,neighborhood:Neighborhood,saveAvailable:boolean,story:StoryMission,prompt?:string,locked=false):void {
     const driving=car.driving,position=driving?car.position:player.position,region=regionAt(position);
     this.text('[data-region-title]',region==='delhi'?'Delhi · नई दिल्ली':regionLabels[region].split(' · ')[0]);
-    this.text('[data-region-detail]',regionLabels[region]);this.text('[data-map-region]',regionLabels[region]);
+    this.text('[data-region-detail]',region==='delhi'&&position.x< -130?'Market Lane · बाज़ार गली':regionLabels[region]);this.text('[data-map-region]',regionLabels[region]);
     this.text('[data-cash]',`₹${mission.cash.toLocaleString('en-IN')}`);
     this.text('[data-mode]',driving?`${car.spec.name.toUpperCase()} / CIVILIAN`:'ON FOOT / EXPLORER');
     this.text('[data-speed]',driving?`${Math.round(car.kmh)} km/h`:'Take the long way.');
@@ -156,7 +157,7 @@ export class GameUI {
     this.root.querySelectorAll<HTMLElement>('[data-driving]').forEach(e=>{e.hidden=!driving;});this.root.querySelectorAll<HTMLElement>('[data-foot]').forEach(e=>{e.hidden=driving;});
     const courier=mission.state==='active',supply=neighborhood.job==='delivery';
     const target=story.active?story.step.target:courier?COURIER_TARGET:supply?SUPPLY_TARGET:MARKET;
-    if(target!==this.routeTarget||performance.now()-this.routeTime>750){this.cachedRoute=roadRoute(position,target);this.routeTarget=target;this.routeTime=performance.now();}
+    if(target!==this.routeTarget||performance.now()-this.routeTime>750){this.cachedRoute=driving?roadRoute(position,target):walkingRoute(position,target);this.routeTarget=target;this.routeTime=performance.now();}
     const route=this.cachedRoute,metres=Math.round(routeLength(route));
     this.text('[data-job-title]',story.active?story.step.title:courier?'Shivaji Stadium Courier Run':supply?'Fruit crate → Delhi Cold Store':'Explore the neighborhood');
     this.text('[data-distance]',story.active?`${metres} m · ${Math.ceil(story.remaining)}s · ${story.step.mode==='foot'?'On-foot handover':'Stop in car'}`:courier?`${metres} m · Deliver on foot`:supply?`${metres} m · Stop in the goods bay · ₹650`:`${metres} m · Visit Neem Chai on Market Lane`);
@@ -172,6 +173,7 @@ export class GameUI {
     this.element('[data-action="cancelStory"]').hidden=!story.active;
     this.text('[data-story-status]',story.active?`${story.index+1}/${story.steps.length} · ${story.step.title} · ${Math.ceil(story.remaining)}s remaining`:'Collect paperwork, cross the circle and finish on foot. 4 minutes · ₹1,200.');
     if(!route.length)this.text('[data-distance]','Walk to a signed roadway for a safe road route');
+    if(prompt?.includes('Stand')||prompt?.includes('Standing'))this.text('[data-distance]','Enjoy the neighborhood · F to stand');
     this.maps.forEach(map=>map.draw(position,driving?car.yaw:player.yaw,car.position,target,route,false));
   }
   shop(title:string,copy:string,buy=false,pay=false,supply=false):void {

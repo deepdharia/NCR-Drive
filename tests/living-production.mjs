@@ -65,7 +65,7 @@ try{
  await page.locator('[data-action="closeShop"]').click();assert.equal(await page.locator('[data-cash]').first().innerText(),'₹15,000');
  await page.keyboard.press('f');await page.locator('[data-action="buy"]').click();await page.locator('[data-action="pay"]').click();assert.equal(await page.locator('[data-cash]').first().innerText(),'₹14,980');
  log('Visited vendor, cancelled free, then confirmed fictional UPI; chai delivered once for ₹20.');
- await walk({x:-154,z:-11.4},'Find a free bench');await page.waitForFunction(()=>document.querySelector('[data-prompt]').textContent.includes('Sit'));await page.keyboard.press('f');
+ await walk({x:-154,z:-10.9},'Find a free bench');await page.waitForFunction(()=>document.querySelector('[data-prompt]').textContent.includes('Sit'));await page.keyboard.press('f');
  await page.waitForFunction(()=>document.querySelector('.toast').textContent.includes('Enjoying chai'));await page.screenshot({path:'test-results/living-chai.png'});await page.keyboard.press('f');await page.waitForFunction(()=>!document.querySelector('[data-prompt]').textContent.includes('Stand')&&!document.querySelector('[data-prompt]').textContent.includes('Standing'));
  await walk({x:-165,z:-9.9},'Leave bench via pavement');await walk({x:-190,z:-11.8},'Gali Baithak neighborhood news');await page.keyboard.press('f');assert.match(await page.locator('[data-shop-copy]').innerText(),/cold store/);await page.locator('[data-action="closeShop"]').click();
  await walk({x:-215,z:-10.1},'Juice corner approach');await walk({x:-218,z:-11.8},'Meet juice vendor');await page.keyboard.press('f');await page.locator('[data-action="supply"]').click();assert.match(await page.locator('[data-job-title]').innerText(),/Fruit crate/);

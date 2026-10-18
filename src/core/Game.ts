@@ -325,8 +325,10 @@ export class Game {
   dispose(): void {
     if (this.disposed) return; this.disposed = true;
     this.audio.dispose();this.people.dispose();this.playerView.dispose();this.fleetViews.forEach(v=>v.dispose());this.trafficViews.forEach(v=>v.dispose());this.interaction.cancel();cancelAnimationFrame(this.frameId); this.abort.abort(); this.input.dispose(); this.ui.dispose();
+    const skeletons=new Set<THREE.Skeleton>();
     const geometries = new Set<THREE.BufferGeometry>(), materials = new Set<THREE.Material>(), textures = new Set<THREE.Texture>();
     this.scene.traverse(object => {
+      if(object instanceof THREE.SkinnedMesh)skeletons.add(object.skeleton);
       if (object instanceof THREE.Mesh) {
         geometries.add(object.geometry);
       }
@@ -338,7 +340,7 @@ export class Game {
       }
       if (object instanceof THREE.InstancedMesh) object.dispose();
     });
-    geometries.forEach(g => g.dispose()); materials.forEach(m => m.dispose()); textures.forEach(t => t.dispose());
+    skeletons.forEach(s=>s.dispose());geometries.forEach(g => g.dispose()); materials.forEach(m => m.dispose()); textures.forEach(t => t.dispose());
     this.district.lighting.dispose(); this.scene.environment = null;
     this.renderer.dispose(); this.renderer.forceContextLoss(); this.root.replaceChildren();
   }
