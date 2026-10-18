@@ -2,7 +2,7 @@
 
 A browser open-world game: explore Delhi on foot, drive connected fictional NCR roads, meet local shopkeepers and help a neighborhood. Three.js + TypeScript + Vite, static Vercel deployment and local single-player saves.
 
-Market Lane extends west of Connaught Place. Park, exit, visit Neem Chai, buy a drink using fictional game currency, sit and drink, meet the Nimbu Corner vendor, take a stopped civilian car and deliver a fruit crate to the cold store and confirm its receipt in DelhiOS. Gurgaon and Noida remain connected through Delhi, with a flat Yamuna-inspired bridge.
+Market Lane extends west of Connaught Place. Park, exit, visit Neem Chai, buy a drink using fictional game currency, sit and drink, meet the Nimbu Corner vendor, take a stopped civilian car and deliver a fruit crate to the cold store, then confirm its receipt in DelhiOS. Gurgaon and Noida remain connected through Delhi, with a flat Yamuna-inspired bridge.
 
 ## Run
 
@@ -32,11 +32,19 @@ The old taxi module, fares, passenger objectives, rewards and onboarding have be
 
 ## Verify
 
-Browser scripts use Playwright. Install a suitable browser in your development environment, then run:
+Browser verification uses Playwright (not a runtime game dependency). For a fresh development checkout:
+
+```sh
+npm install --no-save --package-lock=false playwright@1.62.1
+npx playwright install chromium
+```
+
+Then run:
 
 ```sh
 npm run test:production
 npm run test:living
+npm run test:living-wiring
 npm run test:regional-wiring
 npm run test:visual
 npm run test:regional-drive

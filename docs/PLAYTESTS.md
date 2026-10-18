@@ -23,18 +23,22 @@ Screenshots from player-eye, seated and cabin distances were inspected during im
 
 ## Receipt-follow-up checkpoint
 
-Source `cb526af9ccc6fc340a0f8602fa587a61a6bdc07d`:60 named tests/lint/build PASS locally. Added explicit DelhiOS receipt confirmation, remote/moving rejection, once-only reward and recovery cancellation of pending receipts in both modes. Frozen production and focused touch verification are underway; do not count the6ad immediate-reward run as evidence of this new step.
+Gameplay source `cb526af9ccc6fc340a0f8602fa587a61a6bdc07d`, ordinary harness076ef4d: complete frozen-dist loop PASS locally, with explicit receipt confirmation. CP→market127.734m/75.911wallseconds; occupied car→cold-store160.1m/59.259wallseconds. Once20 purchase, free cancellation, cup consumed, goods handover and DelhiOS receipt,650 reward once;15630 cash/trust1/inventory0 persisted after reload. Zero browser/asset errors. No actor placement/debug API/clock changes. Off-lane parking(-169.4,-12.8), not a claim of exact paint alignment.
+
+Final source checkpoint91c14e4:60 tests/lint/build PASS. The subsequent runtime edits are secondary-button contrast and correctly printed reverse sign faces; final focused contrast/bounds/cancel and visual/preset/disposal gates PASS. Gameplay JavaScript was byte-identical through the CSS-only build; the sign correction affects rendering only. Focused receipt/touch/reentry/local-driver checks PASS, three warmed cycles477 geometries/114 textures/11 actors each. Final portrait/landscape modal screenshots inspected.
+
+[Reviewed images, disclosed capture and raw JSON](evidence/LIVING_DELHI.md). Fullc722f17 CI PASS: https://github.com/deepdharia/NCR-Drive/actions/runs/39160947848 . Final91c14e4 production smoke also PASS locally: courier750 once, recovery both modes, migration/backup/zero-cash, settings/reward reload, simultaneous touch/cancel, portrait/landscape and blocked storage, with zero page/console/asset errors. Raw [production regression](evidence/living-production-regression.json). The sign-only final CI rerun is tracked at https://github.com/deepdharia/NCR-Drive/actions/runs/39161675668 (still running at publication). Earlier failed runs are retained: one harness stood in an occupied bench's exit; another demanded an NPC-occupied shop coordinate even while its named-business interaction prompt was available. Approaches now leave seat exits clear and stop on the live named-business prompt. Collision, spacing, rewards and persistence assertions remain enforced.
 
 ## Performance evidence and limits
 
-CI6ad, fixed frozen CP composition,960×640,45 RAF samples per preset with first10 discarded, software renderer only:
+Local91c14e4, fixed frozen CP composition,960×640,45 RAF samples per preset with first10 discarded, software renderer only:
 
 | Preset / DPR | Frame p50 / p95 ms | Draws / triangles |
 | --- | --- | --- |
-| Low /0.75 |699.9 /15,882.8 |143 /173,377 |
-| Balanced /1 |1,183.3 /2,383.2 |438 /514,038 |
-| High /1 |1,216.6 /2,416.6 |498 /569,528 |
+| Low /0.75 |650.0 /1,233.4 |143 /173,377 |
+| Balanced /1 |1,099.9 /2,116.6 |438 /514,040 |
+| High /1 |1,149.9 /2,233.2 |498 /569,530 |
 
-These very slow software timings include runner stalls and shader work. They establish neither physical-device FPS nor a30/60FPS target. No hardware performance acceptance or human enjoyment is claimed. Populations, particles, traffic, active scenery and audio voices are bounded; short stable resource cycles do not establish an hours-long soak.
+These very slow software timings include software GPU and shader work. They establish neither physical-device FPS nor a30/60FPS target. No hardware performance acceptance or human enjoyment is claimed. Final warmed preset/region cycles stayed at544 geometries/135 textures; disposal reached0 geometries/1 stale DFG_LUT counter and context loss, with zero browser/asset errors. Raw results: [final visual verification](evidence/living-visual-verification.json). Populations, particles, traffic, active scenery and audio voices are bounded; short stable resource cycles do not establish an hours-long soak.
 
 Owner acceptance: play the full loop in Low on M1 8GB Safari/Chrome and one named Android phone. Record browser/device/settings, frame p50/p95, draws/triangles/resources and repeated CP↔market↔outer-region journeys. Inspect feet/hands/cups/doors, shop/traffic audio, road seams, blocked doors, pause/background interruptions, touch steering/throttle and the receipt button. Report enjoyment and boundary hitches. Preview access was blocked here; do not infer it was played from Vercel success status. Historical reports under `history/` are superseded, not current gameplay instructions.

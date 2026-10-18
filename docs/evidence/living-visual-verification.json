@@ -1,0 +1,256 @@
+{
+  "evidence": [
+    {
+      "scene": "cp-chase",
+      "geometries": 307,
+      "textures": 81,
+      "calls": 498,
+      "triangles": 569530
+    },
+    {
+      "scene": "cp-overview",
+      "geometries": 531,
+      "textures": 119,
+      "calls": 929,
+      "triangles": 734408
+    },
+    {
+      "scene": "market-sign-reverse",
+      "geometries": 537,
+      "textures": 119,
+      "calls": 519,
+      "triangles": 421862
+    },
+    {
+      "scene": "east-underpass",
+      "geometries": 537,
+      "textures": 121,
+      "calls": 210,
+      "triangles": 236349
+    },
+    {
+      "scene": "ceremonial-arch",
+      "geometries": 537,
+      "textures": 121,
+      "calls": 288,
+      "triangles": 338041
+    },
+    {
+      "scene": "courier-plaza",
+      "geometries": 537,
+      "textures": 121,
+      "calls": 557,
+      "triangles": 499681
+    },
+    {
+      "scene": "gurgaon",
+      "geometries": 538,
+      "textures": 124,
+      "calls": 111,
+      "triangles": 57584
+    },
+    {
+      "scene": "yamuna",
+      "geometries": 538,
+      "textures": 129,
+      "calls": 106,
+      "triangles": 57444
+    },
+    {
+      "scene": "noida",
+      "geometries": 538,
+      "textures": 135,
+      "calls": 151,
+      "triangles": 59654
+    },
+    {
+      "wheelContact": [
+        {
+          "id": "parvaaz",
+          "wheels": [
+            {
+              "bottom": 0.035000007152557355,
+              "top": 0.6749999928474426,
+              "radius": 0.32
+            },
+            {
+              "bottom": 0.035000007152557355,
+              "top": 0.6749999928474426,
+              "radius": 0.32
+            },
+            {
+              "bottom": 0.035000007152557355,
+              "top": 0.6749999928474426,
+              "radius": 0.32
+            },
+            {
+              "bottom": 0.035000007152557355,
+              "top": 0.6749999928474426,
+              "radius": 0.32
+            }
+          ]
+        },
+        {
+          "id": "raahi",
+          "wheels": [
+            {
+              "bottom": 0.035000007152557355,
+              "top": 0.6749999928474426,
+              "radius": 0.32
+            },
+            {
+              "bottom": 0.035000007152557355,
+              "top": 0.6749999928474426,
+              "radius": 0.32
+            },
+            {
+              "bottom": 0.035000007152557355,
+              "top": 0.6749999928474426,
+              "radius": 0.32
+            },
+            {
+              "bottom": 0.035000007152557355,
+              "top": 0.6749999928474426,
+              "radius": 0.32
+            }
+          ]
+        },
+        {
+          "id": "baaz",
+          "wheels": [
+            {
+              "bottom": 0.035000007152557355,
+              "top": 0.6749999928474426,
+              "radius": 0.32
+            },
+            {
+              "bottom": 0.035000007152557355,
+              "top": 0.6749999928474426,
+              "radius": 0.32
+            },
+            {
+              "bottom": 0.035000007152557355,
+              "top": 0.6749999928474426,
+              "radius": 0.32
+            },
+            {
+              "bottom": 0.035000007152557355,
+              "top": 0.6749999928474426,
+              "radius": 0.32
+            }
+          ]
+        },
+        {
+          "id": "parvaaz",
+          "wheels": [
+            {
+              "bottom": 0.035000007152557355,
+              "top": 0.6749999928474426,
+              "radius": 0.32
+            },
+            {
+              "bottom": 0.035000007152557355,
+              "top": 0.6749999928474426,
+              "radius": 0.32
+            },
+            {
+              "bottom": 0.035000007152557355,
+              "top": 0.6749999928474426,
+              "radius": 0.32
+            },
+            {
+              "bottom": 0.035000007152557355,
+              "top": 0.6749999928474426,
+              "radius": 0.32
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "warmedSceneAndPresetCycles": [
+        {
+          "geometries": 544,
+          "textures": 135,
+          "calls": 151,
+          "triangles": 59654
+        },
+        {
+          "geometries": 544,
+          "textures": 135,
+          "calls": 151,
+          "triangles": 59654
+        },
+        {
+          "geometries": 544,
+          "textures": 135,
+          "calls": 151,
+          "triangles": 59654
+        }
+      ]
+    },
+    {
+      "softwareRendererSamples": [
+        {
+          "quality": "low",
+          "samples": 35,
+          "viewport": [
+            960,
+            640
+          ],
+          "pixelRatio": 0.75,
+          "p50": 650,
+          "p95": 1233.3999999999942,
+          "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "geometries": 544,
+          "textures": 135,
+          "calls": 143,
+          "triangles": 173377
+        },
+        {
+          "quality": "balanced",
+          "samples": 35,
+          "viewport": [
+            960,
+            640
+          ],
+          "pixelRatio": 1,
+          "p50": 1099.8999999999942,
+          "p95": 2116.600000000006,
+          "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "geometries": 544,
+          "textures": 135,
+          "calls": 438,
+          "triangles": 514040
+        },
+        {
+          "quality": "high",
+          "samples": 35,
+          "viewport": [
+            960,
+            640
+          ],
+          "pixelRatio": 1,
+          "p50": 1149.8999999999942,
+          "p95": 2233.2000000000116,
+          "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+          "geometries": 544,
+          "textures": 135,
+          "calls": 498,
+          "triangles": 569530
+        }
+      ],
+      "method": "45 RAF frames/profile, first 10 discarded; controlled frozen CP scene, 960×640, no other browser suite in parallel"
+    },
+    {
+      "disposed": {
+        "children": 0,
+        "geometries": 0,
+        "textures": 1
+      }
+    }
+  ],
+  "errors": [],
+  "warnings": [],
+  "method": "Controlled development-module interception and actor/camera placement. Software renderer; not continuous travel or real device FPS."
+}

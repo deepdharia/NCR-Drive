@@ -1,0 +1,13 @@
+{
+  "evidence": [
+    "Production startup migrated v1 zero-balance career and retained its original backup.",
+    "Keyboard entry/acceleration, active-delivery recovery without payout, released throttle and clear-door exit passed.",
+    "Complete courier: accepted, entered car, drove west, braked, exited and walked to delivery using ordinary controls; ₹750 awarded once.",
+    "On-foot recovery kept completed courier reward; graphics/sensitivity and earned balance survived reload.",
+    "Mobile simultaneous throttle/steering, touch cancellation and recovery/phone in portrait and landscape passed.",
+    "Blocked storage leaves a playable session with a visible saving-unavailable message.",
+    "Production smoke passed with zero page/console errors or failed asset responses. Software rendering; no device performance claim."
+  ],
+  "errors": [],
+  "renderer": "headless Chromium / SwiftShader"
+}
