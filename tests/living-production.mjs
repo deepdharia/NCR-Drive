@@ -55,21 +55,21 @@ try{
  for(let i=0;i<600;i++){const p=await read();if(p.z< -11)break;await key('w',p.speed<4);await key('Space',p.speed>5);await page.waitForTimeout(100);}await key('w',false);await stop();
  assert.ok((await read()).z< -11);log({parking:await read(),checked:'Off the carriageway beside the public pull-off; precise bay alignment is not asserted.'});
  await page.keyboard.press('f');await page.waitForFunction(()=>document.querySelector('[data-mode]').textContent.includes('ON FOOT'));
- async function walkDirect(to,label){
+ async function walkDirect(to,label,tolerance=0.4){
   let last=await read(),stuck=0;
   for(let i=0;i<1600;i++){
-   const p=await read(),dx=to.x-p.x,dz=to.z-p.z;if(Math.hypot(dx,dz)<0.4){for(const k of ['w','s','a','d'])await key(k,false);log({walk:label,arrival:{x:p.x,z:p.z}});return;}
+   const p=await read(),dx=to.x-p.x,dz=to.z-p.z;if(Math.hypot(dx,dz)<tolerance){for(const k of ['w','s','a','d'])await key(k,false);log({walk:label,arrival:{x:p.x,z:p.z}});return;}
    // Default walking camera yaw is -90 degrees: W east, S west, A north, D south.
-   await key('w',dx>0.18);await key('s',dx< -0.18);await key('a',dz< -0.18);await key('d',dz>0.18);
+   await key('w',dx>0.07);await key('s',dx< -0.07);await key('a',dz< -0.07);await key('d',dz>0.07);
    if(Math.hypot(p.x-last.x,p.z-last.z)<0.03)stuck++;else stuck=0;if(stuck>100)throw Error(`Walking blocked ${label}: ${JSON.stringify(p)}`);last=p;await page.waitForTimeout(100);
   }throw Error(`Walking timed out ${label}`);
  }
- async function walk(to,label){
+ async function walk(to,label,tolerance=0.4){
   const start=await read();
   // Use the clear curbside pavement before turning toward a frontage; do not
   // drive the walker diagonally through the car that was just parked.
   if(start.z< -9&&to.z< -9&&Math.abs(start.x-to.x)>3){await walkDirect({x:start.x,z:-9.7},`${label} · pavement`);await walkDirect({x:to.x,z:-9.7},`${label} · frontage`);}
-  await walkDirect(to,label);
+  await walkDirect(to,label,tolerance);
  }
  const outside=await read();await walk({x:outside.x+1.8,z:outside.z},'Step clear of the parked car');await walk({x:outside.x+1.8,z:-10},'Reach the clear pavement');
  await walk({x:-164,z:-11.8},'Meet Neem Chai vendor');await page.keyboard.press('f');await page.locator('[data-action="buy"]').click();
@@ -77,7 +77,8 @@ try{
  await page.locator('[data-action="closeShop"]').click();assert.equal(await page.locator('[data-cash]').first().innerText(),'₹15,000');
  await page.keyboard.press('f');await page.locator('[data-action="buy"]').click();await page.locator('[data-action="pay"]').click();assert.equal(await page.locator('[data-cash]').first().innerText(),'₹14,980');
  log('Visited vendor, cancelled free, then confirmed fictional UPI; chai delivered once for ₹20.');
- await walk({x:-154,z:-10.9},'Find a free bench');await page.waitForFunction(()=>document.querySelector('[data-prompt]').textContent.includes('Sit'));await page.keyboard.press('f');
+ // Wait beside the seat, leaving its front exit clear for an existing customer.
+ await walk({x:-155.3,z:-11.2},'Find a free bench',0.16);await page.waitForFunction(()=>document.querySelector('[data-prompt]').textContent.includes('Sit'));await page.keyboard.press('f');
  await page.waitForFunction(()=>document.querySelector('.toast').textContent.includes('Enjoying chai'));await page.screenshot({path:'test-results/living-chai.png'});await page.keyboard.press('f');await page.waitForFunction(()=>!document.querySelector('[data-prompt]').textContent.includes('Stand')&&!document.querySelector('[data-prompt]').textContent.includes('Standing'));
  await walk({x:-165,z:-9.9},'Leave bench via pavement');await walk({x:-190,z:-11.8},'Gali Baithak neighborhood news');await page.keyboard.press('f');assert.match(await page.locator('[data-shop-copy]').innerText(),/cold store/);await page.locator('[data-action="closeShop"]').click();
  await walk({x:-215,z:-10.1},'Juice corner approach');await walk({x:-218,z:-11.8},'Meet juice vendor');await page.keyboard.press('f');await page.locator('[data-action="supply"]').click();assert.match(await page.locator('[data-job-title]').innerText(),/Fruit crate/);
