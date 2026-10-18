@@ -31,7 +31,6 @@ export class DistrictView {
   readonly delivery = new THREE.Group();
   readonly sun: THREE.DirectionalLight;
   readonly lighting: DaylightRig;
-  private passenger = new THREE.Group();
   private localObjects: THREE.Object3D[] = [];
 
   constructor(scene: THREE.Scene, layout: DistrictLayout, renderer: THREE.WebGLRenderer) {
@@ -162,24 +161,12 @@ export class DistrictView {
     const beacon = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.6, 6, 20, 1, true), new THREE.MeshBasicMaterial({ color: 0xe7b963, transparent: true, opacity: 0.35, side: THREE.DoubleSide, depthWrite: false }));
     beacon.position.y = 3; this.delivery.add(beacon);
     const ring = new THREE.Mesh(new THREE.TorusGeometry(1.8, 0.08, 6, 32), new THREE.MeshBasicMaterial({ color: 0xf1c369 })); ring.rotation.x = Math.PI / 2; ring.position.y = 0.08; this.delivery.add(ring);
-    const passengerMaterial = new THREE.MeshStandardMaterial({ color: 0x76a8b4, roughness: 0.8 });
-    const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.23, 0.2, 0.7, 8), passengerMaterial); torso.position.set(2.7, 1, 0);
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.18, 10, 8), new THREE.MeshStandardMaterial({ color: 0xb78259 })); head.position.set(2.7, 1.55, 0);
-    this.passenger.add(torso, head);
-    for (const x of [2.58, 2.82]) {
-      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.07, 0.65, 6), passengerMaterial); leg.position.set(x, 0.35, 0); this.passenger.add(leg);
-    }
-    this.delivery.add(this.passenger);
+
     this.delivery.position.set(COURIER_TARGET.x, 0, COURIER_TARGET.z); this.delivery.visible = false; this.group.add(this.delivery);
     this.localObjects=this.group.children.filter(child=>child!==earth && child!==eastBank && child!==this.delivery);
   }
 
-  setPickup(pickup: boolean): void {
-    this.passenger.visible = pickup;
-    for (const child of this.delivery.children) if (child instanceof THREE.Mesh && child.material instanceof THREE.MeshBasicMaterial) {
-      child.material.color.setHex(pickup ? 0x71cce5 : 0xf1c369);
-    }
-  }
+
 
   setQuality(quality: QualityPreset): void { this.lighting.setQuality(quality); }
 

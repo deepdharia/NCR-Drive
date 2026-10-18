@@ -5,14 +5,16 @@ import type { InteractionSystem } from '../systems/InteractionSystem';
 import { COURIER_TARGET } from '../systems/CourierMission';
 import type { CourierMission } from '../systems/CourierMission';
 import type { StoryMission } from '../systems/StoryMission';
-import type { TaxiMission } from '../systems/TaxiMission';
+import { MARKET, SUPPLY_TARGET } from '../systems/Neighborhood';
+import type { Neighborhood } from '../systems/Neighborhood';
 import { roadRoute, routeLength } from '../systems/Navigation';
 import { regionAt, regionLabels } from '../world/WorldRoads';
 import { Minimap } from './Minimap';
 import type { Settings } from '../systems/ProgressStore';
 import { nextQuality, QUALITY, resolvedQuality } from '../rendering/QualityProfile';
 
-interface UIActions { journey: () => void; regionalTaxi: (noida: boolean) => void; start: () => void; phone: () => void; pause: () => void; interact: () => void; accept: () => void; taxi: () => void; cancelTaxi: () => void; story: () => void; cancelStory: () => void; quality: () => void; recover: () => void; sensitivity: (kind: 'steeringSensitivity' | 'cameraSensitivity', value: number) => void }
+interface UIActions { journey:()=>void; start:()=>void; phone:()=>void; pause:()=>void; interact:()=>void; accept:()=>void; story:()=>void; cancelStory:()=>void; quality:()=>void; recover:()=>void; sensitivity:(kind:'steeringSensitivity'|'cameraSensitivity',value:number)=>void; buy:()=>void; pay:()=>void; closeShop:()=>void; supply:()=>void; cancelSupply:()=>void; audio:()=>void; volume:(value:number)=>void }
+
 const phoneIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10 18h4"/></svg>';
 
 export class GameUI {
@@ -26,7 +28,7 @@ export class GameUI {
     root.innerHTML = `
       <section class="welcome" aria-label="Welcome to NCR Drive">
         <div class="welcome-top"><span class="brand-mark">N</span><span>NCR DRIVE <small>NEW DELHI, INDIA</small></span><span class="edition">OPEN WORLD / 01</span></div>
-        <div class="welcome-copy"><span class="eyebrow">A CITY WITH A THOUSAND STORIES</span><h1>Your evening.<br>Your <em>Delhi.</em></h1><p>Walk beneath the arcades. Take the Parvaaz for a spin.<br>Switch cars. Pick up passengers. Start your first city story.</p><button class="primary" data-action="start">Explore Connaught Place <span>↗</span></button><div class="welcome-note">NO DOWNLOADS. NO KEYS. JUST THE CITY.</div></div>
+        <div class="welcome-copy"><span class="eyebrow">A CITY WITH A THOUSAND STORIES</span><h1>Your evening.<br>Your <em>Delhi.</em></h1><p>Walk beneath the arcades. Take the Parvaaz for a spin.<br>Visit Market Lane. Share a chai. Help your neighbors.</p><button class="primary" data-action="start">Explore the neighborhood <span>↗</span></button><div class="welcome-note">NO DOWNLOADS. NO KEYS. JUST THE CITY.</div></div>
         <div class="welcome-bottom"><span>25° golden hour · Connaught Place</span><span>WALK / DRIVE / HUSTLE</span></div>
       </section>
       <section class="game-ui" hidden aria-label="Game controls">
@@ -47,19 +49,19 @@ export class GameUI {
       </section>
       <aside class="phone" hidden aria-label="DelhiOS smartphone" aria-modal="true" role="dialog">
         <div class="phone-notch"></div><header class="phone-header"><span>DelhiOS<small>CONNECTED TO YOUR CITY</small></span><button data-action="phone" aria-label="Close phone">×</button></header>
-        <div class="phone-scroll"><h2>Good evening,<br><em>Delhi explorer.</em></h2><div class="phone-balance"><span>YOUR BALANCE</span><strong data-cash>₹15,000</strong><small data-save>Progress saved on this device</small><small data-career>0 rides · New driver</small></div>
+        <div class="phone-scroll"><h2>Good evening,<br><em>Delhi explorer.</em></h2><div class="phone-balance"><span>YOUR BALANCE</span><strong data-cash>₹15,000</strong><small data-save>Progress saved on this device</small><small data-career>Local helper · Building trust</small></div>
           <div class="app-heading"><span>↗ DelhiNav</span><small>LIVE GPS</small></div><div class="phone-map"><canvas aria-label="DelhiNav GPS minimap" role="img"></canvas><div><span>●</span> <span data-map-region>Connaught Place</span> <small data-coordinates>New Delhi, India</small></div></div>
-          <div class="app-heading"><span>↗ Delhi Cabs</span><small>YOUR DRIVING CAREER</small></div>
-          <article class="taxi-card"><span class="taxi-tag">NEXT FARE</span><h3 data-taxi-route></h3><p>Stop below 2 km/h inside each marker for 2 seconds. Stay in the car for pickup and drop-off.</p><div class="gig-reward"><strong data-taxi-fare></strong><span>+ ₹150 clean-drive bonus<br>No time limit</span></div><p data-taxi-status></p><button class="primary" data-action="taxi">Accept passenger →</button><button class="cancel-fare" data-action="regionalTaxi">Delhi → Gurgaon fare</button><button class="cancel-fare" data-action="noidaTaxi">Gurgaon → Noida fare (via Delhi)</button><button class="cancel-fare" data-action="cancelTaxi" hidden>Cancel current fare</button></article>
-          <div class="app-heading"><span>↗ City Stories</span><small>CHAPTER 01</small></div><article class="taxi-card"><span class="story-tag" data-story-name>KABIR’S EVENING RUN</span><h3 data-story-description>One evening. Three stops.</h3><p data-story-status>Collect paperwork, cross the circle and finish a handover on foot. 4 minutes · ₹1,200.</p><button class="primary" data-action="story">Start chapter →</button><p>Kabir’s Regional Dispatch: Delhi pickup → Gurgaon delivery. 12 minutes · ₹2,400. Optional Noida taxi follow-up after delivery.</p><button class="cancel-fare" data-action="journey">Start regional dispatch →</button><button class="cancel-fare" data-action="cancelStory" hidden>Abandon chapter</button></article>
-          <div class="app-heading"><span>↗ Motor pool</span><small>THREE CARS · FREE TO DRIVE</small></div><article class="taxi-card"><p>Gold Parvaaz: inner circle. White Raahi estate: west approach. Blue Baaz sport: east approach. Walk to the right-hand door and press F. Cars remain parked where you leave them this session.</p></article>
+          <div class="app-heading"><span>↗ Neighborhood</span><small>LIVING DELHI</small></div><article class="activity-card"><h3>Market Lane · बाज़ार गली</h3><p>Head west from CP. Park, walk to Neem Chai, pay with fictional game currency, sit and drink. Visit Gali Baithak for local news and Nimbu Corner for a fruit supply job.</p><p data-neighborhood></p><button class="cancel-job" data-action="cancelSupply" hidden>Cancel supply delivery</button></article>
+          <div class="app-heading"><span>↗ City Stories</span><small>CHAPTER 01</small></div><article class="activity-card"><span class="story-tag" data-story-name>KABIR’S EVENING RUN</span><h3 data-story-description>One evening. Three stops.</h3><p data-story-status>Collect paperwork, cross the circle and finish a handover on foot. 4 minutes · ₹1,200.</p><button class="primary" data-action="story">Start chapter →</button><p>Kabir’s Regional Dispatch: Delhi pickup → Gurgaon delivery. 12 minutes · ₹2,400. All three regions remain open for exploration.</p><button class="cancel-job" data-action="journey">Start regional dispatch →</button><button class="cancel-job" data-action="cancelStory" hidden>Abandon chapter</button></article>
+          <div class="app-heading"><span>↗ Motor pool</span><small>THREE CARS · FREE TO DRIVE</small></div><article class="activity-card"><p>Gold Parvaaz: inner circle. Additional prototype cars: west/east approaches. Any stopped civilian car is usable. Approach its right-hand door and press F. Occupied cars need a short takeover. Taken cars remain in this session and are never recycled.</p></article>
           <div class="app-heading"><span>◈ Hustle</span><small>LOCAL GIGS</small></div><article class="gig-card"><span class="gig-tag">YOUR FIRST GIG</span><h3>Shivaji Stadium<br>Courier Run</h3><p>One parcel. A short drive through CP. Hand it over on foot at the stadium metro.</p><div class="gig-reward"><strong>₹750</strong><span>No time limit<br>Parcel included</span></div><button class="primary" data-action="accept">Accept delivery →</button></article><p class="phone-footer">A little hustle. A bigger city.</p>
         </div><div class="phone-home"></div>
       </aside>
       <section class="pause-screen" hidden aria-label="Paused"><div><span class="eyebrow">TAKE A BREATHER</span><h2>Delhi can wait.</h2><p>Your drive will be right here.</p><button class="graphics-button" data-action="quality">Graphics: Detailed · Tap for performance</button>
-        <small data-render-stats aria-label="Rolling render statistics">Drive to collect frame statistics.</small><div class="control-settings"><label for="steering-sensitivity">Steering sensitivity <output data-steering-value>1.0×</output></label><input id="steering-sensitivity" type="range" min="0.5" max="1.5" step="0.1" value="1" data-setting="steeringSensitivity"><label for="camera-sensitivity">Camera sensitivity <output data-camera-value>1.0×</output></label><input id="camera-sensitivity" type="range" min="0.5" max="1.5" step="0.1" value="1" data-setting="cameraSensitivity"></div>
+        <button class="graphics-button" data-action="audio">Sound: On</button><label>Sound volume <input aria-label="Sound volume" data-volume type="range" min="0" max="1" step="0.05" value="0.35"></label><small data-render-stats aria-label="Rolling render statistics">Drive to collect frame statistics.</small><div class="control-settings"><label for="steering-sensitivity">Steering sensitivity <output data-steering-value>1.0×</output></label><input id="steering-sensitivity" type="range" min="0.5" max="1.5" step="0.1" value="1" data-setting="steeringSensitivity"><label for="camera-sensitivity">Camera sensitivity <output data-camera-value>1.0×</output></label><input id="camera-sensitivity" type="range" min="0.5" max="1.5" step="0.1" value="1" data-setting="cameraSensitivity"></div>
         <p class="recovery-note" id="recovery-policy">Stuck? Recovery is free. Your nearby car returns to a clear road.<br>Active jobs are cancelled without payout. Earned money is kept.</p><button class="graphics-button" data-action="recover" aria-describedby="recovery-policy">Recover to a clear road · Free</button><p data-recovery-status role="status"></p>
-        <button class="primary" data-action="pause">Back to the city →</button></div></section>`;
+        <button class="primary" data-action="pause">Back to the city →</button></div></section>
+      <section class="shop-modal" hidden role="dialog" aria-modal="true" aria-label="Neighborhood interaction"><div><span class="eyebrow">LIVING DELHI · GAME CURRENCY ONLY</span><h2 data-shop-title></h2><p data-shop-copy></p><button class="primary" data-action="buy" hidden>Order drink</button><button class="primary" data-action="pay" hidden>Confirm fictional UPI payment</button><button class="graphics-button" data-action="supply" hidden>Help with the fruit supply · ₹650</button><button class="graphics-button" data-action="closeShop">Back to the street</button></div></section>`;
     const options = { signal: this.abort.signal };
     root.addEventListener('click', event => {
       const button = (event.target as Element).closest<HTMLButtonElement>('button[data-action]');
@@ -73,18 +75,21 @@ export class GameUI {
         case 'interact': actions.interact(); break;
         case 'accept': actions.accept(); break;
         case 'journey': actions.journey(); break;
-        case 'regionalTaxi': actions.regionalTaxi(false); break;
-        case 'noidaTaxi': actions.regionalTaxi(true); break;
         case 'story': actions.story(); break;
         case 'cancelStory': actions.cancelStory(); break;
-        case 'taxi': actions.taxi(); break;
-        case 'cancelTaxi': actions.cancelTaxi(); break;
+        case 'buy': actions.buy(); break;
+        case 'pay': actions.pay(); break;
+        case 'closeShop': actions.closeShop(); break;
+        case 'supply': actions.supply(); break;
+        case 'cancelSupply': actions.cancelSupply(); break;
+        case 'audio': actions.audio(); break;
         case 'jump': input.requestJump(); break;
         case 'reverse': input.reverse = !input.reverse; this.text('[data-reverse]', input.reverse ? 'DRIVE' : 'REVERSE'); break;
       }
     }, options);
     root.addEventListener('change', event => {
       const slider = event.target as HTMLInputElement;
+      if(slider.hasAttribute('data-volume'))actions.volume(Number(slider.value));
       const kind = slider.dataset.setting;
       if (kind === 'steeringSensitivity' || kind === 'cameraSensitivity') actions.sensitivity(kind, Number(slider.value));
     }, options);
@@ -137,67 +142,50 @@ export class GameUI {
       else if (started) this.element<HTMLButtonElement>('[aria-label="Open DelhiOS phone"]').focus({ preventScroll: true });
     }
   }
-  update(player: PlayerController, car: VehicleController, interaction: InteractionSystem, mission: CourierMission, taxi: TaxiMission, saveAvailable: boolean, story: StoryMission): void {
-    const driving = car.driving, position = driving ? car.position : player.position;
-    const region=regionAt(position);
-    this.text('[data-region-title]', region === 'delhi' ? 'Connaught Place · नई दिल्ली' : regionLabels[region].split(' · ')[0]);
-    this.text('[data-region-detail]', regionLabels[region]);
-    this.text('[data-map-region]',regionLabels[region]);
-    this.text('[data-story-name]', story.active && story.duration>240 ? 'KABIR’S REGIONAL DISPATCH' : 'KABIR’S EVENING RUN');
-    this.text('[data-story-description]',story.active && story.duration>240 ? 'Delhi → Gurgaon · ₹2,400' : 'One evening. Three stops.');
-    this.text('[data-cash]', `₹${mission.cash.toLocaleString('en-IN')}`);
-    this.text('[data-mode]', driving ? `${car.spec.name.toUpperCase()} / ${car.spec.role.toUpperCase()}` : 'ON FOOT / EXPLORER');
-    this.text('[data-speed]', driving ? `${Math.round(car.kmh)} km/h` : 'Take the long way.');
-    this.text('[data-mode-detail]', driving ? `${Math.abs(car.speed) < 0.1 ? 'IDLE' : car.speed < 0 ? 'REVERSE' : 'DRIVE'} · ${car.spec.role} · HDG ${((car.yaw * 180 / Math.PI % 360 + 360) % 360).toFixed(0)}°` : 'The city moves at your pace.');
-    this.text('[data-prompt]', interaction.prompt);
-    for (const button of this.root.querySelectorAll<HTMLButtonElement>('[data-action="interact"]')) {
-      button.disabled = !interaction.available; button.setAttribute('aria-label', driving ? 'Exit vehicle' : 'Enter vehicle');
-    }
-    this.text('[data-touch-interact]', driving ? 'EXIT' : 'DRIVE');
-    this.root.querySelectorAll<HTMLElement>('[data-driving]').forEach(e => { e.hidden = !driving; });
-    this.root.querySelectorAll<HTMLElement>('[data-foot]').forEach(e => { e.hidden = driving; });
-    const courier = mission.state === 'active';
-    const target = story.active ? story.step.target : taxi.active ? taxi.target : courier ? COURIER_TARGET : undefined;
-    if(target !== this.routeTarget || performance.now()-this.routeTime>750) {
-      this.cachedRoute=target ? roadRoute(position,target) : [];this.routeTarget=target;this.routeTime=performance.now();
-    }
-    const route=this.cachedRoute;
-    const metres = Math.round(routeLength(route));
-    const stage = taxi.state === 'pickup' ? 'Pickup' : 'Drop-off';
-    const stopHint = taxi.dwell > 0 ? `Hold still · ${Math.max(0, 2 - taxi.dwell).toFixed(1)} s` : `Stop in marker · ${metres} m by road`;
-    this.text('[data-job-title]', taxi.active ? `${stage} · ${taxi.state === 'pickup' ? taxi.pickup.name : taxi.destination.name}` : courier ? 'Shivaji Stadium Courier Run' : 'Delhi Cabs · Your next fare');
-    this.text('[data-distance]', taxi.active ? (driving ? stopHint : 'Enter a motor-pool car to collect your passenger') : courier ? `${metres} m by road · Deliver on foot` : 'Open DelhiOS · Find a passenger →');
-    this.text('[data-coordinates]', `${position.x.toFixed(1)}, ${position.z.toFixed(1)} · ${driving ? 'Driving' : 'On foot'}`);
-    this.text('[data-save]', saveAvailable ? 'Progress saved on this device' : 'Saving unavailable · This session only');
-    this.text('[data-career]', `${taxi.completed} rides · ${taxi.completed >= 10 ? 'CP regular' : taxi.completed >= 3 ? 'City driver' : 'New driver'}`);
-    this.text('[data-taxi-route]', `${taxi.pickup.name} → ${taxi.destination.name}`);
-    this.text('[data-taxi-fare]', `₹${taxi.fare}`);
-    this.text('.taxi-tag', taxi.active ? `${stage.toUpperCase()} IN PROGRESS` : 'NEXT FARE');
-    this.text('[data-taxi-status]', taxi.active ? `${stage} · ${taxi.collisions ? 'Clean bonus lost after impact' : 'Clean bonus available'}` : courier ? 'Finish your courier gig to take a fare.' : 'One passenger. A new route through CP.');
-    const taxiButton = this.element<HTMLButtonElement>('[data-action="taxi"]');
-    taxiButton.disabled = taxi.active || courier || story.active;
-    this.text('[data-action="taxi"]', taxi.active ? 'Fare in progress · Close phone to drive' : 'Accept passenger →');
-    this.element('[data-action="cancelTaxi"]').hidden = !taxi.active;
-    this.text('.gig-tag', mission.state === 'completed' ? 'DELIVERED' : courier ? 'IN PROGRESS' : 'YOUR FIRST GIG');
-    const accept = this.element<HTMLButtonElement>('[data-action="accept"]'); accept.disabled = mission.state !== 'available' || taxi.active || story.active;
-    this.text('[data-action="accept"]', courier ? `GPS active · ${metres} m` : mission.state === 'completed' ? 'Delivery complete · ₹750 earned' : taxi.active ? 'Finish your taxi fare first' : 'Accept delivery →');
-    const storyButton = this.element<HTMLButtonElement>('[data-action="story"]');
-    storyButton.disabled = story.active || courier || taxi.active;
-    this.text('[data-action="story"]', story.active ? 'Chapter in progress' : story.state === 'failed' ? 'Retry chapter →' : story.state === 'completed' ? 'Replay chapter →' : 'Start chapter →');
-    this.element('[data-action="cancelStory"]').hidden = !story.active;
-    this.text('[data-story-status]', story.active ? `${story.index + 1}/${story.steps.length} · ${story.step.title} · ${Math.ceil(story.remaining)}s remaining` : 'Collect paperwork, cross the circle and finish a handover on foot. 4 minutes · ₹1,200.');
-    if (story.active) {
-      this.text('[data-job-title]', `${story.index + 1}/${story.steps.length} · ${story.step.title}`);
-      this.text('[data-distance]', `${Math.ceil(story.remaining)}s · ${metres} m · ${story.step.mode === 'foot' ? 'Exit car · hand over on foot' : 'Stop in car'} · Hold still 1.5s`);
-    }
-    for (const action of ['journey','regionalTaxi','noidaTaxi']) this.element<HTMLButtonElement>(`[data-action="${action}"]`).disabled = taxi.active || courier || story.active;
-    if(target && !route.length)this.text('[data-distance]','No safe road route · return to a signed roadway');
-    this.maps.forEach(map => map.draw(position, driving ? car.yaw : player.yaw, car.position, target, route, taxi.state === 'pickup'));
+  update(player:PlayerController,car:VehicleController,interaction:InteractionSystem,mission:CourierMission,neighborhood:Neighborhood,saveAvailable:boolean,story:StoryMission,prompt?:string,locked=false):void {
+    const driving=car.driving,position=driving?car.position:player.position,region=regionAt(position);
+    this.text('[data-region-title]',region==='delhi'?'Delhi · नई दिल्ली':regionLabels[region].split(' · ')[0]);
+    this.text('[data-region-detail]',regionLabels[region]);this.text('[data-map-region]',regionLabels[region]);
+    this.text('[data-cash]',`₹${mission.cash.toLocaleString('en-IN')}`);
+    this.text('[data-mode]',driving?`${car.spec.name.toUpperCase()} / CIVILIAN`:'ON FOOT / EXPLORER');
+    this.text('[data-speed]',driving?`${Math.round(car.kmh)} km/h`:'Take the long way.');
+    this.text('[data-mode-detail]',driving?`${Math.abs(car.speed)<0.1?'IDLE':car.speed<0?'REVERSE':'DRIVE'} · HDG ${((car.yaw*180/Math.PI%360+360)%360).toFixed(0)}°`:'The city moves at your pace.');
+    this.text('[data-prompt]',prompt??interaction.prompt);
+    for(const button of this.root.querySelectorAll<HTMLButtonElement>('[data-action="interact"]')){button.disabled=locked||(!prompt&&!interaction.available);button.setAttribute('aria-label',driving?'Exit vehicle':'Interact nearby');}
+    this.text('[data-touch-interact]',driving?'EXIT':'USE');
+    this.root.querySelectorAll<HTMLElement>('[data-driving]').forEach(e=>{e.hidden=!driving;});this.root.querySelectorAll<HTMLElement>('[data-foot]').forEach(e=>{e.hidden=driving;});
+    const courier=mission.state==='active',supply=neighborhood.job==='delivery';
+    const target=story.active?story.step.target:courier?COURIER_TARGET:supply?SUPPLY_TARGET:MARKET;
+    if(target!==this.routeTarget||performance.now()-this.routeTime>750){this.cachedRoute=roadRoute(position,target);this.routeTarget=target;this.routeTime=performance.now();}
+    const route=this.cachedRoute,metres=Math.round(routeLength(route));
+    this.text('[data-job-title]',story.active?story.step.title:courier?'Shivaji Stadium Courier Run':supply?'Fruit crate → Delhi Cold Store':'Explore the neighborhood');
+    this.text('[data-distance]',story.active?`${metres} m · ${Math.ceil(story.remaining)}s · ${story.step.mode==='foot'?'On-foot handover':'Stop in car'}`:courier?`${metres} m · Deliver on foot`:supply?`${metres} m · Stop in the goods bay · ₹650`:`${metres} m · Visit Neem Chai on Market Lane`);
+    this.text('[data-coordinates]',`${position.x.toFixed(1)}, ${position.z.toFixed(1)} · ${driving?'Driving':'On foot'}`);
+    this.text('[data-save]',saveAvailable?'Progress saved on this device':'Saving unavailable · Purchases and neighborhood rewards require a successful save');
+    this.text('[data-career]',`Neighborhood trust ${neighborhood.data.relationship} · ${neighborhood.data.completed?'Trusted local helper':'Local explorer'}`);
+    this.text('[data-neighborhood]',`Bag: ${neighborhood.data.chai} chai · ${neighborhood.data.juice} juice. ${neighborhood.message}`);
+    this.element('[data-action="cancelSupply"]').hidden=!supply;
+    const busy=courier||story.active||supply;
+    this.element<HTMLButtonElement>('[data-action="accept"]').disabled=mission.state!=='available'||busy;
+    this.text('[data-action="accept"]',mission.state==='completed'?'Delivery complete · ₹750 earned':courier?'Delivery in progress':'Accept delivery →');
+    for(const action of ['story','journey'])this.element<HTMLButtonElement>(`[data-action="${action}"]`).disabled=busy;
+    this.element('[data-action="cancelStory"]').hidden=!story.active;
+    this.text('[data-story-status]',story.active?`${story.index+1}/${story.steps.length} · ${story.step.title} · ${Math.ceil(story.remaining)}s remaining`:'Collect paperwork, cross the circle and finish on foot. 4 minutes · ₹1,200.');
+    if(!route.length)this.text('[data-distance]','Walk to a signed roadway for a safe road route');
+    this.maps.forEach(map=>map.draw(position,driving?car.yaw:player.yaw,car.position,target,route,false));
   }
+  shop(title:string,copy:string,buy=false,pay=false,supply=false):void {
+    this.element('.shop-modal').hidden=false;this.text('[data-shop-title]',title);this.text('[data-shop-copy]',copy);
+    for(const [action,show] of [['buy',buy],['pay',pay],['supply',supply]] as const)this.element(`[data-action="${action}"]`).hidden=!show;
+    this.element<HTMLButtonElement>(pay?'[data-action="pay"]':'[data-action="closeShop"]').focus();
+  }
+  closeShop():void {this.element('.shop-modal').hidden=true;}
 
   renderStats(value:string):void {this.text('[data-render-stats]',value);}
 
   setSettings(settings: Settings): void {
+    this.text('[data-action="audio"]',settings.muted?'Sound: Muted':'Sound: On');
+    this.element<HTMLInputElement>('[data-volume]').value=String(settings.volume??0.35);
     const quality = resolvedQuality(settings);
     this.text('[data-action="quality"]', `Graphics: ${QUALITY[quality].label} · Tap for ${QUALITY[nextQuality(quality)].label}`);
     this.element<HTMLInputElement>('[data-setting="steeringSensitivity"]').value = String(settings.steeringSensitivity);

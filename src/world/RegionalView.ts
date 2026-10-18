@@ -47,7 +47,7 @@ export class RegionalView {
      const crown=new THREE.Mesh(foliage,verge);crown.position.set(x,3.2,z);chunk.add(crown);
     }
    }
-   const label=r.region==='gurgaon'?'GURGAON · BUSINESS AVENUE':r.region==='noida'?'NOIDA · SECTOR 18 / 19':r.region==='gurgaon-corridor'?'GURGAON ↗   |   DELHI ↙':r.bridge?'YAMUNA CROSSING · NOIDA ↗':'NOIDA ↗   |   DELHI ↙';
+   const label=r.id==='market-lane'?'MARKET LANE · DELHI ↗':r.region==='gurgaon'?'GURGAON · BUSINESS AVENUE':r.region==='noida'?'NOIDA · SECTOR 18 / 19':r.region==='gurgaon-corridor'?'GURGAON ↗   |   DELHI ↙':r.bridge?'YAMUNA CROSSING · NOIDA ↗':'NOIDA ↗   |   DELHI ↙';
    for(const reverse of [false,true]){
     const t=reverse?0.85:0.15,side=reverse?-1:1;
     const x=a.x+(b.x-a.x)*t+Math.cos(yaw)*(r.width/2+3)*side,z=a.z+(b.z-a.z)*t-Math.sin(yaw)*(r.width/2+3)*side;

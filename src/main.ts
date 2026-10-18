@@ -1,9 +1,12 @@
 import './style.css';
+import { loadPeople } from './people/HumanoidView';
 import { Game } from './core/Game';
 
 const root = document.querySelector<HTMLDivElement>('#app');
 if (!root) throw new Error('NCR Drive mount point is missing.');
 try {
+  root.textContent = 'Preparing your Delhi neighborhood…';
+  await loadPeople();
   const game = new Game(root);
   import.meta.hot?.dispose(() => game.dispose());
   window.addEventListener('pagehide', event => { if (!event.persisted) game.dispose(); });

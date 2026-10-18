@@ -4,7 +4,7 @@ import type { Point } from '../core/math';
 import type { PlayerController } from '../player/PlayerController';
 import type { VehicleController } from '../vehicle/VehicleController';
 import type { CourierMission } from './CourierMission';
-import type { TaxiMission } from './TaxiMission';
+import type { Neighborhood } from './Neighborhood';
 import type { StoryMission } from './StoryMission';
 
 import { recoveryPads, regionAt } from '../world/WorldRoads';
@@ -23,14 +23,15 @@ export function findRecoveryPose(world: CollisionWorld, car: VehicleController, 
 
 /** Validate first; a blocked recovery changes neither actors nor mission progress. */
 export function recoverToRoad(world: CollisionWorld, car: VehicleController, player: PlayerController, obstacles: readonly Solid[],
-  courier: CourierMission, taxi: TaxiMission, story: StoryMission): boolean {
+  courier: CourierMission, neighborhood: Pick<Neighborhood, 'cancelJob'>, story: StoryMission): boolean {
   const pose = findRecoveryPose(world, car, car.driving ? car.position : player.position, obstacles);
   if (!pose) return false;
   if (courier.state === 'active') courier.state = 'available';
-  if (taxi.active) taxi.cancel();
+  neighborhood.cancelJob();
   if (story.active) story.cancel();
   const driving = car.driving;
   car.position = { x: pose.x, z: pose.z }; car.yaw = pose.yaw;
+  car.owner=driving?'player':'parked';car.protected=true;car.reserved=false;car.doorOpen=0;
   car.setDriving(driving); player.setActive(!driving);
   player.teleport(localToWorld({ x: -1.65, z: 0.35 }, pose, pose.yaw));
   return true;

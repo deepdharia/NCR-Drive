@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=22.12.0" },
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 3000",
     "build": "tsc --noEmit && vite build",
@@ -13,9 +15,12 @@
     "test:production": "node tests/production-smoke.mjs",
     "test:regional-wiring": "node tests/regional-browser-wiring.mjs",
     "test:regional-drive": "node --import tsx tests/regional-drive.mjs",
-    "test:visual": "node tests/visual-browser.mjs"
+    "test:visual": "node tests/visual-browser.mjs",
+    "test:living": "node --import tsx tests/living-production.mjs"
   },
-  "dependencies": { "three": "0.186.1" },
+  "dependencies": {
+    "three": "0.186.1"
+  },
   "devDependencies": {
     "@types/node": "^22.14.0",
     "@types/three": "0.186.0",

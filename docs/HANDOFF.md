@@ -194,3 +194,24 @@ focus loss and three repeat journeys for frame times/retention/hitches. Reconnec
 the Vercel scope only if remote automated inspection is needed. Keep this PR
 draft until visual/device acceptance. Do not resume the rejected shadow resizing
 approach, and do not block this map on audio.
+
+## Living Delhi — active milestone, 18 October 2026
+
+Branch `improve/living-delhi`, starting clean SHA
+`36ec239f22e9b087d1170fdfa4e7fed35ed3de81`. Remote branches/PRs refreshed: the
+supplied visual branch is the newest approved connected/visual chain; the
+separate visual-mobile PR predates it. Baseline 51 tests/lint/build PASS.
+Blender 4.3.2, FFmpeg, Chromium and Playwright are available. Vercel scoped preview
+inspection remains 403; no protection change/login or remote playtest claimed.
+
+Acceptance: IN PROGRESS — complete taxi removal and v1/v2 save migration;
+connected 250m market; rigged adults/routines/shops/seats; atomic fictional UPI;
+all-civilian vehicle access/takeover; goods mission/relationship; audio; complete
+production-input loop. Use a local CC0 Quaternius rig with original authored
+animation/clothing; official license verified, local source prep underway.
+No real payment, external banking or live NPC model calls. Highest priority is
+the complete playable loop before extra decorative variants.
+
+Living Delhi integration checkpoint (uncommitted): market-lane adds 250 m west of CP; shared lane routing/render data retained. `Neighborhood` commits money/items and reward/trust in one v3 save, stable storage key and v1/v2 migration. Taxi module/runtime/UI removed; old save ride totals are retired, money is retained. Ten persistent rigged market adults, queue/seat ownership, three vendors, optional drinks, goods job, civilian owner/occupant/door fields and reserved transfer sequence are integrated. Blender export has 20 original clips on the CC0 skeleton. Build and TypeScript passed before animation refinements; focused purchase/save/recovery/route tests being updated and run. Production loop, NPC clearance/animation inspection, sound behavior, new browser coverage and documentation cleanup remain IN PROGRESS. Do not claim hardware FPS or full milestone completion from this checkpoint.
+
+Runnable checkpoint: all nine Node test files PASS; `npm run lint` and `npm run build` PASS. Production `npm run test:production` PASS: v1 zero balance/backup migration, retained courier completed using ordinary keyboard inputs, recovery cancellation/no payout, entry/exit, settings/reward reload, simultaneous touch steering/throttle and portrait/landscape bounds, blocked storage, no browser/asset errors. New complete market loop has its own `test:living` production script and is next to run. These results do not yet establish the new full street loop or real-device FPS.

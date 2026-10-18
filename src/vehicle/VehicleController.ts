@@ -7,7 +7,15 @@ import type { CollisionWorld, Solid } from '../core/CollisionWorld';
 export interface DriveInput { throttle: number; steer: number; brake: boolean; handbrake: boolean }
 
 /** Signed-speed arcade bicycle model; +Z is the car's forward axis. */
+let vehicleSerial = 0;
 export class VehicleController {
+  readonly id = `civilian-${++vehicleSerial}`;
+  owner: 'ai' | 'parked' | 'player' = 'parked';
+  occupant: string | null = null;
+  protected = false;
+  reserved = false;
+  doorOpen = 0;
+  condition = 1;
   position: Point = { x: -44, z: 0 };
   yaw = 0;
   speed = 0;

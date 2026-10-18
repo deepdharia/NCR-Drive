@@ -59,10 +59,10 @@ try{
  await page.screenshot({path:'test-results/visual-input-underpass.png'});
  }else{
  if(scope!=='noida'){
- await page.keyboard.press('Tab');await page.locator('[data-action="regionalTaxi"]').click();
- await drive({x:92,z:0},'Delhi pickup');await page.waitForFunction(()=>document.querySelector('[data-job-title]').textContent.startsWith('Drop-off'));
- await drive(destinations[0],'Delhi → Gurgaon');await page.waitForFunction(()=>document.querySelector('[data-career]').textContent.includes('1 rides'));
- assert.match(await page.locator('[data-career]').innerText(),/1 rides/);log('Cross-region fare paid and ride counter incremented.');
+ await page.keyboard.press('Tab');await page.locator('[data-action="journey"]').click();
+ await drive({x:92,z:0},'Delhi paperwork pickup');await page.waitForFunction(()=>document.querySelector('[data-job-title]').textContent.includes('Gurgaon'));
+ await drive(destinations[0],'Delhi → Gurgaon');await page.waitForFunction(()=>document.querySelector('[data-cash]').textContent==='₹17,400');
+ log('Regional goods dispatch completed and ₹2400 awarded.');
  await page.screenshot({path:'test-results/regional-gurgaon.png'});
  await page.keyboard.press('Escape');await page.locator('[data-action="recover"]').click();const recovered=await read();assert.ok(recovered.x< -1800);log({regionalRecovery:recovered});
  await drive({x:-2296,z:2050},'Gurgaon return · west avenue');

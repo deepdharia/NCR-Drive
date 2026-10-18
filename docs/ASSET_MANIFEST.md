@@ -53,3 +53,12 @@ budgets remain unverified. No new licence/attribution dependency was introduced.
 Review PNGs under `docs/evidence/visual-*.png` are unedited screenshots of this
 repository's own rendered geometry/UI, captured with disclosed controlled camera
 placement. They are documentation, not runtime assets or third-party imagery.
+
+## Living Delhi — licensed articulated adult
+
+- Runtime: `public/assets/people/delhi-adult.glb`, packaged locally (~1.5 MB); no account/CDN dependency.
+- Creator: **Quaternius**, Universal Base Characters, Standard FREE CC0 subset. Creator's license/use statement: https://quaternius.com/packs/universalbasecharacters.html and https://quaternius.itch.io/universal-base-characters . CC0 permits commercial use, modification and redistribution; attribution is appreciated, not required. Preserved notice: `public/assets/people/QUATERNIUS-LICENSE.txt`; legal deed https://creativecommons.org/publicdomain/zero/1.0/ .
+- Downloaded rigged source: https://raw.githubusercontent.com/programasweights/avatar/d5c4a204c6485ebd7d1d0ced6f1e261509874af5/public/assets/character.glb . Mirror's explicit asset provenance: https://github.com/programasweights/avatar/blob/d5c4a204c6485ebd7d1d0ced6f1e261509874af5/ASSETS.md . License verified against the creator's page, not inferred from public GitHub availability. Source SHA256: `d6f3b64cab629f6ddca9ba063811aeffd3663a8a4e49ade47cd9505dc2bbd70f`.
+- Modifications: original shirt/trouser/skin/shoe palette, close-cropped hair, mesh simplification, normalized four-bone skin weights, and 20 original Blender-authored animation clips. Reproducible preparation: `scripts/prepare-character.py` with Blender 4.3.2. No external motion clips, Mixamo download, proprietary model or commercial-game animation is included. Runtime skeletons use Three.js SkeletonUtils clones sharing geometry; clothing colors vary by actor. Authored motion remains stylized and needs owner art feedback.
+- Prepared GLB SHA256: `b13a2b6a3d258ebdc7dc88c7edac4edbcb5a00f4ce387af89bef583973290a11`. Cup/phone/doors/stalls/fruit/signs/cables and all shop businesses are original procedural geometry/Canvas text. No real merchant QR, trademarks or real transaction payload exists.
+- Sound: `StreetAudio.ts` synthesizes kettle/preparation/murmur/engine tones from original deterministic noise/oscillators. No third-party audio recording or speech service. Existing Three.js MIT notices remain applicable.

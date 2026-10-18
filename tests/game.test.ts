@@ -86,9 +86,9 @@ test('enter/exit is near-door only, blocks at 15 km/h, and restores the player r
   player.teleport({ x: 0, z: 0 }); assert.equal(interaction.interact(), false);
   player.teleport(interaction.door);
   for (let i = 0; i < 3; i++) {
-    assert.equal(interaction.interact(), true); assert.equal(player.active, false);
+    assert.equal(interaction.interact(), true); interaction.update(1.2); assert.equal(player.active, false);
     car.speed = 15 / 3.6; assert.equal(interaction.interact(), false);
-    car.speed = 14 / 3.6; assert.equal(interaction.interact(), true);
+    car.speed = 14 / 3.6; assert.equal(interaction.interact(), true); interaction.update(1.2);
     assert.equal(player.active, true); assert.equal(car.driving, false); assert.equal(car.speed, 0);
     assert.deepEqual(player.position, interaction.door);
   }

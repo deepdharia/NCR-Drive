@@ -22,18 +22,19 @@ export class TrafficSystem {
   for(let i=0;i<count;i++){
    const lane=lanes.find(l=>l.id===`cp-ring-${(Math.floor((i+0.5)/Math.ceil(count/2)*72)+6)%72}:${i%2?'back':'out'}`)!;
    const car=new VehicleController(VEHICLE_SPECS[i%3]);car.position={...lane.start};car.yaw=Math.atan2(lane.end.x-lane.start.x,lane.end.z-lane.start.z);
-   this.cars.push(car);this.paths.push(lane);this.entering.push(false);this.progress.push(0);this.stuck.push(0);
+   car.owner='ai';car.occupant=`driver-${car.id}`;this.cars.push(car);this.paths.push(lane);this.entering.push(false);this.progress.push(0);this.stuck.push(0);
   }
  }
  update(dt:number,world:CollisionWorld,obstacles:readonly Solid[],focus?:Point):void{
   this.tick+=dt;
   const recycle=this.tick>=this.nextRecycle;
   if(recycle)this.nextRecycle=this.tick+1;
-  for(const [id,owner] of this.reservations)if((this.paths[owner].from===id&&distance(this.cars[owner].position,junctionById.get(id)!)>28)||(this.paths[owner].from!==id&&this.paths[owner].to!==id))this.reservations.delete(id);
+  for(const [id,owner] of this.reservations)if(this.cars[owner].owner!=='ai'||this.cars[owner].reserved||(this.paths[owner].from===id&&distance(this.cars[owner].position,junctionById.get(id)!)>28)||(this.paths[owner].from!==id&&this.paths[owner].to!==id))this.reservations.delete(id);
   this.cars.forEach((car,i)=>{
+   if(car.owner!=='ai'||car.reserved){if(car.owner==='ai')car.speed=0;return;}
    let lane=this.paths[i];
    // Recycle only beyond the visible neighbourhood; at most one attempt/car/second.
-   if(focus && recycle && distance(car.position,focus)>650){
+   if(focus && recycle && !car.protected && distance(car.position,focus)>650){
     const candidates=lanes.filter(l=>distance(l.start,focus)>300&&distance(l.start,focus)<500&&l.length>35&&destinations.every(d=>distance(d,l.start)>40));
     const next=candidates[(i*7+Math.floor(this.tick))%candidates.length];
     if(next && obstacles.every(o=>distance(o,next.start)>35) && this.cars.every(c=>c===car||distance(c.position,next.start)>25) && world.boxIsClear({...next.start,yaw:Math.atan2(next.end.x-next.start.x,next.end.z-next.start.z)},car.width+2,car.length+12,obstacles)){
@@ -50,7 +51,7 @@ export class TrafficSystem {
     if(!this.reservations.has(lane.to)){
      const node=junctionById.get(lane.to)!;
      const candidates=this.cars.map((c,index)=>({index,d:distance(c.position,node)}))
-      .filter(c=>(this.paths[c.index].to===lane.to&&c.d<45)||(this.paths[c.index].from===lane.to&&c.d<20))
+      .filter(c=>this.cars[c.index].owner==='ai'&&!this.cars[c.index].reserved).filter(c=>(this.paths[c.index].to===lane.to&&c.d<45)||(this.paths[c.index].from===lane.to&&c.d<20))
       .sort((a,b)=>a.d-b.d||a.index-b.index);
      this.reservations.set(lane.to,candidates[0]?.index??i);
     }
@@ -73,7 +74,7 @@ export class TrafficSystem {
    car.braking=!move||move.hit;car.speed=car.braking?0:cruise;
    if(move&&!move.hit){car.position={x:move.pose.x,z:move.pose.z};car.yaw=move.pose.yaw;car.wheelTravel+=travel;this.stuck[i]=0;}else this.stuck[i]=Math.min(30,this.stuck[i]+dt);
    // Blocked nearby traffic waits. Distant blocked cars become eligible for safe recycling.
-   if(recycle&&focus&&this.stuck[i]>=30&&distance(car.position,focus)>650){const candidate=lanes.find(l=>distance(l.start,focus)>300&&distance(l.start,focus)<500&&destinations.every(d=>distance(d,l.start)>40)&&world.boxIsClear({...l.start,yaw:0},car.width+3,car.length+15,others));if(candidate){this.paths[i]=candidate;this.entering[i]=false;car.yaw=Math.atan2(candidate.end.x-candidate.start.x,candidate.end.z-candidate.start.z);car.position={...candidate.start};this.stuck[i]=0;}}
+   if(!car.protected&&recycle&&focus&&this.stuck[i]>=30&&distance(car.position,focus)>650){const candidate=lanes.find(l=>distance(l.start,focus)>300&&distance(l.start,focus)<500&&destinations.every(d=>distance(d,l.start)>40)&&world.boxIsClear({...l.start,yaw:0},car.width+3,car.length+15,others));if(candidate){this.paths[i]=candidate;this.entering[i]=false;car.yaw=Math.atan2(candidate.end.x-candidate.start.x,candidate.end.z-candidate.start.z);car.position={...candidate.start};this.stuck[i]=0;}}
   });
  }
 }
