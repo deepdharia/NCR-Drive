@@ -17,7 +17,9 @@
     "test:regional-drive": "node --import tsx tests/regional-drive.mjs",
     "test:visual": "node tests/visual-browser.mjs",
     "test:living": "node --import tsx tests/living-production.mjs",
-    "test:living-wiring": "node tests/living-wiring.mjs"
+    "test:living-wiring": "node tests/living-wiring.mjs",
+    "map:export": "node --import tsx scripts/export-map.ts",
+    "test:map-waypoint": "node tests/map-waypoint.mjs"
   },
   "dependencies": {
     "three": "0.186.1"

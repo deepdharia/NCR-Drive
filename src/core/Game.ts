@@ -8,6 +8,7 @@ import { VEHICLE_SPECS } from '../vehicle/VehicleSpec';
 import { TrafficSystem } from '../systems/TrafficSystem';
 import { StoryMission, REGIONAL_JOURNEY } from '../systems/StoryMission';
 import { distance, localToWorld } from './math';
+import type { Point } from './math';
 import { VehicleView } from '../vehicle/VehicleView';
 import { CameraRig } from '../camera/CameraRig';
 import { InputController } from '../input/InputController';
@@ -21,7 +22,7 @@ import type { WalletSnapshot } from '../systems/Neighborhood';
 import { defaultSettings, loadProgress, writeProgress } from '../systems/ProgressStore';
 import { recoverToRoad } from '../systems/RecoverySystem';
 import { createDistrictLayout } from '../world/DistrictLayout';
-import { motorPoolBays, roadsideRetreat } from '../world/WorldRoads';
+import { motorPoolBays, roadsideRetreat, nearestRoad, projection, ends } from '../world/WorldRoads';
 import { RegionalView } from '../world/RegionalView';
 import { DistrictView } from '../world/DistrictView';
 import { CentralDelhiView } from '../world/CentralDelhiView';
@@ -55,6 +56,7 @@ export class Game {
   private market!:MarketView;private people!:StreetPeople;private audio=new StreetAudio();
   private modal=false;private shopIndex=0;private payment:number|undefined;
   private seated:string|undefined;private drinkTime=0;private standing=0;private consumedAtSeat=false;private rewardRetry=0;private handover=0;
+  private waypoint?:Point;
   private get jobBusy():boolean{return this.story.active||this.mission.state==='active'||this.neighborhood.active;}
   private saveAvailable = true;
   private saveWritable = true;
@@ -138,6 +140,8 @@ export class Game {
       supply:()=>{if(!this.jobBusy&&this.neighborhood.accept()){this.closeShop();this.ui.toast(this.neighborhood.message);}},
       receive:()=>{const position=this.car.driving?this.car.position:this.player.position;this.neighborhood.cash=this.mission.cash;if(this.neighborhood.confirm(position,this.car.driving?this.car.kmh:this.player.speed*3.6)){this.mission.cash=this.neighborhood.cash;this.phone=false;this.syncScreen();}this.ui.toast(this.neighborhood.message);this.refreshUI();},
       cancelSupply:()=>{this.neighborhood.cancelJob();this.refreshUI();},
+      waypoint:(point)=>{const road=nearestRoad(point);this.waypoint=projection(point,...ends(road)).point;this.ui.toast('Waypoint set — follow the gold marker.');this.refreshUI();},
+      clearWaypoint:()=>{this.waypoint=undefined;this.ui.toast('Waypoint cleared.');this.refreshUI();},
       audio:()=>{this.settings.muted=!this.settings.muted;this.applySettings();this.saveProgress();},
       volume:value=>{if(Number.isFinite(value)&&value>=0&&value<=1){this.settings.volume=value;this.applySettings();this.saveProgress();}},
     });
@@ -216,11 +220,13 @@ export class Game {
   }
   private refreshUI(): void {
     this.selectNearbyCar();
-    const target = this.story.active ? this.story.step.target : this.mission.state==='active'?COURIER_TARGET:this.neighborhood.active?SUPPLY_TARGET:MARKET;
+    const focus=this.car.driving?this.car.position:this.player.position;
+    if(this.waypoint&&distance(focus,this.waypoint)<15){this.waypoint=undefined;this.ui.toast('Waypoint reached.');}
+    const target = this.waypoint??(this.story.active ? this.story.step.target : this.mission.state==='active'?COURIER_TARGET:this.neighborhood.active?SUPPLY_TARGET:MARKET);
     this.district.delivery.visible = distance(target,this.car.driving?this.car.position:this.player.position)>20 || this.jobBusy;
     this.district.delivery.position.set(target.x, 0, target.z);
 
-    this.ui.update(this.player, this.car, this.interaction, this.mission, this.neighborhood, this.saveAvailable, this.story,this.contextPrompt(),this.interaction.busy||this.handover>0);
+    this.ui.update(this.player, this.car, this.interaction, this.mission, this.neighborhood, this.saveAvailable, this.story,this.contextPrompt(),this.interaction.busy||this.handover>0,this.waypoint);
   }
   private updateViews(dt: number): void {
     if(this.handover>0)this.playerView.overrideAnimation='pay';else if(this.interaction.busy)this.playerView.overrideAnimation=this.interaction.animation;else if(!this.seated&&!this.modal)this.playerView.overrideAnimation=undefined;

@@ -1,5 +1,13 @@
 import type { Point } from '../core/math';
 import { roads, ends, destinations, regionLabels, regionAt } from '../world/WorldRoads';
+/** Overview projection constants (shared by the canvas and its click handler). */
+export const MAP_SIZE = 480;
+export const OVERVIEW_ORIGIN = { x: 550, z: 1000 };
+export const OVERVIEW_SCALE = 0.072;
+/** Convert a click pixel on the overview canvas (0..480) to a world point. */
+export function overviewClickToWorld(px: number, pz: number): Point {
+  return { x: OVERVIEW_ORIGIN.x + (px - MAP_SIZE / 2) / OVERVIEW_SCALE, z: OVERVIEW_ORIGIN.z + (pz - MAP_SIZE / 2) / OVERVIEW_SCALE };
+}
 export class Minimap {
  private context:CanvasRenderingContext2D;
  constructor(canvas:HTMLCanvasElement,private overview=false){canvas.width=canvas.height=480;const c=canvas.getContext('2d');if(!c)throw Error('DelhiNav needs Canvas 2D');this.context=c;}
