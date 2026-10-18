@@ -32,7 +32,7 @@ bpy.ops.object.transform_apply(location=False,rotation=False,scale=True)
 hair.data.materials.append(mats[4]);g=hair.vertex_groups.new(name='Head');g.add(list(range(len(hair.data.vertices))),1,'REPLACE')
 mod=hair.modifiers.new('Humanoid skin','ARMATURE');mod.object=rig
 bones=list(rig.data.bones); rest={b.name:b.matrix_local.to_quaternion() for b in bones}
-clips=['idle','walk','run','turn','talk','wait','sit_down','sit','stand','drink','pay','react','flee','enter','exit','takeover','smoke','prepare','sit_drink','sit_smoke']
+clips=['idle','walk','run','turn','talk','wait','sit_down','sit','stand','drink','pay','react','flee','enter','exit','takeover','smoke','prepare','sit_drink','sit_smoke','drive']
 rig.animation_data_create()
 for name in clips:
  action=bpy.data.actions.new(name);rig.animation_data.action=action
@@ -48,8 +48,8 @@ for name in clips:
     d['foot_'+side]=Quaternion((1,0,0),0)
     d['upperarm_'+side]=Quaternion((1,0,0),amp*swing*.65)@Quaternion((0,1,0),sign*1.35)
    rootdrop=.015*math.cos(phase*2)
-  if name in ['sit','sit_down','stand','enter','exit','sit_drink','sit_smoke']:
-   f=1 if name in ['sit','sit_drink','sit_smoke'] else t*t*(3-2*t) if name in ['sit_down','enter'] else 1-t*t*(3-2*t)
+  if name in ['sit','sit_down','stand','enter','exit','sit_drink','sit_smoke','drive']:
+   f=1 if name in ['sit','sit_drink','sit_smoke','drive'] else t*t*(3-2*t) if name in ['sit_down','enter'] else 1-t*t*(3-2*t)
    rootdrop=-.40*f
    for side in ['l','r']:
     d['thigh_'+side]=Quaternion((1,0,0),-1.5*f);d['calf_'+side]=Quaternion((1,0,0),0);d['foot_'+side]=Quaternion((1,0,0),0)
@@ -69,6 +69,18 @@ for name in clips:
    for bone,aim in [('upperarm_r',elbow-shoulder),('lowerarm_r',target-elbow),('hand_r',Vector((0,-.12,1)))]:
     rb=rig.data.bones[bone];d[bone]=(rb.tail_local-rb.head_local).rotation_difference(aim)
    d['Head']=Quaternion((1,0,0),.08 if name!='pay' else .18)
+  if name=='drive':
+   for side in ['l','r']:
+    d['calf_'+side]=Quaternion((1,0,0),-1.0)
+    shoulder=rig.data.bones['upperarm_'+side].head_local.copy()
+    target=Vector((.18 if side=='l' else -.18,-.40,1.38))
+    upper=rig.data.bones['upperarm_'+side];lower=rig.data.bones['lowerarm_'+side]
+    axis=(target-shoulder).normalized();length=(target-shoulder).length
+    along=(upper.length**2-lower.length**2+length**2)/(2*length)
+    pref=Vector((1 if side=='l' else -1,0,-.8));bend=(pref-axis*pref.dot(axis)).normalized()
+    elbow=shoulder+axis*along+bend*math.sqrt(max(0,upper.length**2-along**2))
+    for bone,aim in [('upperarm_'+side,elbow-shoulder),('lowerarm_'+side,target-elbow),('hand_'+side,Vector((0,-1,0)))]:
+     rb=rig.data.bones[bone];d[bone]=(rb.tail_local-rb.head_local).rotation_difference(aim)
   if name=='turn':d['spine_03']=Quaternion((0,0,1),.22*math.sin(phase))
   desired={}
   for b in bones:

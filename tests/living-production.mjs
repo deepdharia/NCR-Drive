@@ -14,7 +14,7 @@ try{
  await context.addInitScript(()=>{if(!localStorage.getItem('ncr-drive-career-v1'))localStorage.setItem('ncr-drive-career-v1',JSON.stringify({version:2,cash:15000,rides:7,courierCompleted:false,settings:{performanceMode:true,steeringSensitivity:1,cameraSensitivity:1}}));});
  page=await context.newPage();page.setDefaultTimeout(90000);page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});page.on('response',r=>{if(r.status()>=400)errors.push(`${r.status()} ${r.url()}`);});
  await page.goto(origin);await page.locator('[data-action="start"]').click();assert.equal(await page.locator('[data-cash]').first().innerText(),'₹15,000');
- assert.ok(!/taxi|Delhi Cabs|fare|passenger/i.test(await page.locator('#app').innerText()));
+ assert.ok(!/taxi|Delhi Cabs|fare|passenger/i.test(await page.locator('#app').textContent()));
  await page.keyboard.press('f');await page.waitForFunction(()=>document.querySelector('[data-mode]').textContent.includes('PARVAAZ'));
  const held=new Set();async function key(k,on){if(on&&!held.has(k)){await page.keyboard.down(k);held.add(k);}else if(!on&&held.has(k)){await page.keyboard.up(k);held.delete(k);}}
  async function read(){return page.evaluate(()=>{const p=document.querySelector('[data-coordinates]').textContent.split(',');const heading=document.querySelector('[data-mode-detail]').textContent.match(/HDG ([\d.]+)/);return{x:parseFloat(p[0]),z:parseFloat(p[1]),yaw:Number(heading?.[1]??0)*Math.PI/180,speed:parseFloat(document.querySelector('[data-speed]').textContent)/3.6};});}

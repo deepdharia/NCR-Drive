@@ -8,7 +8,7 @@ test('local licensed humanoid covers required clips, stays human scale, grounds 
  const bytes=await readFile('public/assets/people/delhi-adult.glb');
  const gltf=await new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');
  const root=gltf.scene,mixer=new THREE.AnimationMixer(root),names=gltf.animations.map(c=>c.name);
- for(const name of ['idle','walk','run','turn','talk','wait','sit_down','sit','stand','drink','pay','react','flee','enter','exit','takeover','smoke','prepare','sit_drink','sit_smoke'])assert.ok(names.includes(name),name);
+ for(const name of ['idle','walk','run','turn','talk','wait','sit_down','sit','stand','drink','pay','react','flee','enter','exit','takeover','smoke','prepare','sit_drink','sit_smoke','drive'])assert.ok(names.includes(name),name);
  let triangles=0;root.traverse(o=>{if(o instanceof THREE.Mesh)triangles+=(o.geometry.index?.count??o.geometry.getAttribute('position').count)/3;});assert.ok(triangles<=12000);
  const sample=(name:string)=>{mixer.stopAllAction();mixer.clipAction(gltf.animations.find(c=>c.name===name)!).reset().play();mixer.update(0.5);root.updateMatrixWorld(true);const bounds=new THREE.Box3();root.traverse(o=>{if(o instanceof THREE.SkinnedMesh){o.skeleton.update();o.computeBoundingBox();bounds.union(o.boundingBox!.clone().applyMatrix4(o.matrixWorld));}});return bounds;};
  const standing=sample('idle');assert.ok(standing.max.y>1.7&&standing.max.y<1.9);assert.ok(standing.min.y>=-0.025);

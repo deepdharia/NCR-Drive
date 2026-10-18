@@ -16,14 +16,14 @@ try{
  await page.waitForFunction(()=>window.__game.handover<=0);
  await page.evaluate(()=>{const g=window.__game;g.paused=true;g.player.teleport({x:-150,z:-9.7});});
  const simulation=await page.evaluate(()=>{
-  const g=window.__game;let minDistance=Infinity,blocked=0;const states=new Set();
+  const g=window.__game;let minDistance=Infinity,blocked=0,closest;const states=new Set();
   for(let frame=0;frame<3600;frame++){
    g.people.update(1/30,g.world,g.cars,g.player.position,g.player.position);
    const p=g.people.people;
    for(const actor of p){states.add(actor.state);if(actor.state!=='vendor'&&actor.state!=='drink'&&!g.world.isClear(actor.position,0.29,0,1.75,g.cars.map(c=>c.collider)))blocked++;}
-   for(let i=0;i<p.length;i++)for(let k=i+1;k<p.length;k++)if(p[i].state!=='vendor'&&p[k].state!=='vendor')minDistance=Math.min(minDistance,Math.hypot(p[i].position.x-p[k].position.x,p[i].position.z-p[k].position.z));
+   for(let i=0;i<p.length;i++)for(let k=i+1;k<p.length;k++)if(p[i].state!=='vendor'&&p[k].state!=='vendor'){const d=Math.hypot(p[i].position.x-p[k].position.x,p[i].position.z-p[k].position.z);if(d<minDistance){minDistance=d;closest={frame,a:p[i].id,b:p[k].id,states:[p[i].state,p[k].state],positions:[{...p[i].position},{...p[k].position}]};}}
   }
-  return{states:[...states],minDistance,blocked,reservations:g.people.reservations.size,population:g.people.people.length,actors:g.people.people.map(p=>({id:p.id,state:p.state,time:p.time,position:p.position,target:p.target,seat:p.seat}))};
+  return{states:[...states],minDistance,closest,blocked,reservations:g.people.reservations.size,population:g.people.people.length,actors:g.people.people.map(p=>({id:p.id,state:p.state,time:p.time,position:p.position,target:p.target,seat:p.seat}))};
  });console.log(JSON.stringify(simulation,null,2));assert.equal(simulation.blocked,0);assert.ok(simulation.minDistance>=0.59);assert.ok(simulation.states.includes('drink')&&simulation.states.includes('order'));assert.ok(simulation.reservations<=7);evidence.push({twoMinuteControlledRoutineSimulation:simulation});
  const shots=[['market-eye',[-165,1.65,-8.5],[-164,1.3,-17]],['market-street',[-238,3.5,-5],[-174,1.4,-15]]];
  for(const [name,camera,target] of shots){await page.evaluate(({camera,target})=>{const g=window.__game;g.updateViews(0.1);g.camera.camera.position.set(...camera);g.camera.camera.lookAt(...target);g.renderer.setPixelRatio(1);g.renderer.render(g.scene,g.camera.camera);},{camera,target});await page.screenshot({path:`test-results/living-${name}.png`});}
@@ -31,7 +31,15 @@ try{
  await page.keyboard.press('f');await page.waitForFunction(()=>window.__game.seated);await page.waitForFunction(()=>window.__game.neighborhood.data.chai===0);
  await page.evaluate(()=>{const g=window.__game;g.paused=true;g.updateViews(0.4);g.camera.camera.position.set(-151,1.8,-8.5);g.camera.camera.lookAt(-154,0.9,-12);g.renderer.render(g.scene,g.camera.camera);});await page.screenshot({path:'test-results/living-seated-detail.png'});
  await page.evaluate(()=>{const g=window.__game;g.stand(true);g.paused=false;const car=g.fleet[3];g.interaction.car=car;g.player.teleport(g.interaction.door);g.refreshUI();});
+ let capture,frames=[];
+ if(process.env.LIVING_CAPTURE==='1'){
+  await mkdir('test-results/living-capture',{recursive:true});capture=await page.context().newCDPSession(page);
+  capture.on('Page.screencastFrame',event=>{if(frames.length<180)frames.push({data:event.data,time:event.metadata.timestamp});void capture.send('Page.screencastFrameAck',{sessionId:event.sessionId});});
+  await capture.send('Page.startScreencast',{format:'jpeg',quality:78,maxWidth:960,maxHeight:640,everyNthFrame:2});
+ }
  await page.keyboard.press('f');await page.waitForFunction(()=>window.__game.car.driving);assert.equal(await page.evaluate(()=>window.__game.car.owner),'player');assert.equal(await page.evaluate(()=>window.__game.car.protected),true);assert.equal(await page.evaluate(()=>window.__game.people.people.length),11);
+ if(capture){await page.waitForTimeout(2500);await capture.send('Page.stopScreencast');await Promise.all(frames.map((f,i)=>writeFile(`test-results/living-capture/frame-${String(i).padStart(4,'0')}.jpg`,Buffer.from(f.data,'base64'))));await writeFile('test-results/living-capture/times.json',JSON.stringify(frames.map(f=>f.time)));evidence.push({capture:'living-capture/',frames:frames.length,method:'controlled initial door placement; ordinary F takeover; variable software-rendered frame times'});await capture.detach();}
+ await page.evaluate(()=>{const g=window.__game;g.paused=true;g.updateViews(0.1);g.camera.camera.position.set(g.car.position.x+3,1.5,g.car.position.z+0.6);g.camera.camera.lookAt(g.car.position.x+0.1,1.1,g.car.position.z+0.3);g.renderer.render(g.scene,g.camera.camera);});await page.screenshot({path:'test-results/living-civilian-interior.png'});await page.evaluate(()=>{window.__game.paused=false;});
  await page.evaluate(()=>{const g=window.__game;g.neighborhood.accept();g.car.position={x:-342,z:4};g.car.speed=0;});await page.waitForFunction(()=>window.__game.neighborhood.job==='completed');assert.equal(await page.evaluate(()=>window.__game.mission.cash),15630);
  const cycles=[];for(let cycle=0;cycle<3;cycle++)cycles.push(await page.evaluate(()=>{const g=window.__game;g.paused=true;for(const position of [{x:-164,z:4},{x:-2100,z:1910},{x:3200,z:60},{x:-182,z:12}]){g.car.position=position;g.updateViews(0.1);g.renderer.render(g.scene,g.camera.camera);}return{...g.renderer.info.memory,actors:g.people.people.length};}));assert.deepEqual(cycles[2],cycles[1]);evidence.push({controlledVisitCycles:cycles});
  const mobileContext=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:0.5});

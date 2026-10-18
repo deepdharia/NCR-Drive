@@ -8,7 +8,7 @@ import {InteractionSystem} from '../src/systems/InteractionSystem';
 import {TrafficSystem} from '../src/systems/TrafficSystem';
 import {distance} from '../src/core/math';
 test('all civilian classes transfer occupied driver control once; repeated input and paused transitions are safe',()=>{
- for(const spec of VEHICLE_SPECS){
+ for(const spec of [...VEHICLE_SPECS,{...VEHICLE_SPECS[0],id:'sedan-platform-test',width:1.9,length:4.7,height:1.6},{...VEHICLE_SPECS[0],id:'suv-platform-test',width:2.0,length:4.8,height:1.9}]){
   const car=new VehicleController(spec),player=new PlayerController(),world=new CollisionWorld();car.occupant='adult-driver';car.seats.frontLeft='adult-companion';car.seats.rearLeft='adult-neighbor';car.seats.rearRight='adult-relative';car.condition=0.7;car.owner='ai';const identity=car.id;
   const i=new InteractionSystem(player,car,world);player.teleport(i.door);let displaced=0,transfers=0;i.onDisplaced=()=>displaced++;i.onTransferred=()=>transfers++;
   assert.ok(i.interact());assert.equal(i.interact(),false);assert.equal(car.owner,'ai');assert.ok(car.reserved);i.update(0.5);assert.ok(car.doorOpen>0);i.cancel();assert.equal(car.owner,'ai');assert.equal(car.occupant,'adult-driver');assert.equal(player.active,true);assert.equal(displaced,0);

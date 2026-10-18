@@ -33,7 +33,9 @@ export class VehicleView {
       const mesh = new THREE.Mesh(new RoundedBoxGeometry(w, h, d, 2, Math.min(radius, w / 3, h / 3, d / 3)), material);
       mesh.position.set(x, y, z); this.body.add(mesh); return mesh;
     };
-    addBox(1.46,0.55,3.65,paint,0,0.68,0,0.12);
+    addBox(1.46,0.12,3.4,interior,0,0.48,0,0.03);
+    addBox(1.46,0.43,0.85,paint,0,0.735,1.39,0.08);
+    addBox(1.46,0.43,0.7,paint,0,0.735,-1.47,0.08);
     for(const side of [-1,1]){
       addBox(0.11,0.55,1.30,paint,side*0.785,0.68,-1.13,0.04);
       addBox(0.11,0.55,0.82,paint,side*0.785,0.68,1.4,0.04);
@@ -90,6 +92,7 @@ export class VehicleView {
       addBox(0.36, 0.17, 0.08, headlight, side * 0.55, 0.80, 1.82, 0.025);
       addBox(0.28, 0.30, 0.085, this.brakeMaterial, side * 0.61, 0.77, -1.82, 0.025);
       addBox(0.12, 0.06, 0.09, new THREE.MeshStandardMaterial({ color: 0xe8ad42, emissive: 0x9a5212, emissiveIntensity: 0.35 }), side * 0.73, 0.73, 1.79, 0.015);
+      addBox(0.47,0.14,0.55,interior,side*0.36,0.69,-0.02,0.05);
       const seat = addBox(0.47, 0.56, 0.17, interior, side * 0.36, 1.06, -0.32, 0.06); seat.rotation.x = -0.12;
       addBox(0.30, 0.19, 0.13, interior, side * 0.36, 1.42, -0.38, 0.05);
     }
@@ -105,7 +108,7 @@ export class VehicleView {
     }
     if (spec.id === 'baaz') addBox(1.48, 0.08, 0.2, rubber, 0, 0.35, 1.77, 0.015);
     addBox(0.54, 0.14, 0.04, rubber, 0, 1.01, 0.62);
-    const steering = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.018, 6, 16), rubber); steering.position.set(-0.35, 1.10, 0.46); steering.rotation.x = -0.35; this.body.add(steering);
+    const steering = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.018, 6, 16), rubber); steering.position.set(-0.35, 1.10, 0.32); steering.rotation.x = -0.35; this.body.add(steering);
     for (const rear of [false, true]) {
       const map = signTexture(plateNumber, undefined, rear ? '#e5bd5e' : '#e9e7d9');
       // High-contrast Indian number plates use dark, unlit lettering.
@@ -159,7 +162,7 @@ export class VehicleView {
     this.body.position.y = Math.sin(car.wheelTravel * 2.1) * Math.min(Math.abs(car.speed) * 0.0006, 0.008);
     this.wheels.forEach(w => { w.pivot.rotation.y = w.front ? car.steering : 0; w.spin.rotation.x = car.wheelTravel / 0.32; });
     this.doors.forEach(d=>{d.pivot.rotation.y=d.side<0?-car.doorOpen*1.05:0;});
-    this.driver.group.visible=(car.occupant!==null||car.driving)&&!(car.reserved&&car.occupant==='player');if(this.driver.group.visible&&this.detailed.visible)this.driver.update(dt,'sit');
+    this.driver.group.visible=(car.occupant!==null||car.driving)&&!(car.reserved&&car.occupant==='player');if(this.driver.group.visible&&this.detailed.visible)this.driver.update(dt,'drive');
     this.brakeMaterial.emissiveIntensity = car.braking ? 2.5 : 0.3;
   }
 }

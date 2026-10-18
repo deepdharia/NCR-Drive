@@ -21,13 +21,19 @@ export class StreetPeople {
   if(this.people.some(p=>p.id===id))return;
   const view=new HumanoidView(0x8f8070);this.group.add(view.group);this.people.push({id,position:{...point},view,state:'flee',time:0,shop:0,target:{x:point.x-6,z:point.z<0?-12:16},speed:0,yaw:0,waypoints:[],blocked:0});this.alert=8;
  }
- private release(p:Person):void {p.waypoints=[];if(p.state==='drink'&&p.seat)p.position={x:p.position.x,z:p.position.z+0.8};this.reservations.release(p.id);p.seat=undefined;}
+ private release(p:Person):void {p.waypoints=[];this.reservations.release(p.id);p.seat=undefined;}
+ private leaveSeat(p:Person,world:CollisionWorld,cars:readonly VehicleController[],player?:Point):boolean {
+  if(p.state!=='drink')return true;
+  const exits=[{x:p.position.x,z:p.position.z+0.8},{x:p.position.x-1.3,z:p.position.z+0.8},{x:p.position.x+1.3,z:p.position.z+0.8}];
+  const exit=exits.find(q=>world.isClear(q,0.3,0,1.8,cars.map(c=>c.collider))&&this.people.every(o=>o===p||distance(o.position,q)>=0.65)&&(!player||distance(player,q)>=0.7));
+  if(!exit)return false;p.position=exit;return true;
+ }
  update(dt:number,world:CollisionWorld,cars:readonly VehicleController[],focus:Point,player?:Point):void {
   this.alert=Math.max(0,this.alert-dt);
   for(const p of this.people){
-   p.time+=dt;p.view.group.visible=distance(p.position,focus)<100;if(!p.view.group.visible){if(p.state!=='vendor'){this.release(p);p.state='leave';p.time=0;p.target={x:-238+p.shop*8,z:-10.5};}continue;}
+   p.time+=dt;p.view.group.visible=distance(p.position,focus)<100;if(!p.view.group.visible){if(p.state!=='vendor'&&this.leaveSeat(p,world,cars,player)){this.release(p);p.state='leave';p.time=0;p.target={x:-238+p.shop*8,z:-10.5};}continue;}
    const danger=cars.find(c=>c.kmh>15&&distance(c.position,p.position)<6);
-   if(danger&&p.state!=='vendor'&&p.state!=='flee'&&p.state!=='react'){this.release(p);p.state='react';p.time=0;p.target={x:p.position.x+(p.position.x<danger.position.x?-4:4),z:p.position.z<0?-12.8:12.8};this.alert=5;}
+   if(danger&&p.state!=='vendor'&&p.state!=='flee'&&p.state!=='react'&&this.leaveSeat(p,world,cars,player)){this.release(p);p.state='react';p.time=0;p.target={x:p.position.x+(p.position.x<danger.position.x?-4:4),z:p.position.z<0?-12.8:12.8};this.alert=5;}
    if(p.state==='react'&&p.time>0.8){p.state='flee';p.time=0;}
    if(p.state==='walk'){
     const queue=`queue-${p.shop}`;
@@ -36,8 +42,11 @@ export class StreetPeople {
    else if(p.state==='order'&&p.time>2.4){
     this.release(p);const seat=[...seats].sort((a,b)=>distance(a,p.position)-distance(b,p.position)).find(s=>this.reservations.reserve(s.id,p.id));
     if(seat){p.state='seat';p.target={x:seat.x,z:seat.z+0.7};p.waypoints=[{x:seat.x+1,z:seat.z+1.3}];p.seat=seat.id;}else {p.state='leave';p.target={x:-238+p.shop*10,z:-10.5};}p.time=0;
-   }else if(p.state==='seat'&&distance(p.position,p.target)<0.3){p.state='drink';p.time=0;const seat=seats.find(s=>s.id===p.seat)!;p.position={x:seat.x,z:seat.z};p.yaw=seat.yaw;}
-   else if(p.state==='drink'&&p.time>9){const exit={x:p.position.x,z:p.position.z+0.8};if(!world.isClear(exit,0.3,0,1.8,[...cars.map(c=>c.collider),...this.colliders.filter(c=>distance(c,p.position)>0.1)])||(player&&distance(player,exit)<0.7))continue;p.position=exit;p.state='leave';this.release(p);p.state='leave';p.target={x:-240+p.shop*8,z:-10.5};p.time=0;}
+   }else if(p.state==='seat'&&distance(p.position,p.target)<0.3){
+    const seat=seats.find(s=>s.id===p.seat)!;
+    if(this.people.every(o=>o===p||distance(o.position,seat)>=0.66)&&(!player||distance(player,seat)>=0.7)&&cars.every(c=>distance(c.position,seat)>Math.hypot(c.width,c.length)/2+0.4)){p.state='drink';p.time=0;p.position={x:seat.x,z:seat.z};p.yaw=seat.yaw;}
+   }
+   else if(p.state==='drink'&&p.time>9&&this.leaveSeat(p,world,cars,player)){p.state='leave';this.release(p);p.target={x:-240+p.shop*8,z:-10.5};p.time=0;}
    else if((p.state==='leave'||p.state==='flee')&&(distance(p.position,p.target)<0.3||p.time>12)){
     this.release(p);p.shop=(p.shop+1)%3;p.state='walk';p.target={x:shops[p.shop].x,z:-12.7};p.time=0;
    }
@@ -54,7 +63,7 @@ export class StreetPeople {
     }
    }
    // Timeout clears every reservation; a blocked customer never owns a queue forever.
-   if(p.state!=='vendor'&&p.time>24){this.release(p);p.state='leave';p.target={x:-240+p.shop*8,z:-10.4};p.time=0;}
+   if(p.state!=='vendor'&&p.time>24&&this.leaveSeat(p,world,cars,player)){this.release(p);p.state='leave';p.target={x:-240+p.shop*8,z:-10.4};p.time=0;}
    p.view.group.position.set(p.position.x,0,p.position.z);p.view.group.rotation.y=p.yaw;
    const anim=p.state==='vendor'?(p.shop===2?'prepare':'talk'):p.state==='drink'?(p.time<0.8?'sit_down':p.time>8?'stand':p.shop===1?'sit_smoke':'sit_drink'):p.state==='react'?'react':p.speed>0.1?(p.state==='flee'?'flee':'walk'):p.state==='order'?'talk':'wait';
    if(p.actionTime){p.actionTime=Math.max(0,p.actionTime-dt);if(!p.actionTime)p.action=undefined;}
