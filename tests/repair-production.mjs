@@ -88,8 +88,9 @@ try{
  });
  for(const sample of animations)assert.notDeepEqual(sample.after,sample.before);
  log('Production player and NPC cloned skeleton animation mixers advance.');
- // Real takeover transition at the occupied civilian's existing door.
- await page.evaluate(()=>{const g=window.__game;g.car.setDriving(false);g.player.setActive(true);g.interaction.car=g.fleet.at(-1);g.player.teleport(g.interaction.door);g.syncScreen();});
+ // Controlled placement of an actual occupied traffic car at a clear bay;
+ // use its real door and F transition. Earlier jobs may have moved fleet cars.
+ const takeover=await page.evaluate(()=>{const g=window.__game;g.car.setDriving(false);g.player.setActive(true);const car=g.cars.find(c=>c.occupant&&c.occupant!=='player');if(!car)throw Error('No occupied civilian');car.owner='parked';car.speed=0;car.yaw=-Math.PI/2;const others=g.cars.filter(c=>c!==car).map(c=>c.collider);const pose=[{x:-182,z:12},{x:-190,z:12},{x:-174,z:12}].find(p=>g.world.boxIsClear({...p,yaw:car.yaw},car.width,car.length,others));if(!pose)throw Error('No clear takeover bay');car.position=pose;g.interaction.car=car;g.player.teleport(g.interaction.door);g.syncScreen();return {occupant:car.occupant,available:g.interaction.available,doorClear:g.interaction.clear()};});assert.ok(takeover.available&&takeover.doorClear);log({controlledTakeoverSetup:takeover});
  await page.keyboard.press('f');await page.waitForFunction(()=>window.__game.car.driving&&!window.__game.interaction.busy);
  assert.equal(await page.evaluate(()=>window.__game.car.owner),'player');
  assert.equal(await page.evaluate(()=>window.__game.car.occupant),'player');log('Occupied civilian takeover completed through F.');
