@@ -15,7 +15,7 @@ try{
  await mkdir('test-results',{recursive:true});
  for(let i=0;i<100;i++){try{if((await fetch(origin)).ok)break;}catch{}await new Promise(r=>setTimeout(r,100));}
  browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_EXECUTABLE_PATH||undefined,args:['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader','--disable-dev-shm-usage']});
- const context=await browser.newContext({viewport:{width:640,height:480},deviceScaleFactor:0.25});
+ const context=await browser.newContext({viewport:{width:640,height:480},deviceScaleFactor:0.25,hasTouch:true});
  await context.addInitScript(()=>{if(!localStorage.getItem('ncr-drive-career-v1'))localStorage.setItem('ncr-drive-career-v1',JSON.stringify({version:3,cash:15000,courierCompleted:false,settings:{graphicsQuality:'low',steeringSensitivity:1,cameraSensitivity:1},neighborhood:{chai:0,juice:0,relationship:0,completed:false,flowers:0,sweets:0,cake:0,parkCircuit:false,photoViewpoint:false,goodsDone:[]}}));});
  page=await context.newPage();page.setDefaultTimeout(90000);
  page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});page.on('response',r=>{if(r.url().startsWith(origin)&&r.status()>=400)errors.push(`${r.status()} ${r.url()}`);});
@@ -77,6 +77,34 @@ try{
  await unblock();await page.keyboard.press('f');await page.locator('[data-action="exitPhoto"]').click();assert.equal((await saved()).neighborhood.photoViewpoint,true);
  await page.keyboard.press('f');await page.locator('[data-action="exitPhoto"]').click();assert.match(await page.locator('.toast').innerText(),/already recorded/);
  log('Production park/photo failed saves show honest feedback, preserve retry paths and restore controls; saved and already-completed outcomes verified.');
+ // Sample actual cloned player/NPC skeletons; original numeric pose/scale gates
+ // remain in people.test.ts. These samples prove independent mixers advance.
+ const animations=await page.evaluate(()=>{
+  const g=window.__game;
+  return [g.playerView,g.people.people[3].view].map(view=>{
+   view.update(0.1,'walk',1.6);const bone=view.group.getObjectByName('thigh_l'),before=bone.quaternion.toArray();
+   view.update(0.3,'walk',1.6);return {before,after:bone.quaternion.toArray()};
+  });
+ });
+ for(const sample of animations)assert.notDeepEqual(sample.after,sample.before);
+ log('Production player and NPC cloned skeleton animation mixers advance.');
+ // Real takeover transition at the occupied civilian's existing door.
+ await page.evaluate(()=>{const g=window.__game;g.car.setDriving(false);g.player.setActive(true);g.interaction.car=g.fleet.at(-1);g.player.teleport(g.interaction.door);g.syncScreen();});
+ await page.keyboard.press('f');await page.waitForFunction(()=>window.__game.car.driving&&!window.__game.interaction.busy);
+ assert.equal(await page.evaluate(()=>window.__game.car.owner),'player');
+ assert.equal(await page.evaluate(()=>window.__game.car.occupant),'player');
+ await page.keyboard.press('Escape');await page.locator('[data-action="recover"]').click();await page.waitForFunction(()=>!window.__game.paused);
+ const gas=await page.locator('[data-hold="gas"]').boundingBox(),stick=await page.getByRole('group',{name:'Movement joystick'}).boundingBox();assert.ok(gas&&stick);
+ await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{id:1,x:stick.x+stick.width/2+25,y:stick.y+stick.height/2},{id:2,x:gas.x+gas.width/2,y:gas.y+gas.height/2}]});
+ await page.waitForFunction(()=>window.__game.input.gas&&window.__game.input.stick.x>0);
+ await cdp.send('Input.dispatchTouchEvent',{type:'touchCancel',touchPoints:[]});
+ assert.equal(await page.evaluate(()=>window.__game.input.gas),false);assert.equal(await page.evaluate(()=>window.__game.input.stick.x),0);
+ await page.evaluate(()=>{window.dispatchEvent(new Event('blur'));});assert.equal(await page.evaluate(()=>window.__game.input.enabled),false);
+ await page.locator('[data-action="pause"]').first().click();
+ await page.keyboard.press('Tab');await page.locator('[data-action="place"]').first().click();
+ assert.ok(await page.evaluate(()=>!!window.__game.waypoint));assert.match(await page.locator('[data-distance]').innerText(),/Waypoint/);
+ await page.locator('[data-action="clearWaypoint"]').click();assert.equal(await page.evaluate(()=>window.__game.waypoint),undefined);
+ log('Production occupied-car takeover, recovery, simultaneous touch input/cancel, focus-loss reset and Places routing passed. Controlled door placement, no regional journey.');
  await page.screenshot({path:'test-results/repair-production.png'});
  assert.deepEqual(errors,[]);
  await context.close();
