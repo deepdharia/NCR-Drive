@@ -1,0 +1,378 @@
+{
+  "branch": "improve/visual-realism-v1",
+  "parent_sha": "3b5e593d1460dc8aaf8599bf416dbaff5d785f43",
+  "implementation_sha": "0287b78ec245c8161bd197b4b6c4e8ccb53f141b",
+  "bundle": "dist/assets/index-BZgxjkF-.js",
+  "draft_pr": "https://github.com/deepdharia/NCR-Drive/pull/7",
+  "local_date": "2026-10-18",
+  "timezone": "Asia/Kolkata",
+  "checks": {
+    "logic_named_cases": 51,
+    "npm_test": "passed",
+    "lint": "passed",
+    "build": "passed",
+    "full_visual_browser": "passed",
+    "final_production_suite": "passed",
+    "regional_wiring": "passed",
+    "original_browser_smoke": "passed",
+    "central_input_drive": "passed"
+  },
+  "environment": {
+    "os": "managed Linux x86_64",
+    "cpu": "AMD EPYC 9V45 virtual instance, 3 logical CPUs exposed",
+    "node": "24.19.0",
+    "browser": "Chromium 154.0.8037.57",
+    "renderer": "ANGLE Vulkan / SwiftShader Device (Subzero), software only",
+    "scene": "frozen controlled CP scene; no concurrent browser suite during final samples"
+  },
+  "visual_browser": {
+    "evidence": [
+      {
+        "scene": "cp-chase",
+        "geometries": 303,
+        "textures": 67,
+        "calls": 383,
+        "triangles": 406387
+      },
+      {
+        "scene": "cp-overview",
+        "geometries": 348,
+        "textures": 82,
+        "calls": 565,
+        "triangles": 509901
+      },
+      {
+        "scene": "east-underpass",
+        "geometries": 348,
+        "textures": 84,
+        "calls": 146,
+        "triangles": 154421
+      },
+      {
+        "scene": "ceremonial-arch",
+        "geometries": 348,
+        "textures": 84,
+        "calls": 181,
+        "triangles": 194533
+      },
+      {
+        "scene": "courier-plaza",
+        "geometries": 348,
+        "textures": 84,
+        "calls": 186,
+        "triangles": 285529
+      },
+      {
+        "scene": "gurgaon",
+        "geometries": 349,
+        "textures": 87,
+        "calls": 89,
+        "triangles": 33636
+      },
+      {
+        "scene": "yamuna",
+        "geometries": 349,
+        "textures": 92,
+        "calls": 84,
+        "triangles": 33496
+      },
+      {
+        "scene": "noida",
+        "geometries": 349,
+        "textures": 98,
+        "calls": 126,
+        "triangles": 35242
+      },
+      {
+        "wheelContact": [
+          {
+            "id": "parvaaz",
+            "wheels": [
+              {
+                "bottom": 0.035000007152557355,
+                "top": 0.6749999928474426,
+                "radius": 0.32
+              },
+              {
+                "bottom": 0.035000007152557355,
+                "top": 0.6749999928474426,
+                "radius": 0.32
+              },
+              {
+                "bottom": 0.035000007152557355,
+                "top": 0.6749999928474426,
+                "radius": 0.32
+              },
+              {
+                "bottom": 0.035000007152557355,
+                "top": 0.6749999928474426,
+                "radius": 0.32
+              }
+            ]
+          },
+          {
+            "id": "raahi",
+            "wheels": [
+              {
+                "bottom": 0.035000007152557355,
+                "top": 0.6749999928474426,
+                "radius": 0.32
+              },
+              {
+                "bottom": 0.035000007152557355,
+                "top": 0.6749999928474426,
+                "radius": 0.32
+              },
+              {
+                "bottom": 0.035000007152557355,
+                "top": 0.6749999928474426,
+                "radius": 0.32
+              },
+              {
+                "bottom": 0.035000007152557355,
+                "top": 0.6749999928474426,
+                "radius": 0.32
+              }
+            ]
+          },
+          {
+            "id": "baaz",
+            "wheels": [
+              {
+                "bottom": 0.035000007152557355,
+                "top": 0.6749999928474426,
+                "radius": 0.32
+              },
+              {
+                "bottom": 0.035000007152557355,
+                "top": 0.6749999928474426,
+                "radius": 0.32
+              },
+              {
+                "bottom": 0.035000007152557355,
+                "top": 0.6749999928474426,
+                "radius": 0.32
+              },
+              {
+                "bottom": 0.035000007152557355,
+                "top": 0.6749999928474426,
+                "radius": 0.32
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "warmedSceneAndPresetCycles": [
+          {
+            "geometries": 361,
+            "textures": 98,
+            "calls": 126,
+            "triangles": 35242
+          },
+          {
+            "geometries": 361,
+            "textures": 98,
+            "calls": 126,
+            "triangles": 35242
+          },
+          {
+            "geometries": 361,
+            "textures": 98,
+            "calls": 126,
+            "triangles": 35242
+          }
+        ]
+      },
+      {
+        "softwareRendererSamples": [
+          {
+            "quality": "low",
+            "samples": 35,
+            "viewport": [
+              960,
+              640
+            ],
+            "pixelRatio": 0.75,
+            "p50": 583.3000000000029,
+            "p95": 1199.9000000000087,
+            "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+            "geometries": 361,
+            "textures": 98,
+            "calls": 115,
+            "triangles": 142573
+          },
+          {
+            "quality": "balanced",
+            "samples": 35,
+            "viewport": [
+              960,
+              640
+            ],
+            "pixelRatio": 1,
+            "p50": 983.3000000000029,
+            "p95": 1999.8999999999942,
+            "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+            "geometries": 361,
+            "textures": 98,
+            "calls": 337,
+            "triangles": 374217
+          },
+          {
+            "quality": "high",
+            "samples": 35,
+            "viewport": [
+              960,
+              640
+            ],
+            "pixelRatio": 1,
+            "p50": 1000,
+            "p95": 1999.8999999999942,
+            "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+            "geometries": 361,
+            "textures": 98,
+            "calls": 383,
+            "triangles": 406387
+          }
+        ],
+        "method": "45 RAF frames/profile, first 10 discarded; controlled frozen CP scene, 960\u00d7640, no other browser suite in parallel"
+      },
+      {
+        "disposed": {
+          "children": 0,
+          "geometries": 0,
+          "textures": 1
+        }
+      }
+    ],
+    "errors": [],
+    "warnings": [],
+    "method": "Controlled development-module interception and actor/camera placement. Software renderer; not continuous travel or real device FPS."
+  },
+  "preview": {
+    "url": "https://ncr-drive-git-improve-visual-realism-v1-deep-07f0.vercel.app",
+    "implementation_deployment": "https://vercel.com/deep-07f0/ncr-drive/FzUCnBVR8jud9S8M7JLwoUpazbxo",
+    "status": "Vercel GitHub commit status success: Deployment has completed",
+    "remote_playtest": "not performed",
+    "access_gap": "Vercel project/protected-fetch API 403; direct HTTPS CONNECT denied by worker proxy (403); CLI had no credentials"
+  },
+  "ci": {
+    "url": "https://github.com/deepdharia/NCR-Drive/actions/runs/39077737804",
+    "sha": "0287b78ec245c8161bd197b4b6c4e8ccb53f141b",
+    "status": "success",
+    "checks": [
+      "clean install",
+      "51 logic cases",
+      "strict build",
+      "original gameplay browser smoke",
+      "production-dist smoke",
+      "regional wiring",
+      "full visual browser gate",
+      "browser evidence artifact upload"
+    ]
+  },
+  "limitations": [
+    "No physical M1/Android 60/30 FPS or human enjoyment acceptance",
+    "Flyover is supported scenery with a usable ground underpass; elevated driving and ramps are unimplemented",
+    "Flat terrain and procedural/stylized foliage/shared vehicle base remain; no scanned-city or photorealism claim",
+    "Full outer-region round trips are parent-branch evidence; V1 adds automated route/clearance checks and controlled regional scenes, plus a short input drive",
+    "Initial shadow-replacement and resize attempts emitted sampler/attachment warnings and failed cleanup checks; rejected and replaced with bounded complete shadow targets and explicit environment ownership"
+  ],
+  "production_smoke": {
+    "evidence": [
+      "Production startup migrated v1 zero-balance career and retained its original backup.",
+      "Keyboard entry/acceleration, active-fare recovery without payout, released throttle and clear-door exit passed.",
+      "Complete courier: accepted, entered car, drove west, braked, exited and walked to delivery using ordinary controls; \u20b9750 awarded once.",
+      "On-foot recovery kept completed courier reward; graphics/sensitivity and earned balance survived reload.",
+      "Mobile simultaneous throttle/steering, touch cancellation and recovery/phone in portrait and landscape passed.",
+      "Blocked storage leaves a playable session with a visible saving-unavailable message.",
+      "Production smoke passed with zero page/console errors or failed asset responses. Software rendering; no device performance claim."
+    ],
+    "errors": [],
+    "renderer": "headless Chromium / SwiftShader"
+  },
+  "regional_wiring": {
+    "evidence": [
+      {
+        "regionalFare": {
+          "cash": 17956,
+          "rides": 1,
+          "reward": 2956
+        }
+      },
+      "Regional Dispatch completed through Game once with controlled objective placement; \u20b92400 awarded.",
+      {
+        "noidaRecovery": {
+          "position": {
+            "x": 3100,
+            "z": 46
+          },
+          "driving": true,
+          "taxi": "available",
+          "cash": 20356
+        }
+      },
+      {
+        "controlledResourceCycles": [
+          {
+            "geometries": 180,
+            "textures": 95,
+            "calls": 94,
+            "triangles": 19057
+          },
+          {
+            "geometries": 180,
+            "textures": 95,
+            "calls": 94,
+            "triangles": 19057
+          },
+          {
+            "geometries": 180,
+            "textures": 95,
+            "calls": 94,
+            "triangles": 19057
+          }
+        ]
+      },
+      "Reward/settings/rides reload passed; zero browser errors. Controlled placement, not driven routes."
+    ],
+    "errors": [],
+    "method": "controlled placement; headless Chromium/SwiftShader"
+  },
+  "original_browser_smoke": {
+    "status": "passed",
+    "evidence": "Keyboard acceleration, full original story, entry into all three fleet cars, taxi completion, rides reload and mobile phone bounds; zero page errors",
+    "method": "development module interception and disclosed objective/player placement; separate production input smoke passed"
+  },
+  "central_input_drive": {
+    "status": "passed",
+    "scope": "central",
+    "evidence": [
+      {
+        "label": "Central Delhi \u00b7 ring and east radial",
+        "metres": 203.5644538866571,
+        "wallSeconds": 73.48,
+        "arrival": {
+          "x": 90.8,
+          "z": -0.9,
+          "yaw": 0.890117918517108,
+          "speed": 0
+        }
+      },
+      {
+        "label": "Central Delhi \u00b7 corridor seam and flyover underpass",
+        "metres": 161.07655181001743,
+        "wallSeconds": 21.904,
+        "arrival": {
+          "x": 253.1,
+          "z": -3.4,
+          "yaw": 1.413716694115407,
+          "speed": 0
+        }
+      },
+      "Central Delhi outbound underpass drive completed with ordinary keyboard controls; saved cash persisted; zero browser/asset errors."
+    ],
+    "errors": [],
+    "environment": "managed Linux / headless Chromium / SwiftShader, functional only"
+  }
+}

@@ -33,9 +33,9 @@ try {
   page = await context.newPage(); checkPage(page);
   page.setDefaultTimeout(90000);
   await page.goto(origin);
-  await page.getByRole('button', { name: 'Explore Connaught Place' }).click();
+  await page.getByRole('button', { name: 'Explore the neighborhood' }).click();
   assert.equal(await page.locator('[data-cash]').first().innerText(), '₹0');
-  assert.equal(await page.evaluate(key => JSON.parse(localStorage.getItem(key)).version, key), 2);
+  assert.equal(await page.evaluate(key => JSON.parse(localStorage.getItem(key)).version, key), 3);
   assert.deepEqual(await page.evaluate(key => JSON.parse(localStorage.getItem(`${key}-backup`)), key), legacy);
   log('Production startup migrated v1 zero-balance career and retained its original backup.');
   await page.keyboard.press('Escape');
@@ -51,7 +51,7 @@ try {
   await page.keyboard.down('w');
   await page.waitForFunction(() => parseFloat(document.querySelector('[data-speed]').textContent) >= 3);
   await page.keyboard.up('w');
-  await page.keyboard.press('Tab'); await page.getByRole('button', { name: 'Accept passenger' }).click();
+  await page.keyboard.press('Tab'); await page.locator('[data-action="accept"]').click();
   await page.keyboard.down('w'); await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'Recover to a clear road' }).click();
   await page.keyboard.up('w');
@@ -61,11 +61,11 @@ try {
   await page.waitForTimeout(500);
   assert.equal(await page.locator('[data-coordinates]').innerText(), recovered, 'Held throttle survived recovery');
   await page.keyboard.press('Tab');
-  assert.equal(await page.locator('[data-action="cancelTaxi"]').isVisible(), false);
+  assert.equal(await page.locator('[data-action="accept"]').isDisabled(), false);
   assert.equal(await page.locator('[data-cash]').first().innerText(), '₹0');
   await page.keyboard.press('Tab'); await page.keyboard.press('f');
   await page.waitForFunction(() => document.querySelector('[data-mode]').textContent === 'ON FOOT / EXPLORER');
-  log('Keyboard entry/acceleration, active-fare recovery without payout, released throttle and clear-door exit passed.');
+  log('Keyboard entry/acceleration, active-delivery recovery without payout, released throttle and clear-door exit passed.');
 
   // A complete courier job, driven west from recovery and finished on foot with WASD.
   await page.keyboard.press('Tab'); await page.locator('[data-action="accept"]').click();
@@ -91,7 +91,7 @@ try {
   log('Complete courier: accepted, entered car, drove west, braked, exited and walked to delivery using ordinary controls; ₹750 awarded once.');
   await page.keyboard.press('Escape'); await page.getByRole('button', { name: 'Recover to a clear road' }).click();
   assert.equal(await page.locator('[data-mode]').innerText(), 'ON FOOT / EXPLORER');
-  await page.reload(); await page.getByRole('button', { name: 'Explore Connaught Place' }).click();
+  await page.reload(); await page.getByRole('button', { name: 'Explore the neighborhood' }).click();
   assert.equal(await page.locator('[data-cash]').first().innerText(), '₹750');
   await page.keyboard.press('Escape');
   assert.match(await page.locator('[data-action="quality"]').innerText(), /Performance/);
@@ -99,11 +99,12 @@ try {
   assert.equal(await page.getByLabel('Camera sensitivity').inputValue(), '1.4');
   log('On-foot recovery kept completed courier reward; graphics/sensitivity and earned balance survived reload.');
 
+  await context.close();
   const mobileContext = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 0.5 });
   await mobileContext.addInitScript(key => localStorage.setItem(key, JSON.stringify({ version: 2, cash: 0, rides: 0, courierCompleted: false,
     settings: { performanceMode: true, steeringSensitivity: 1, cameraSensitivity: 1 } })), key);
   const mobile = await mobileContext.newPage(); checkPage(mobile); mobile.setDefaultTimeout(90000);
-  await mobile.goto(origin); await mobile.getByRole('button', { name: 'Explore Connaught Place' }).tap();
+  await mobile.goto(origin); await mobile.getByRole('button', { name: 'Explore the neighborhood' }).tap();
   await mobile.locator('.touch-interact').tap();
   await mobile.waitForFunction(() => document.querySelector('[data-mode]').textContent.includes('PARVAAZ'));
   const stick = await mobile.getByRole('group', { name: 'Movement joystick' }).boundingBox();
@@ -130,10 +131,11 @@ try {
     await mobile.getByRole('button', { name: 'Close phone' }).tap();
   }
   log('Mobile simultaneous throttle/steering, touch cancellation and recovery/phone in portrait and landscape passed.');
+  await mobileContext.close();
   const blockedContext = await browser.newContext({ viewport: { width: 640, height: 480 }, deviceScaleFactor: 0.5 });
   await blockedContext.addInitScript(() => { Object.defineProperty(window, 'localStorage', { get() { throw new Error('blocked by test'); } }); });
-  const blocked = await blockedContext.newPage(); checkPage(blocked);
-  await blocked.goto(origin); await blocked.getByRole('button', { name: 'Explore Connaught Place' }).click();
+  const blocked = await blockedContext.newPage(); checkPage(blocked); blocked.setDefaultTimeout(90000);
+  await blocked.goto(origin); await blocked.getByRole('button', { name: 'Explore the neighborhood' }).click();
   await blocked.getByRole('button', { name: 'Open DelhiOS phone' }).click();
   assert.match(await blocked.locator('[data-save]').innerText(), /Saving unavailable/);
   log('Blocked storage leaves a playable session with a visible saving-unavailable message.');

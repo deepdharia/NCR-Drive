@@ -1,27 +1,51 @@
 import type { Point } from '../core/math';
 import { distance } from '../core/math';
-const TAU = Math.PI * 2;
-const ring = (angle: number): Point => ({ x: Math.cos(angle) * 44, z: Math.sin(angle) * 44 });
-function access(point: Point): { angle: number; points: Point[] } {
-  const raw = Math.atan2(point.z, point.x);
-  if (Math.hypot(point.x, point.z) <= 50) return { angle: raw, points: [point, ring(raw)] };
-  const angle = Math.round(raw / (Math.PI / 3)) * Math.PI / 3;
-  const radius = Math.max(44, point.x * Math.cos(angle) + point.z * Math.sin(angle));
-  return { angle, points: [point, { x: Math.cos(angle) * radius, z: Math.sin(angle) * radius }, ring(angle)] };
-}
-/** Uses circle + radial roads instead of drawing a straight line through buildings. */
+import { lanes, projection, successors, ends } from '../world/WorldRoads';
+import type { Lane } from '../world/WorldRoads';
+
+/** Directed Dijkstra on left-hand lanes; reject endpoints outside the road envelope.
+ * Local destination approaches are explicit short links inside the paved width. */
+const courierApproach = {x:-99,z:0}, courierBay = {x:-99,z:24};
 export function roadRoute(from: Point, to: Point): Point[] {
-  if (distance(from, to) < 6) return [from, to];
-  const a = access(from), b = access(to);
-  // Stops on the same radial road can be reached without returning to the circle.
-  if (Math.abs(a.angle - b.angle) < 0.001 && Math.hypot(from.x, from.z) > 50 && Math.hypot(to.x, to.z) > 50) {
-    return [from, a.points[1], b.points[1], to];
+ // The original courier is a foot handover on the stadium plaza, not a road stop.
+ // Explicit paved sidewalk approaches; no building/median shortcuts.
+ const marketApproach=(p:Point)=>p.x>=-236&&p.x<=-145&&p.z>=-14.5&&p.z<=-8.3;
+ const fromMarket=marketApproach(from),toMarket=marketApproach(to);
+ const fromBay=from.x>=-200&&from.x<=-165&&from.z>8.2&&from.z<=15;
+ const toBay=to.x>=-200&&to.x<=-165&&to.z>8.2&&to.z<=15;
+ const toPlaza=distance(to,courierBay)<0.5;
+ const fromPlaza=from.x>=-100 && from.x<=-96 && from.z>6 && from.z<=39;
+ const route=laneRoute(fromPlaza?courierApproach:fromMarket?{x:from.x,z:-6}:fromBay?{x:from.x,z:6}:from,toPlaza?courierApproach:toMarket?{x:to.x,z:-6}:toBay?{x:to.x,z:6}:to);
+ if(!route.length)return [];
+ return [...(fromPlaza?[from,{x:-99,z:13}]:fromMarket||fromBay?[from]:[]),...route,...(toPlaza?[{x:-99,z:13},to]:toMarket||toBay?[to]:[])];
+}
+function laneRoute(from: Point, to: Point): Point[] {
+ const candidates=(p: Point)=>lanes.map(l=>({l,...projection(p,l.start,l.end)})).filter(s=>s.distance<=s.l.road.width/2+2 && projection(p,...ends(s.l.road)).distance<=s.l.road.width/2-0.8).sort((a,b)=>a.distance-b.distance).slice(0,4);
+ const allStarts=candidates(from),starts=allStarts.filter(s=>s.distance<=(allStarts[0]?.distance??0)+0.25), allGoals=candidates(to), goals=allGoals.filter(g=>g.distance <= (allGoals[0]?.distance ?? 0)+0.25); if(!starts.length||!goals.length)return [];
+ let best: Point[]=[];let bestLength=Infinity;
+ for(const start of starts) for(const goal of goals){
+  if(start.l===goal.l && start.t<=goal.t){const route=[from,start.point,goal.point,to];const len=routeLength(route);if(len<bestLength){best=route;bestLength=len;}continue;}
+  // Seed successors rather than the source lane: a target behind us on the
+  // same directed lane must take a legal loop, never reverse along that lane.
+  const costs=new Map<string,number>(), previous=new Map<string,Lane>(), open:Lane[]=[];
+  for(const next of successors(start.l)) {
+    costs.set(next.id,(1-start.t)*start.l.length+distance(start.l.end,next.start)+next.length);
+    open.push(next);
   }
-  const delta = ((b.angle - a.angle + Math.PI) % TAU + TAU) % TAU - Math.PI;
-  const steps = Math.max(1, Math.ceil(Math.abs(delta) / 0.09));
-  const arc = Array.from({ length: steps }, (_, i) => ring(a.angle + delta * (i + 1) / steps));
-  return [...a.points, ...arc, ...b.points.slice().reverse()];
+  const settled=new Set<string>();
+  while(open.length){
+   open.sort((a,b)=>costs.get(a.id)!-costs.get(b.id)!);const lane=open.shift()!;
+   if(settled.has(lane.id))continue;settled.add(lane.id);if(lane===goal.l)break;
+   for(const next of successors(lane)){const cost=costs.get(lane.id)!+distance(lane.end,next.start)+next.length;
+    if(cost<(costs.get(next.id)??Infinity)){costs.set(next.id,cost);previous.set(next.id,lane);open.push(next);}}
+  }
+  if(!settled.has(goal.l.id))continue;
+  const path:Lane[]=[goal.l];let cursor=goal.l;
+  while(previous.has(cursor.id)){cursor=previous.get(cursor.id)!;path.unshift(cursor);}
+  path.unshift(start.l);
+  const route=[from,start.point,start.l.end,...path.slice(1,-1).flatMap(l=>[l.start,l.end]),goal.l.start,goal.point,to];
+  const len=routeLength(route);if(len<bestLength){best=route;bestLength=len;}
+ }
+ return best;
 }
-export function routeLength(route: Point[]): number {
-  return route.slice(1).reduce((sum, p, i) => sum + distance(route[i], p), 0);
-}
+export function routeLength(route: readonly Point[]): number { return route.slice(1).reduce((sum,p,i)=>sum+distance(route[i],p),0); }

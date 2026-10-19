@@ -1,35 +1,14 @@
-# Milestones and gates
+# NCR Drive roadmap
 
-Delivery branch: `main`. The foundation came from PR #4 at
-`c6e0514573e44395c3e0a6505343678e5ad9054f`; recovery/settings came through
-PR #5. See HANDOFF.md for merged commits, evidence and remaining work.
+| Milestone | State |
+| --- | --- |
+| Connected NCR | Retained: both corridors, Gurgaon avenue loop, Noida sector loop, Yamuna-inspired flat crossing; legal shared routes, collision broad phase, regional recovery, capped traffic |
+| Central Delhi V1 | Retained: detailed CP surface, PBR/daylight, scenic supported flyover with ground underpass, original landmarks, LOD and Low/Balanced/High |
+| Living Delhi | Integrated: 250 m market, rigged adults/original clips, bounded routines/reservations, shops, atomic fictional purchases, seating/drinking, civilian door/control transfer, goods handover/receipt follow-up with once-only reward/trust, saved spatial sound controls. Current verification in HANDOFF/PLAYTESTS |
+| NCR Parks and Shopping Streets | In progress (branch `improve/ncr-parks-shopping`, from benchmark HEAD `1dedea2`): 4 destination clusters (garden stop, Gurgaon boulevard, Noida park + market, Yamuna viewpoint), cluster shops with flowers/sweets/cake inventory, 2 goods delivery jobs, park circuit, photo stop, Places routing card, category map markers, barrier gaps driving collision + rails. Wardrobe purchase deferred (fashion shops browse-only). |
+| Device/art acceptance | Owner M1 8 GB + named phone: 30 FPS Low target, feet/hands/doors, sound mix, driving enjoyment and longer repeated visits. Software rendering does not close this gate |
+| Later | More authored missions/contacts, distinct finished sedan/SUV art, richer animation, recorded licensed local sound, city-wide pedestrian crossings, police pursuit and business opportunities |
 
-| Milestone | Gate | Current status |
-| --- | --- | --- |
-| M0 baseline | Verify remote state, instructions, feature inventory and reproducible checks | Complete for inspected PR #4 snapshot; production deployment source remains unverified |
-| M1 driving/recovery | Start, drive, finish a fare, recover, save settings and reload; audio, feedback and measured profiling | Partial: recovery, save migration and persistent sensitivity/quality implemented; production verification recorded in PLAYTESTS.md |
-| M2 connected district | Shared directed road graph, reachable targets, traffic junctions and bounded pedestrians; defined blockage/deadlock outcomes | Not started |
-| M3 chapter/progression | Varied non-pursuit objectives, dialogue history, checkpoints, garage/spending and safe migration | Not started; current three-stop story is an earlier prototype |
-| M4 pursuit/spectacle | One real pursuit with search/escape/failure/retry/cleanup plus a bounded stunt/prop encounter | Not started |
-| M5 presentation/release | Asset/audio quality, full player runs, device evidence, licences, lifecycle and versioned release | Not started |
+Save schema v3 retains the original key and validates/migrates v1/v2 money/settings/courier completion with backups and corruption/unknown-version safeguards. Inventory/trust/completed goods delivery persist; active jobs, locations and cars are session state. Recovery remains free and cancels active work without reward. Existing replayable chapters keep their original per-completion reward policy.
 
-Next M1 increment: gesture-initialised procedural driving audio with mute/volume
-settings and pause/lifecycle behavior. Then add bounded frame-time/render-resource
-instrumentation and measure a representative full fare on the owner's M1 and a
-named midrange Android. Keep functional CI results separate from frame-rate data.
-Tune camera/handling using route playtests before marking M1 complete.
-
-Recovery policy implemented here: free, cancel active jobs without reward,
-preserve earned cash/completed jobs, preserve driving/on-foot mode. Select a
-collision-clear radial-road pad and door; if all pads are occupied, change nothing.
-This deliberately avoids introducing recovery charges before transaction/economy
-design. Recovery is an explicit menu action, not an AI teleport system.
-
-Reload policy: wallet, taxi count, courier completion and settings persist.
-Active jobs cancel, chapter/vehicle locations reset. Chapter replay still pays
-again by the existing policy; no persistent chapter reward ledger is claimed.
-Timers continue to use clamped simulated time and stop under phone/pause.
-
-Do not widen into M2 before M1's remaining gates are evidenced. Future spending
-requires central validated/idempotent transactions; allowing zero cash alone is
-not a complete economy. No purchase or ownership feature is introduced here.
+Decorative density must give way to interaction/route/collision correctness and bounded resource use. No merge to main, production promotion or hardware performance acceptance is implied by a preview.

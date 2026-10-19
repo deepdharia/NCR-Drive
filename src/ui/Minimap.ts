@@ -1,41 +1,32 @@
 import type { Point } from '../core/math';
-
+import { roads, ends, destinations, regionLabels, regionAt } from '../world/WorldRoads';
+import { CLUSTER_PLACES, PLACE_CATEGORY_COLORS } from '../world/ClusterData';
+/** Overview projection constants (shared by the canvas and its click handler). */
+export const MAP_SIZE = 480;
+export const OVERVIEW_ORIGIN = { x: 550, z: 1000 };
+export const OVERVIEW_SCALE = 0.072;
+/** Convert a click pixel on the overview canvas (0..480) to a world point. */
+export function overviewClickToWorld(px: number, pz: number): Point {
+  return { x: OVERVIEW_ORIGIN.x + (px - MAP_SIZE / 2) / OVERVIEW_SCALE, z: OVERVIEW_ORIGIN.z + (pz - MAP_SIZE / 2) / OVERVIEW_SCALE };
+}
 export class Minimap {
-  private context: CanvasRenderingContext2D;
-  constructor(canvas: HTMLCanvasElement) {
-    canvas.width = canvas.height = 480;
-    const context = canvas.getContext('2d'); if (!context) throw new Error('DelhiNav needs Canvas 2D support.');
-    this.context = context;
-  }
-  draw(position: Point, yaw: number, car: Point, target?: Point, route: Point[] = [], pickup = false): void {
-    const ctx = this.context, scale = 1.75, centre = 240;
-    const project = (p: Point): Point => ({ x: centre + p.x * scale, z: centre + p.z * scale });
-    ctx.fillStyle = '#203b35'; ctx.fillRect(0, 0, 480, 480);
-    ctx.lineWidth = 18; ctx.strokeStyle = '#677770'; ctx.beginPath(); ctx.arc(centre, centre, 44 * scale, 0, Math.PI * 2); ctx.stroke();
-    for (let i = 0; i < 6; i++) {
-      const angle = i * Math.PI / 3; ctx.beginPath(); ctx.moveTo(centre + Math.cos(angle) * 44 * scale, centre + Math.sin(angle) * 44 * scale);
-      ctx.lineTo(centre + Math.cos(angle) * 150 * scale, centre + Math.sin(angle) * 150 * scale); ctx.stroke();
-    }
-    ctx.fillStyle = '#4d7250'; ctx.beginPath(); ctx.arc(centre, centre, 30 * scale, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = '#7d9b71'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(centre, centre, 18 * scale, 0, Math.PI * 2); ctx.stroke();
-    ctx.fillStyle = '#aeb5a0';
-    for (let sector = 0; sector < 6; sector++) for (let block = 0; block < 5; block++) {
-      const angle = (sector * 60 + 12 + block * 9) * Math.PI / 180;
-      ctx.save(); ctx.translate(centre + Math.cos(angle) * 67 * scale, centre + Math.sin(angle) * 67 * scale); ctx.rotate(angle); ctx.fillRect(-10, -7, 20, 14); ctx.restore();
-    }
-    ctx.fillStyle = '#c5d2bd'; ctx.font = '15px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('CENTRAL PARK', 240, 235);
-    ctx.fillStyle = '#e8d8b5'; ctx.font = '16px sans-serif'; ctx.fillText('N', 240, 30);
-    const parked = project(car); ctx.fillStyle = '#d3d9c5'; ctx.fillRect(parked.x - 4, parked.z - 7, 8, 14);
-    if (route.length) {
-      ctx.strokeStyle = pickup ? '#71cce5' : '#f1c369'; ctx.lineWidth = 4; ctx.lineJoin = 'round'; ctx.beginPath();
-      route.forEach((p, i) => { const q = project(p); if (i === 0) ctx.moveTo(q.x, q.z); else ctx.lineTo(q.x, q.z); }); ctx.stroke();
-    }
-    if (target) {
-      const marker = project(target); ctx.fillStyle = pickup ? '#71cce5' : '#edbc71'; ctx.beginPath(); ctx.arc(marker.x, marker.z, 9, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#e0c995'; ctx.font = '13px sans-serif'; ctx.textAlign = marker.x > 330 ? 'right' : 'left'; ctx.fillText(pickup ? 'PICKUP' : 'DROP-OFF', marker.x + (marker.x > 330 ? -13 : 13), marker.z);
-    }
-    const player = project(position);
-    ctx.save(); ctx.translate(player.x, player.z); ctx.rotate(Math.PI - yaw);
-    ctx.shadowColor = '#f1c37d'; ctx.shadowBlur = 12; ctx.fillStyle = '#f4d29c'; ctx.beginPath(); ctx.moveTo(0, -12); ctx.lineTo(8, 8); ctx.lineTo(0, 4); ctx.lineTo(-8, 8); ctx.closePath(); ctx.fill(); ctx.restore();
-  }
+ private context:CanvasRenderingContext2D;
+ constructor(canvas:HTMLCanvasElement,private overview=false){canvas.width=canvas.height=480;const c=canvas.getContext('2d');if(!c)throw Error('DelhiNav needs Canvas 2D');this.context=c;}
+ draw(position:Point,yaw:number,car:Point,target?:Point,route:Point[]=[],pickup=false):void{
+  const ctx=this.context,scale=this.overview?0.072:1.15,origin=this.overview?{x:550,z:1000}:position;
+  const project=(p:Point)=>({x:240+(p.x-origin.x)*scale,z:240+(p.z-origin.z)*scale});
+  ctx.fillStyle='#203b35';ctx.fillRect(0,0,480,480);
+  const river=project({x:1225,z:-1200});ctx.fillStyle='#386977';ctx.fillRect(river.x,river.z,300*scale,2400*scale);
+  ctx.lineCap='round';
+  for(const road of roads){const [a,b]=ends(road),p=project(a),q=project(b);ctx.strokeStyle=road.bridge?'#d0c3a0':'#79867b';ctx.lineWidth=Math.max(this.overview?2:4,road.width*scale);ctx.beginPath();ctx.moveTo(p.x,p.z);ctx.lineTo(q.x,q.z);ctx.stroke();}
+  if(route.length){ctx.strokeStyle=pickup?'#71cce5':'#f1c369';ctx.lineWidth=this.overview?3:4;ctx.beginPath();route.forEach((p,i)=>{const q=project(p);if(i)ctx.lineTo(q.x,q.z);else ctx.moveTo(q.x,q.z);});ctx.stroke();}
+  const marker=(p:Point,color:string,size:number)=>{const q=project(p),x=Math.max(12,Math.min(468,q.x)),z=Math.max(40,Math.min(455,q.z));ctx.fillStyle=color;ctx.beginPath();ctx.arc(x,z,size,0,Math.PI*2);ctx.fill();};
+  destinations.forEach(d=>marker(d,'#a4c9af',3));
+  for (const place of CLUSTER_PLACES) { const q = project(place.arrival), x = Math.max(12, Math.min(468, q.x)), z = Math.max(40, Math.min(455, q.z)); ctx.fillStyle = PLACE_CATEGORY_COLORS[place.category]; ctx.beginPath(); ctx.moveTo(x, z - 6); ctx.lineTo(x + 5, z); ctx.lineTo(x, z + 6); ctx.lineTo(x - 5, z); ctx.fill(); ctx.strokeStyle = '#f2efe6'; ctx.lineWidth = 1; ctx.stroke(); }
+  marker(car,'#d3d9c5',4);if(target)marker(target,pickup?'#71cce5':'#f1c369',8);
+  const p=project(position);ctx.save();ctx.translate(p.x,p.z);ctx.rotate(Math.PI-yaw);ctx.fillStyle='#ffe3a5';ctx.beginPath();ctx.moveTo(0,-11);ctx.lineTo(7,8);ctx.lineTo(0,4);ctx.lineTo(-7,8);ctx.fill();ctx.restore();
+  ctx.fillStyle='#eee3c7';ctx.font='15px sans-serif';ctx.textAlign='center';ctx.fillText(this.overview?'NCR · REGIONAL OVERVIEW':regionLabels[regionAt(position)],240,25);
+  if(this.overview)for(const [text,p] of [['DELHI',{x:0,z:0}],['GURGAON',{x:-2100,z:2100}],['NOIDA',{x:3200,z:250}]] as const){const q=project(p);ctx.fillText(text,q.x,q.z-17);}
+  ctx.font='12px sans-serif';ctx.fillText(this.overview?'Fictional geography · N ↑':'N ↑   •   edge dots point toward distant stops',240,472);
+ }
 }

@@ -164,13 +164,13 @@ kbd { font-family: inherit; font-size: 9px; border: 1px solid #dfc79d77; border-
 }
 @media (prefers-reduced-motion:reduce) { .phone { animation: none; } }
 
-/* Fare cards share the phone's compact layout and native scroll surface. */
-.taxi-card { border: 1px solid #71cce54d; background: #71cce509; border-radius: 17px; padding: 17px; }
-.taxi-tag { font-size: 7px; letter-spacing: .18em; color: #8dd8e9; }
-.taxi-card h3 { font-size: 19px; font-weight: 400; line-height: 1.35; margin: 10px 0; }
-.taxi-card p { font-size: 10px; line-height: 1.7; color: #b9cbb8; }
-.taxi-card .primary { width: 100%; font-size: 11px; padding: 13px; }
-.cancel-fare { margin-top: 10px; width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 10px; background: transparent; font-size: 11px; }
+/* Activity cards share the phone's compact layout and native scroll surface. */
+.activity-card { border: 1px solid #71cce54d; background: #71cce509; border-radius: 17px; padding: 17px; }
+.activity-tag { font-size: 7px; letter-spacing: .18em; color: #8dd8e9; }
+.activity-card h3 { font-size: 19px; font-weight: 400; line-height: 1.35; margin: 10px 0; }
+.activity-card p { font-size: 10px; line-height: 1.7; color: #b9cbb8; }
+.activity-card .primary { width: 100%; font-size: 11px; padding: 13px; }
+.cancel-job { margin-top: 10px; width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 10px; background: transparent; font-size: 11px; }
 .phone-balance small + small { display: block; margin-top: 8px; color: #e7c392; }
 .gig-tracker { max-width: 310px; }
 .gig-tracker strong { line-height: 1.4; }
@@ -187,3 +187,6 @@ kbd { font-family: inherit; font-size: 9px; border: 1px solid #dfc79d77; border-
 .control-settings input { width: 100%; min-height: 36px; accent-color: var(--gold); touch-action: pan-y; }
 .pause-screen .recovery-note { line-height: 1.6; margin: 12px 0; }
 .pause-screen { padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+
+.shop-modal{position:absolute;inset:0;z-index:60;display:grid;place-items:center;background:#101e22b8;pointer-events:auto;padding:16px}.shop-modal>div{max-width:440px;max-height:88dvh;overflow:auto;background:#ece5d5;color:#243a36;padding:28px;border-radius:18px;box-shadow:0 15px 60px #0006}.shop-modal h2{font-size:26px;margin:16px 0}.shop-modal p{line-height:1.6}.shop-modal button{display:block;width:100%;margin-top:12px}.shop-modal [hidden]{display:none}.shop-modal[hidden]{display:none}.pause-screen [data-volume]{max-width:180px}.shop-modal .graphics-button{background:#29473e;color:#f2e5c9;border-color:#29473e}
+.photo-overlay{position:absolute;inset:0;z-index:55;display:grid;place-items:end center;background:transparent;pointer-events:none;padding:0 0 28px}.photo-overlay>div{text-align:center;color:#fff;text-shadow:0 1px 8px #000a;pointer-events:auto}.photo-overlay h2{font-size:26px;margin:6px 0}.photo-overlay p{font-size:13px;margin:0 0 10px}.photo-overlay button{pointer-events:auto}.photo-overlay[hidden]{display:none}
