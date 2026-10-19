@@ -104,7 +104,7 @@ try{
  await page.evaluate(()=>{window.dispatchEvent(new Event('blur'));});assert.equal(await page.evaluate(()=>window.__game.input.enabled),false);
  await page.keyboard.press('Escape');
  await page.keyboard.press('Tab');await page.locator('[data-action="place"]').first().click();
- assert.ok(await page.evaluate(()=>!!window.__game.waypoint));assert.match(await page.locator('[data-distance]').innerText(),/Waypoint/);
+ assert.ok(await page.evaluate(()=>!!window.__game.waypoint));assert.match(await page.locator('[data-distance]').textContent(),/Waypoint/);
  await page.locator('[data-action="clearWaypoint"]').click();assert.equal(await page.evaluate(()=>window.__game.waypoint),undefined);
  await page.keyboard.press('Tab');await openShop(approach('noida-bakery'));await page.locator('[data-action="buy"]').click();
  const beforeBlur=await cash();assert.ok(await page.evaluate(()=>!!window.__game.neighborhood.pending));
