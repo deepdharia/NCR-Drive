@@ -1,5 +1,6 @@
 import './style.css';
 import { loadPeople } from './people/HumanoidView';
+import { CharacterAssetError } from './people/CharacterAsset';
 import { Game } from './core/Game';
 
 const root = document.querySelector<HTMLDivElement>('#app');
@@ -15,7 +16,11 @@ try {
   root.replaceChildren();
   const panel = document.createElement('div'); panel.className = 'startup-error';
   const title = document.createElement('h1'); title.textContent = 'The city could not start.';
-  const message = document.createElement('p'); message.textContent = 'Use a browser with WebGL graphics enabled, then reload NCR Drive.';
+  const message = document.createElement('p'); message.textContent = error instanceof CharacterAssetError
+    ? 'Character files could not load. Check your connection and reload to retry. If this continues, try again later.'
+    : error instanceof Error && /webgl|graphics context/i.test(error.message)
+      ? 'Graphics could not start. Enable WebGL in your browser, then reload to retry.'
+      : 'The city could not finish starting. Reload to retry. If this continues, try again later.';
   const retry = document.createElement('button'); retry.className = 'primary'; retry.textContent = 'Reload game'; retry.addEventListener('click', () => location.reload());
   panel.append(title, message, retry); root.append(panel);
 }

@@ -1,9 +1,9 @@
 name: Verify playable district
 on: [push, pull_request]
 jobs:
-  game:
+  logic-build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -12,18 +12,37 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+      - run: npm run lint
       - run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: production-dist
+          path: dist/
+  browser:
+    needs: logic-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [core, living, parks, visual]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: production-dist
+          path: dist/
       - run: npm install --no-save --package-lock=false playwright@1.62.1
       - run: npx playwright install --with-deps chromium
-      - run: node tests/browser-smoke.mjs
-      - run: node tests/production-smoke.mjs
-      - run: npm run test:regional-wiring
-      - run: npm run test:living-wiring
-      - run: npm run test:living
-      - run: npm run test:visual
+      - run: node scripts/browser-checks.mjs ${{ matrix.group }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: browser-evidence
+          name: browser-evidence-${{ matrix.group }}
           path: test-results/
-          if-no-files-found: ignore
+          if-no-files-found: warn

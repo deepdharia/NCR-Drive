@@ -93,14 +93,14 @@ try {
     throw Error('Tab press did not take effect');
   };
   const pressF = async (until) => {
-    // An F press can be swallowed by the 1.2 s handover timer after paying
-    // (Game.interact returns early while handover > 0), so retry until the
-    // expected state appears.
-    for (let i = 0; i < 6; i++) {
-      await page.keyboard.press('f'); await page.waitForTimeout(2000);
-      if (!until || await until()) return;
-    }
-    if (until) throw Error('F press did not take effect');
+    // Wait for real simulation handovers/transitions before issuing a toggle.
+    // Repeated F while a slow entry is completing can immediately exit again.
+    await page.waitForFunction(() => window.__game.handover <= 0 && !window.__game.interaction.busy);
+    await page.keyboard.press('f');
+    if (!until) return;
+    const deadline=Date.now()+120000;
+    while(Date.now()<deadline){if(await until())return;await page.waitForTimeout(250);}
+    throw Error('F interaction did not finish within 120 seconds');
   };
   const modalOpen = () => page.evaluate(() => !document.querySelector('.shop-modal').hidden);
 

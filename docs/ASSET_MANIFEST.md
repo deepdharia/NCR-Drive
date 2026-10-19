@@ -59,7 +59,7 @@ placement. They are documentation, not runtime assets or third-party imagery.
 - Creator: **Quaternius**, Universal Base Characters, Standard FREE CC0 subset. Creator's license/use statement: https://quaternius.com/packs/universalbasecharacters.html and https://quaternius.itch.io/universal-base-characters . CC0 permits commercial use, modification and redistribution; attribution is appreciated, not required. Preserved notice: `public/assets/people/QUATERNIUS-LICENSE.txt`; legal deed https://creativecommons.org/publicdomain/zero/1.0/ .
 - Downloaded rigged source: https://raw.githubusercontent.com/programasweights/avatar/d5c4a204c6485ebd7d1d0ced6f1e261509874af5/public/assets/character.glb . Mirror's explicit asset provenance: https://github.com/programasweights/avatar/blob/d5c4a204c6485ebd7d1d0ced6f1e261509874af5/ASSETS.md . License verified against the creator's page, not inferred from public GitHub availability. Source SHA256: `d6f3b64cab629f6ddca9ba063811aeffd3663a8a4e49ade47cd9505dc2bbd70f`.
 - Modifications: original shirt/trouser/skin/shoe palette, close-cropped hair, mesh simplification, normalized four-bone skin weights, and 21 original Blender-authored animation clips. Reproducible preparation: `scripts/prepare-character.py` with Blender 4.3.2. No external motion clips, Mixamo download, proprietary model or commercial-game animation is included. Runtime skeletons use Three.js SkeletonUtils clones sharing geometry; clothing colors vary by actor. Authored motion remains stylized and needs owner art feedback.
-- Prepared GLB SHA256: `6c6de8b968804567061117b6498f550761a2f246e7a7c90fa04f54930269cf0a`. Cup/phone/doors/stalls/fruit/signs/cables and all shop businesses are original procedural geometry/Canvas text. No real merchant QR, trademarks or real transaction payload exists.
+- Prepared GLB SHA256: `150b3a8c45c74f4a154ddc32405acc8d1d347ce60bbc2aeedf0d84f31e715fab`. Cup/phone/doors/stalls/fruit/signs/cables and all shop businesses are original procedural geometry/Canvas text. No real merchant QR, trademarks or real transaction payload exists.
 - Sound: `StreetAudio.ts` synthesizes kettle/preparation/murmur/engine tones from original deterministic noise/oscillators. No third-party audio recording or speech service. Existing Three.js MIT notices remain applicable.
 
 The driving pose uses original two-bone arm IK toward the steering wheel and raised pedal feet. The compact now has an open cabin floor, separate front doors and cushions; estate/sport coachwork remains prototype art. Controller, occupant and door tests additionally exercise sedan/SUV dimensions without advertising stretched models as completed art.
@@ -67,3 +67,14 @@ The driving pose uses original two-bone arm IK toward the steering wheel and rai
 ## NCR Parks and Shopping Streets
 
 All new art is **original procedural repository work** — no external meshes, textures, photos, logos, or fonts were imported. `ClusterView.ts` authors lawns, paving, asphalt lots with painted bays, park loop paths, shop boxes with Canvas-lettered signs (`signTexture` from the shop's data label + Hindi line), shop windows, awnings, and kind-specific displays (fashion mannequins + rack, streetwear graphic panels, flower buckets + gift boxes, sweets glass case + trays, bakery cake stand + menu, café tables + cups). `ClusterLayout.ts` authors the matching collision props (shops, counters, benches, signs, beds, bins, planters, trees, fountain, exercise frame, railing) from the same data. Storefront brand labels (H&M, Zara, The Souled Store, FNP, Aggarwal Sweets) are **data strings only** in `ClusterData.ts` — no scraped logos, photos, or real-branch claims, and no sponsorship implication. Each shop carries a `fictional` alternative; `USE_FICTIONAL_NAMES = true` swaps every label. The only licensed external asset remains the Quaternius CC0 adult rig listed above.
+
+### Repair asset restoration (19 October 2026)
+
+The runtime GLB is now committed (1,632,396 bytes; use the file size/check output
+for the exact count). It was regenerated with Blender 4.3.2 and the unchanged
+`prepare-character.py` from the pinned source above, whose SHA256 was verified
+before import. Export metadata/order can change the prepared hash; the restored
+file passes the original scale, sole, sitting, drinking and driver-grip checks.
+`npm ci && npm run build` uses this committed binary, never Blender or a download.
+The build parses the packaged GLB and checks animations, skinned geometry and
+attachment bones. Runtime loading applies the same compatibility check.

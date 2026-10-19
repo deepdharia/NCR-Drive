@@ -1,9 +1,10 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone } from 'three/addons/utils/SkeletonUtils.js';
+import { CHARACTER_URL, CharacterAssetError, validateCharacter } from './CharacterAsset';
 export const PEDESTRIAN_FLOOR_OFFSET=0.045; // Sole -0.01 m meets the 0.035 m pavement.
 let template:THREE.Group; let clips:THREE.AnimationClip[]=[];
-export async function loadPeople():Promise<void> {const gltf=await new GLTFLoader().loadAsync('/assets/people/delhi-adult.glb');template=gltf.scene;clips=gltf.animations;}
+export async function loadPeople():Promise<void> {try {const gltf=await new GLTFLoader().loadAsync(CHARACTER_URL);validateCharacter(gltf);template=gltf.scene;clips=gltf.animations;} catch(error){throw new CharacterAssetError('Required character asset could not be loaded.',{cause:error});}}
 /** Full per-actor look. A bare number keeps the old shirt-only call working. */
 export interface HumanVariant { shirt:number; trousers:number; shoes:number; skin:number; hair:number; scale?:number; accessory?:'none'|'cap'|'bag'; phase?:number; }
 export const PLAYER_VARIANT:HumanVariant={shirt:0x357a86,trousers:0x2e3442,shoes:0x4a3220,skin:0xb08a68,hair:0x1f1a16,scale:1,accessory:'none',phase:0};

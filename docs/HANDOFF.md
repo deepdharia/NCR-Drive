@@ -1,6 +1,10 @@
 # NCR Parks and Shopping Streets handoff
 
-19 October 2026 (Asia/Kolkata). Branch: `improve/ncr-parks-shopping` (from benchmark HEAD `1dedea2`). Local HEAD at writing: `c49b2f1` (logic tests + collision fixes). Not yet pushed; push via the GitHub connector `push_files` (approval cards), then open a draft PR. No merge to main, production promotion, or hardware performance acceptance is implied by a preview.
+19 October 2026 (Asia/Kolkata). Repair branch: `repair/ncr-assets-deliveries`.
+Baseline fetched from `improve/ncr-parks-shopping` at `f290934` (PR #9).
+Remote main remains `546fff3`; it lacks the newer parks/shopping work and was
+not used as the repair source. Initial working tree was clean; no AGENTS.md
+was present. Repair publication and final verification are recorded below.
 
 ## What landed
 
@@ -23,10 +27,48 @@
 
 Storefront labels are data strings with original procedural signage; `USE_FICTIONAL_NAMES = true` in `ClusterData.ts` swaps every label to its `fictional` alternative. No scraped logos/photos, no real-branch claims, no sponsorship implication.
 
-## Verification / evidence
+## Repair checkpoint
 
-Local: build + lint + full logic suite PASS (including the new parks-shopping tests). The logic tests caught real placement bugs — garden shop/tree in the parking lot, Gurgaon lot clipping the forecourt barrier, Noida lot on the auto-building row (moved to the barrier/building strip), Noida park east edge inside the x=3335 building row (park shrunk west), Yamuna lot clipping the spur barrier — all fixed in code, not in tests. Browser gameplay test: see `test-results/parks-shopping-evidence.json` + screenshots (`parks-garden-arrival`, `parks-gurgaon-boulevard`, `parks-noida-park`, `parks-yamuna-viewpoint`, `parks-mobile-portrait/landscape`).
+Implemented: committed compatible licensed character, packaged-asset parse gate,
+asset-specific startup retry feedback, sequential goods completion with complete
+transient cleanup, distinct saved/already-completed/save-failed activity results,
+park retry at the board retaining finished stops, and honest photo exit feedback.
+Removed the unreferenced legacy TaxiMission module; taxi gameplay stays removed.
+All connected roads, clusters, pedestrians, retained jobs, shops, vehicles, maps,
+waypoints and v3 save migrations are preserved.
 
-## Next owner step
+Baseline reproduced: 67/68 logic tests; missing character GLB; build nevertheless
+succeeded. Direct goods reproduction returned `done`, second acceptance false.
+Restored source hash matches the existing manifest; generated with the existing
+Blender 4.3.2 pipeline. Runtime GLB is committed, so build/install needs no Blender.
+Initial repaired logic: 73/73, strict typing and production build/asset parse PASS.
+Additional recovery/compatibility tests and browser verification are in progress.
+Use Git log for the exact checkpoint SHA; a commit cannot contain its own hash.
 
-Push the branch, open a draft PR, playtest on a phone (Low preset): drive to each cluster, shop, deliver one goods job, walk the park circuit, take the photo stop, recover near a cluster. Record device/browser/settings/frame p50/p95/draws/triangles/resources. Do not merge to main until the device gate passes.
+Browser evidence is written to `test-results/`; final results will be summarized
+in `docs/evidence/REPAIR_VERIFICATION.md`. Production repair harness reads unmodified
+shipped bundle bytes and uses CDP to expose the game instance for controlled actor
+placements. This proves transitions, not full regional travel. No real-device FPS
+or human playtesting claim. Existing ordinary-input production smoke is retained.
+
+CI builds once, shares that exact dist, and runs core/living/parks/visual groups.
+Each browser script runs once with a 15-minute deadline, stdout/stderr logs and
+failure screenshots/JSON where available; groups do not fail-fast. The added parks,
+map-waypoint and visual-benchmark scripts run on their existing development servers;
+production smoke/living/repair scripts run Vite preview against the shared dist.
+
+## Publication / deployment
+
+Original parks work is already published in PR #9; the old “not yet pushed”
+instruction was stale and removed. Repair branch/PR publication is pending at this
+checkpoint. No merge, force-push, production promotion or protection change.
+Read-only Vercel project inspection for `deep-07f0` returned HTTP 403; Vercel CLI
+is unavailable. Deployed commit and live-preview gameplay remain unverified.
+A branch URL must not be assumed to serve its latest Git commit.
+
+## Next owner acceptance
+
+After final automated results, review the draft repair PR and playtest on a
+physical phone. Record device/browser/settings and frame times. Wardrobe,
+image export, visual redesign, combat and new destinations remain outside this
+repair. Do not infer device performance from headless SwiftShader.

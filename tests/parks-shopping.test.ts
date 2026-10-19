@@ -94,10 +94,10 @@ test('goods jobs: one reward, idempotent confirm, cancel without payout', () => 
 
 test('park circuit and photo discovery record once', () => {
   const n = fresh();
-  assert.equal(n.completeParkCircuit(), true); assert.equal(n.data.parkCircuit, true);
-  assert.equal(n.completeParkCircuit(), false);
-  assert.equal(n.markPhoto(), true); assert.equal(n.data.photoViewpoint, true);
-  assert.equal(n.markPhoto(), false);
+  assert.equal(n.completeParkCircuit(), 'saved'); assert.equal(n.data.parkCircuit, true);
+  assert.equal(n.completeParkCircuit(), 'already-completed');
+  assert.equal(n.markPhoto(), 'saved'); assert.equal(n.data.photoViewpoint, true);
+  assert.equal(n.markPhoto(), 'already-completed');
 });
 
 test('old saves without the new fields load with tolerant defaults; new fields round-trip', () => {
@@ -110,4 +110,44 @@ test('old saves without the new fields load with tolerant defaults; new fields r
   assert.equal(writeProgress(storage, { ...loaded.progress, neighborhood: { ...loaded.progress.neighborhood, flowers: 2, goodsDone: ['flower-order'] } }), true);
   const reloaded = loadProgress(storage);
   assert.equal(reloaded.progress.neighborhood.flowers, 2); assert.deepEqual(reloaded.progress.neighborhood.goodsDone, ['flower-order']);
+});
+
+for(const jobs of [GOODS_JOBS,[...GOODS_JOBS].reverse()])test(`sequential goods ${jobs.map(j=>j.id).join(' → ')} persist and never repay`,()=>{
+ let persisted={cash:5000,neighborhood:freshNeighborhood()};
+ const n=new Neighborhood(persisted,next=>{persisted=structuredClone(next);return true;});
+ for(const job of jobs){
+  assert.equal(n.acceptGoods(job),true);assert.equal(n.accept(),false,'supply excluded during goods');
+  assert.equal(n.updateGoods(job.dropoff,false,0),false);assert.equal(n.updateGoods(job.dropoff,true,3),false);
+  assert.equal(n.updateGoods(job.dropoff,true,0),true);
+  assert.equal(n.confirmGoods(job.dropoff,0),true);assert.equal(n.confirmGoods(job.dropoff,0),false);
+  assert.equal(n.goods,'idle');assert.equal(n.goodsId,undefined);assert.equal(n.goodsDropoff,undefined);assert.equal(n.goodsName,'');assert.equal(n.goodsReward,0);
+  assert.match(n.message,new RegExp(String(job.reward)));assert.equal(n.acceptGoods(job),false);
+ }
+ assert.equal(n.cash,5000+jobs.reduce((s,j)=>s+j.reward,0));
+ const reload=new Neighborhood(persisted,()=>{throw Error('completed jobs must not save');});
+ for(const job of jobs)assert.equal(reload.acceptGoods(job),false);
+ assert.equal(reload.cash,n.cash);
+});
+
+test('goods failed save is atomic and retryable; cancel/recovery clears all transient data',()=>{
+ let writable=false,writes=0;
+ const n=new Neighborhood({cash:5000,neighborhood:freshNeighborhood()},()=>{writes++;return writable;});
+ const job=GOODS_JOBS[0];
+ assert.equal(n.accept(),true);assert.equal(n.acceptGoods(job),false,'goods excluded during supply');n.cancelJob();
+ n.acceptGoods(job);n.updateGoods(job.dropoff,true,0);
+ assert.equal(n.confirmGoods(job.dropoff,0),false);assert.equal(n.goods,'receipt');assert.equal(n.goodsReward,job.reward);
+ assert.equal(n.cash,5000);assert.deepEqual(n.data.goodsDone,[]);assert.match(n.message,/No reward paid/);
+ n.cancelJob();assert.equal(n.goods,'idle');assert.equal(n.goodsId,undefined);assert.equal(n.goodsName,'');assert.equal(n.goodsDropoff,undefined);assert.equal(n.goodsReward,0);
+ assert.equal(n.confirmGoods(job.dropoff,0),false);assert.equal(n.cash,5000);
+ writable=true;assert.equal(n.acceptGoods(job),true);n.updateGoods(job.dropoff,true,0);assert.equal(n.confirmGoods(job.dropoff,0),true);
+ assert.equal(writes,2);assert.equal(n.cash,5000+job.reward);assert.equal(n.accept(),true,'supply available after goods');
+});
+
+for(const method of ['completeParkCircuit','markPhoto'] as const)test(`${method}: storage failure, retry, success and idempotency are distinct`,()=>{
+ let writable=false,writes=0;
+ const n=new Neighborhood({cash:5000,neighborhood:freshNeighborhood()},()=>{writes++;return writable;});
+ const before=structuredClone(n.data);
+ assert.equal(n[method](),'save-failed');assert.deepEqual(n.data,before);assert.equal(n.cash,5000);assert.match(n.message,/could not be saved/);assert.match(n.message,/retry/);
+ writable=true;assert.equal(n[method](),'saved');assert.equal(n.cash,5000);
+ assert.equal(n[method](),'already-completed');assert.equal(writes,2);assert.match(n.message,/already recorded/i);
 });

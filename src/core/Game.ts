@@ -61,7 +61,7 @@ export class Game {
   private market!:MarketView;private people!:StreetPeople;private audio=new StreetAudio();
   private clusters!:ClusterView;private populations:LocalPopulation[]=[];
   private clusterShop?:ClusterShop;private seatReservations?:Reservations;
-  private photoMode=false;private circuit?:{cluster:Cluster;next:number};
+  private photoMode=false;private circuit?:{cluster:Cluster;next:number;saveFailed?:boolean};
   private photoPose?:{position:THREE.Vector3;lookAt:THREE.Vector3};
   private modal=false;private shopIndex=0;private payment:number|undefined;
   private seated:string|undefined;private drinkTime=0;private standing=0;private consumedAtSeat=false;private rewardRetry=0;private handover=0;
@@ -334,6 +334,7 @@ export class Game {
     if(this.interaction.busy)return undefined;
     if(this.seated)return this.standing?'Standing up…':'Press F · Stand up';
     if(this.car.driving)return undefined;
+    if(this.circuit?.saveFailed)return 'Park visit not saved · Press F at the board to retry';
     if(this.circuit)return `Park circuit · ${this.circuit.next}/${this.circuit.cluster.circuit?.length??0} stops · Return to the board`;
     const clusterShop=CLUSTER_SHOPS.find(s=>distance(s.counter,this.player.position)<2.6);if(clusterShop)return `Press F · Visit ${shopLabel(clusterShop)}`;
     const boardCluster=CLUSTERS.find(c=>c.board&&distance(c.board,this.player.position)<2.2);if(boardCluster)return 'Press F · Start park circuit';
@@ -379,22 +380,26 @@ export class Game {
   }
   private startCircuit(cluster:Cluster):void {
     if(!cluster.circuit||!cluster.board)return;
+    if(this.circuit?.saveFailed){this.finishCircuit();return;}
     if(this.circuit){this.ui.toast(`Park circuit · ${this.circuit.next}/${cluster.circuit.length} stops · Return to the board.`);return;}
     this.circuit={cluster,next:0};
     this.ui.toast(this.neighborhood.data.parkCircuit?'Park circuit — walk it again for the views. Already recorded.':'Park circuit started — walk the loop, pass 4 stops, return to the board. No timer.');
     this.refreshUI();
   }
   private updateCircuit():void {
-    if(!this.circuit||this.car.driving||this.seated)return;
+    if(!this.circuit||this.circuit.saveFailed||this.car.driving||this.seated)return;
     const {cluster}=this.circuit,board=cluster.board,points=cluster.circuit;if(!board||!points)return;
     if(this.circuit.next<points.length){
       if(distance(this.player.position,points[this.circuit.next])<3){this.circuit.next++;this.ui.toast(`Park circuit · ${this.circuit.next}/${points.length} stops`);this.refreshUI();}
     }else if(distance(this.player.position,board)<3){
-      const first=this.neighborhood.completeParkCircuit();
-      this.circuit=undefined;
-      this.ui.toast(first?'Park circuit complete. Your Noida visit is recorded.':'Park circuit complete. Already recorded.');
-      this.refreshUI();
+      this.finishCircuit();
     }
+  }
+  private finishCircuit():void {
+    const result=this.neighborhood.completeParkCircuit();
+    if(result==='save-failed'){if(this.circuit)this.circuit.saveFailed=true;}
+    else this.circuit=undefined;
+    this.ui.toast(this.neighborhood.message);this.refreshUI();
   }
   private enterPhotoMode(cluster:Cluster):void {
     if(!cluster.photo)return;
@@ -404,7 +409,7 @@ export class Game {
   private exitPhotoMode(silent=false):void {
     if(!this.photoMode)return;
     this.photoMode=false;this.photoPose=undefined;this.ui.setPhotoMode(false);
-    if(!silent){this.neighborhood.markPhoto();this.ui.toast('Photo stop saved. Yamuna viewpoint discovered.');}
+    if(!silent){this.neighborhood.markPhoto();this.ui.toast(this.neighborhood.message);}
     this.camera.reset();this.syncScreen();this.updateViews(0.02);this.renderer.render(this.scene,this.camera.camera);
   }
   private framePhoto():void {
