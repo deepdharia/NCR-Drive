@@ -41,8 +41,9 @@ Baseline reproduced: 67/68 logic tests; missing character GLB; build nevertheles
 succeeded. Direct goods reproduction returned `done`, second acceptance false.
 Restored source hash matches the existing manifest; generated with the existing
 Blender 4.3.2 pipeline. Runtime GLB is committed, so build/install needs no Blender.
-Initial repaired logic: 73/73, strict typing and production build/asset parse PASS.
-Additional recovery/compatibility tests and browser verification are in progress.
+Current repaired logic: 75/75, strict typing and production build/asset parse PASS.
+Recovery/compatibility tests pass. The initial shipped-production repair browser
+gate, map-waypoint and six-scene benchmark pass. Expanded verification continues.
 Use Git log for the exact checkpoint SHA; a commit cannot contain its own hash.
 
 Browser evidence is written to `test-results/`; final results will be summarized
@@ -60,8 +61,10 @@ production smoke/living/repair scripts run Vite preview against the shared dist.
 ## Publication / deployment
 
 Original parks work is already published in PR #9; the old “not yet pushed”
-instruction was stale and removed. Repair branch/PR publication is pending at this
-checkpoint. No merge, force-push, production promotion or protection change.
+instruction was stale and removed. Repair branch is pushed; draft PR #10 is open:
+https://github.com/deepdharia/NCR-Drive/pull/10 .
+Runtime checkpoint `bb65c99`; expanded-test checkpoint `fcfc2a2`.
+The final verification record tracks subsequent delivery corrections. No merge, force-push, production promotion or protection change.
 Read-only Vercel project inspection for `deep-07f0` returned HTTP 403; Vercel CLI
 is unavailable. Deployed commit and live-preview gameplay remain unverified.
 A branch URL must not be assumed to serve its latest Git commit.

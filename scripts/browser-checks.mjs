@@ -15,10 +15,10 @@ for(const name of groups[group]){
  const began=Date.now(),log=[];
  const child=spawn(process.execPath,['--import','tsx',`tests/${name}.mjs`],{detached:true,env:{...process.env,BENCHMARK_PHASE:'after'},stdio:['ignore','pipe','pipe']});
  for(const stream of [child.stdout,child.stderr])stream.on('data',chunk=>{log.push(chunk);process.stdout.write(chunk);});
- let timedOut=false;
- const timer=setTimeout(()=>{timedOut=true;try{process.kill(-child.pid,'SIGTERM');}catch{}},15*60*1000);
+ let timedOut=false,killTimer;
+ const timer=setTimeout(()=>{timedOut=true;try{process.kill(-child.pid,'SIGTERM');}catch{}killTimer=setTimeout(()=>{try{process.kill(-child.pid,'SIGKILL');}catch{}},10000);},15*60*1000);
  const code=await new Promise((resolve,reject)=>{child.on('error',reject);child.on('close',resolve);});
- clearTimeout(timer);
+ clearTimeout(timer);clearTimeout(killTimer);
  await writeFile(`test-results/${name}.log`,Buffer.concat(log));
  results.push({name,code,timedOut,wallSeconds:(Date.now()-began)/1000});
  await writeFile(`test-results/browser-${group}.json`,JSON.stringify(results,null,2));

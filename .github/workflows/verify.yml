@@ -1,5 +1,8 @@
 name: Verify playable district
-on: [push, pull_request]
+on:
+  push:
+    branches: [main]
+  pull_request:
 jobs:
   logic-build:
     runs-on: ubuntu-latest

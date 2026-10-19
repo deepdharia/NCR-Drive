@@ -92,18 +92,23 @@ try{
  await page.evaluate(()=>{const g=window.__game;g.car.setDriving(false);g.player.setActive(true);g.interaction.car=g.fleet.at(-1);g.player.teleport(g.interaction.door);g.syncScreen();});
  await page.keyboard.press('f');await page.waitForFunction(()=>window.__game.car.driving&&!window.__game.interaction.busy);
  assert.equal(await page.evaluate(()=>window.__game.car.owner),'player');
- assert.equal(await page.evaluate(()=>window.__game.car.occupant),'player');
+ assert.equal(await page.evaluate(()=>window.__game.car.occupant),'player');log('Occupied civilian takeover completed through F.');
  await page.keyboard.press('Escape');await page.locator('[data-action="recover"]').click();await page.waitForFunction(()=>!window.__game.paused);
+ log('Pause-menu vehicle recovery completed.');
  const gas=await page.locator('[data-hold="gas"]').boundingBox(),stick=await page.getByRole('group',{name:'Movement joystick'}).boundingBox();assert.ok(gas&&stick);
  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{id:1,x:stick.x+stick.width/2+25,y:stick.y+stick.height/2},{id:2,x:gas.x+gas.width/2,y:gas.y+gas.height/2}]});
- await page.waitForFunction(()=>window.__game.input.gas&&window.__game.input.stick.x>0);
+ await page.waitForFunction(()=>window.__game.input.gas&&window.__game.input.stick.x>0);log('Simultaneous touch steering and throttle registered.');
  await cdp.send('Input.dispatchTouchEvent',{type:'touchCancel',touchPoints:[]});
  assert.equal(await page.evaluate(()=>window.__game.input.gas),false);assert.equal(await page.evaluate(()=>window.__game.input.stick.x),0);
  await page.evaluate(()=>{window.dispatchEvent(new Event('blur'));});assert.equal(await page.evaluate(()=>window.__game.input.enabled),false);
- await page.locator('[data-action="pause"]').first().click();
+ await page.keyboard.press('Escape');
  await page.keyboard.press('Tab');await page.locator('[data-action="place"]').first().click();
  assert.ok(await page.evaluate(()=>!!window.__game.waypoint));assert.match(await page.locator('[data-distance]').innerText(),/Waypoint/);
  await page.locator('[data-action="clearWaypoint"]').click();assert.equal(await page.evaluate(()=>window.__game.waypoint),undefined);
+ await page.keyboard.press('Tab');await openShop(approach('noida-bakery'));await page.locator('[data-action="buy"]').click();
+ const beforeBlur=await cash();assert.ok(await page.evaluate(()=>!!window.__game.neighborhood.pending));
+ await page.evaluate(()=>window.dispatchEvent(new Event('blur')));
+ assert.equal(await page.evaluate(()=>window.__game.neighborhood.pending),undefined);assert.equal(await cash(),beforeBlur);
  log('Production occupied-car takeover, recovery, simultaneous touch input/cancel, focus-loss reset and Places routing passed. Controlled door placement, no regional journey.');
  await page.screenshot({path:'test-results/repair-production.png'});
  assert.deepEqual(errors,[]);
@@ -116,6 +121,9 @@ try{
   assert.match(await p.locator('.startup-error').innerText(),/Character files could not load/);assert.doesNotMatch(await p.locator('.startup-error').innerText(),/WebGL|ENOENT|SyntaxError/);
   await p.unroute('**/assets/people/delhi-adult.glb');await p.getByRole('button',{name:'Reload game'}).click();await p.locator('[data-action="start"]').waitFor();await p.close();
  }
- log('Missing and corrupt production assets display character-specific retry feedback; reload succeeds after asset service recovers.');
+ const graphics=await browser.newPage();graphics.setDefaultTimeout(30000);
+ await graphics.addInitScript(()=>{const get=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(kind,...args){return /webgl/i.test(kind)?null:get.call(this,kind,...args);};});
+ await graphics.goto(origin);await graphics.getByRole('button',{name:'Reload game'}).waitFor();assert.match(await graphics.locator('.startup-error').innerText(),/Graphics could not start/);await graphics.close();
+ log('Missing and corrupt production assets display character-specific retry feedback; reload succeeds after asset service recovers. WebGL failure has distinct graphics feedback.');
 }catch(error){if(page)await page.screenshot({path:'test-results/repair-production-failure.png',timeout:10000}).catch(()=>{});throw error;}
 finally{await writeFile('test-results/repair-production-evidence.json',JSON.stringify({bundle:'unmodified shipped dist; CDP debugger exposes constructor instance only',method:'controlled actor placements and circuit-stop sampling; ordinary shop/payment/phone buttons; storage quota injection; no regional journey or real-device FPS claim',evidence,errors},null,2));await browser?.close();server.kill();}
