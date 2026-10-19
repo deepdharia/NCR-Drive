@@ -26,6 +26,9 @@ try {
   await canvas.scrollIntoViewIfNeeded();
   // Overview projection: px = 240 + (x-550)*0.072, pz = 240 + (z-1000)*0.072.
   const clickWorld = async (wx, wz) => {
+    // Hiding Clear can move the scroll position after its focused button vanishes.
+    // Re-establish the actual visible canvas before converting world to pixels.
+    await canvas.scrollIntoViewIfNeeded();
     const box = await canvas.boundingBox();
     assert.ok(box, 'overview canvas has a bounding box');
     const px = 240 + (wx - 550) * 0.072, pz = 240 + (wz - 1000) * 0.072;

@@ -39,7 +39,9 @@ try {
   assert.deepEqual(await page.evaluate(key => JSON.parse(localStorage.getItem(`${key}-backup`)), key), legacy);
   log('Production startup migrated v1 zero-balance career and retained its original backup.');
   await page.keyboard.press('Escape');
-  await page.locator('[data-action="quality"]').click();
+  const qualityButton=page.locator('[data-action="quality"]');
+  for(let i=0;i<3&&!/^Graphics: Low/.test(await qualityButton.innerText());i++)await qualityButton.click();
+  assert.match(await qualityButton.innerText(),/^Graphics: Low \(Performance\)/);
   const steering = page.getByLabel('Steering sensitivity'), camera = page.getByLabel('Camera sensitivity');
   await steering.focus(); await steering.press('Home'); await steering.press('ArrowRight'); await steering.press('ArrowRight');
   await camera.focus(); await camera.press('End'); await camera.press('ArrowLeft');
@@ -107,7 +109,7 @@ try {
   await page.reload(); await page.getByRole('button', { name: 'Explore the neighborhood' }).click();
   assert.equal(await page.locator('[data-cash]').first().innerText(), '₹750');
   await page.keyboard.press('Escape');
-  assert.match(await page.locator('[data-action="quality"]').innerText(), /Performance/);
+  assert.match(await page.locator('[data-action="quality"]').innerText(), /^Graphics: Low \(Performance\)/);
   assert.equal(await page.getByLabel('Steering sensitivity').inputValue(), '0.7');
   assert.equal(await page.getByLabel('Camera sensitivity').inputValue(), '1.4');
   log('On-foot recovery kept completed courier reward; graphics/sensitivity and earned balance survived reload.');
