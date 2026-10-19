@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 3000",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && vite build && npm run check:production-assets",
     "preview": "vite preview --host 0.0.0.0",
     "lint": "tsc --noEmit",
     "test": "node --import tsx --test --test-isolation=none tests/*.test.ts",
@@ -20,7 +20,9 @@
     "test:living-wiring": "node tests/living-wiring.mjs",
     "test:parks-shopping": "node --import tsx tests/parks-shopping.mjs",
     "map:export": "node --import tsx scripts/export-map.ts",
-    "test:map-waypoint": "node tests/map-waypoint.mjs"
+    "test:map-waypoint": "node tests/map-waypoint.mjs",
+    "check:production-assets": "node --import tsx scripts/check-production-assets.ts",
+    "test:visual-benchmark": "node tests/visual-benchmark.mjs"
   },
   "dependencies": {
     "three": "0.186.1"

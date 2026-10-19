@@ -39,7 +39,9 @@ try {
   assert.deepEqual(await page.evaluate(key => JSON.parse(localStorage.getItem(`${key}-backup`)), key), legacy);
   log('Production startup migrated v1 zero-balance career and retained its original backup.');
   await page.keyboard.press('Escape');
-  await page.locator('[data-action="quality"]').click();
+  const qualityButton=page.locator('[data-action="quality"]');
+  for(let i=0;i<3&&!/^Graphics: Low/.test(await qualityButton.innerText());i++)await qualityButton.click();
+  assert.match(await qualityButton.innerText(),/^Graphics: Low \(Performance\)/);
   const steering = page.getByLabel('Steering sensitivity'), camera = page.getByLabel('Camera sensitivity');
   await steering.focus(); await steering.press('Home'); await steering.press('ArrowRight'); await steering.press('ArrowRight');
   await camera.focus(); await camera.press('End'); await camera.press('ArrowLeft');
@@ -84,9 +86,22 @@ try {
     await page.waitForFunction(() => Math.abs(parseFloat(document.querySelector('[data-coordinates]').textContent) + 99) < 0.7);
     await page.keyboard.up(direction);
   }
-  await page.keyboard.down('d');
-  await page.waitForFunction(() => document.querySelector('[data-cash]').textContent === '₹750');
-  await page.keyboard.up('d');
+  // Traffic can stop across a direct sidewalk approach. Use ordinary walking
+  // keys to go around a stationary obstacle rather than holding D against it.
+  const readFoot=()=>page.evaluate(()=>{const [x,z]=document.querySelector('[data-coordinates]').textContent.split(',').map(parseFloat);return {x,z};});
+  const held=new Set();
+  const hold=async keys=>{for(const k of [...held])if(!keys.includes(k)){await page.keyboard.up(k);held.delete(k);}for(const k of keys)if(!held.has(k)){await page.keyboard.down(k);held.add(k);}};
+  const began=Date.now();let previous=await readFoot(),lastProgress=Date.now(),detourUntil=0;
+  while(await page.locator('[data-cash]').first().innerText()!=='₹750'){
+    assert.ok(Date.now()-began<240000,'Courier on-foot approach exceeded four minutes');
+    const p=await readFoot();
+    if(Math.hypot(p.x-previous.x,p.z-previous.z)>0.3){previous=p;lastProgress=Date.now();}
+    if(Date.now()-lastProgress>6000){detourUntil=Date.now()+3000;lastProgress=Date.now();}
+    // Camera yaw remains its normal -PI/2: W east, S west, D south.
+    const keys=Date.now()<detourUntil?['s']:p.z<19?['d']:Math.abs(p.x+99)>1?[p.x< -99?'w':'s']:['d'];
+    await hold(keys);await page.waitForTimeout(100);
+  }
+  await hold([]);
   await page.screenshot({ path: 'test-results/production-courier.png', animations: 'disabled' });
   log('Complete courier: accepted, entered car, drove west, braked, exited and walked to delivery using ordinary controls; ₹750 awarded once.');
   await page.keyboard.press('Escape'); await page.getByRole('button', { name: 'Recover to a clear road' }).click();
@@ -94,7 +109,7 @@ try {
   await page.reload(); await page.getByRole('button', { name: 'Explore the neighborhood' }).click();
   assert.equal(await page.locator('[data-cash]').first().innerText(), '₹750');
   await page.keyboard.press('Escape');
-  assert.match(await page.locator('[data-action="quality"]').innerText(), /Performance/);
+  assert.match(await page.locator('[data-action="quality"]').innerText(), /^Graphics: Low \(Performance\)/);
   assert.equal(await page.getByLabel('Steering sensitivity').inputValue(), '0.7');
   assert.equal(await page.getByLabel('Camera sensitivity').inputValue(), '1.4');
   log('On-foot recovery kept completed courier reward; graphics/sensitivity and earned balance survived reload.');

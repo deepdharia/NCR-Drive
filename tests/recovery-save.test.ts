@@ -115,3 +115,13 @@ test('recovery cancels pending receipt follow-up without reward or trust, in bot
   assert.equal(neighborhood.confirm(SUPPLY_TARGET,0),false);assert.equal(car.driving,driving);assert.equal(player.active,!driving);
  }
 });
+
+test('recovery clears pending goods receipt and permits the same unfinished job without payout',()=>{
+ const world=new CollisionWorld(createDistrictLayout().solids);
+ const car=new VehicleController(),player=new PlayerController(),courier=new CourierMission(),n=newNeighborhood(),story=new StoryMission();
+ const job={id:'flower-order',name:'Flowers',dropoff:{x:-1945,z:1785},reward:400,brief:'Deliver flowers'};
+ n.acceptGoods(job);n.updateGoods(job.dropoff,true,0);
+ assert.equal(recoverToRoad(world,car,player,[],courier,n,story),true);
+ assert.equal(n.goods,'idle');assert.equal(n.goodsId,undefined);assert.equal(n.goodsName,'');assert.equal(n.goodsDropoff,undefined);assert.equal(n.goodsReward,0);
+ assert.equal(n.cash,17);assert.deepEqual(n.data.goodsDone,[]);assert.equal(n.confirmGoods(job.dropoff,0),false);assert.equal(n.acceptGoods(job),true);
+});

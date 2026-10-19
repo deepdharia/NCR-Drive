@@ -1,5 +1,6 @@
 import type { Point } from '../core/math';
 import { distance } from '../core/math';
+export type ActivitySaveResult = 'saved' | 'already-completed' | 'save-failed';
 export type Drink = 'chai' | 'juice';
 /** Purchasable items. Chai/juice are drinks; flowers/sweets/cake are
  * cluster-shop goods with a purpose (gifts, offerings, the goods jobs). */
@@ -23,7 +24,7 @@ export class Neighborhood {
  job:'available'|'delivery'|'receipt'|'completed'; message='Explore the neighborhood · Visit Neem Chai on Market Lane';
  /** Goods jobs (cluster shops) share the supply state machine: one at a time,
   * transient while active, completed ids persisted in `goodsDone`. */
- goods:'idle'|'delivery'|'receipt'|'done'; goodsId?:string; goodsName=''; goodsDropoff?:Point; goodsReward=0;
+ goods:'idle'|'delivery'|'receipt'; goodsId?:string; goodsName=''; goodsDropoff?:Point; goodsReward=0;
  constructor(snapshot:WalletSnapshot,private commit:(next:WalletSnapshot)=>boolean){this.cash=snapshot.cash;this.data={...snapshot.neighborhood};this.job=this.data.completed?'completed':'available';this.goods='idle';}
  order(item:ShopItem,priceOverride?:number):number|undefined {
   if(this.pending)return;
@@ -52,35 +53,38 @@ export class Neighborhood {
  get goodsActive():boolean{return this.goods==='delivery'||this.goods==='receipt';}
  get activeTarget():Point|undefined { return this.job==='delivery'||this.job==='receipt' ? SUPPLY_TARGET : this.goodsDropoff; }
  get goodsDoneIds():string[]{return [...this.data.goodsDone];}
- accept():boolean {if(this.job!=='available')return false;this.job='delivery';this.message='Nimbu: Our chiller has failed. Take this sealed fruit crate to the west-end cold store, then confirm their receipt in DelhiOS. ₹650 + trust. No timer.';return true;}
+ accept():boolean {if(this.job!=='available'||this.active)return false;this.job='delivery';this.message='Nimbu: Our chiller has failed. Take this sealed fruit crate to the west-end cold store, then confirm their receipt in DelhiOS. ₹650 + trust. No timer.';return true;}
  cancelJob():void {if(this.job==='delivery'||this.job==='receipt'){this.job='available';this.message='Supply run cancelled. No reward paid. Speak to Nimbu Corner to try again.';}this.cancelGoods();}
  acceptGoods(job:{id:string;name:string;dropoff:Point;reward:number;brief:string}):boolean {
-  if(this.goods!=='idle'||this.data.goodsDone.includes(job.id))return false;
+  if(this.active||this.goods!=='idle'||this.data.goodsDone.includes(job.id))return false;
   this.goods='delivery';this.goodsId=job.id;this.goodsName=job.name;this.goodsDropoff=job.dropoff;this.goodsReward=job.reward;this.message=job.brief;return true;
  }
- cancelGoods():void {if(this.goodsActive){this.goods='idle';this.goodsId=undefined;this.goodsDropoff=undefined;this.goodsReward=0;this.message='Goods delivery cancelled. No reward paid. Speak to the shop to try again.';}}
+ private clearGoods():void {this.goods='idle';this.goodsId=undefined;this.goodsName='';this.goodsDropoff=undefined;this.goodsReward=0;}
+ cancelGoods():void {const active=this.goodsActive;this.clearGoods();if(active)this.message='Goods delivery cancelled. No reward paid. Speak to the shop to try again.';}
  updateGoods(position:Point,driving:boolean,speed:number):boolean {
   if(this.goods!=='delivery'||!this.goodsDropoff||!driving||speed>2||distance(position,this.goodsDropoff)>4)return false;
   this.goods='receipt';this.message=`Arrived at the handover counter. Open DelhiOS and confirm the receipt to finish · ₹${this.goodsReward}.`;return true;
  }
  confirmGoods(position:Point,speed:number):boolean {
   if(this.goods!=='receipt'||!this.goodsDropoff||!this.goodsId||speed>2||distance(position,this.goodsDropoff)>5)return false;
-  const next={cash:this.cash+this.goodsReward,neighborhood:{...this.data,goodsDone:[...this.data.goodsDone,this.goodsId]}};
+  if(this.data.goodsDone.includes(this.goodsId))return false;
+  const reward=this.goodsReward;
+  const next={cash:this.cash+reward,neighborhood:{...this.data,goodsDone:[...this.data.goodsDone,this.goodsId]}};
   if(!this.commit(next)){this.message='Receipt could not be saved. No reward paid. Stay by the counter and retry confirmation in DelhiOS.';return false;}
-  this.cash=next.cash;this.data=next.neighborhood;this.goods='done';this.goodsId=undefined;this.goodsDropoff=undefined;this.message=`Order handed over · ₹${this.goodsReward} earned. The shop remembers.`;return true;
+  this.cash=next.cash;this.data=next.neighborhood;this.clearGoods();this.message=`Order handed over · ₹${reward} earned. The shop remembers.`;return true;
  }
  /** One-time, idempotent: re-walking the circuit or re-taking a photo never re-pays. */
- completeParkCircuit():boolean {
-  if(this.data.parkCircuit)return false;
+ completeParkCircuit():ActivitySaveResult {
+  if(this.data.parkCircuit){this.message='Park circuit complete. Already recorded.';return 'already-completed';}
   const next={cash:this.cash,neighborhood:{...this.data,parkCircuit:true}};
-  if(!this.commit(next))return false;
-  this.data=next.neighborhood;this.message='Park circuit complete. Your Noida visit is recorded.';return true;
+  if(!this.commit(next)){this.message='Park visit could not be saved. Press F at the board to retry; your finished circuit is kept.';return 'save-failed';}
+  this.data=next.neighborhood;this.message='Park circuit complete. Your Noida visit is recorded.';return 'saved';
  }
- markPhoto():boolean {
-  if(this.data.photoViewpoint)return false;
+ markPhoto():ActivitySaveResult {
+  if(this.data.photoViewpoint){this.message='Photo stop already recorded. Yamuna viewpoint discovered.';return 'already-completed';}
   const next={cash:this.cash,neighborhood:{...this.data,photoViewpoint:true}};
-  if(!this.commit(next))return false;
-  this.data=next.neighborhood;this.message='Yamuna viewpoint discovered.';return true;
+  if(!this.commit(next)){this.message='Photo stop could not be saved. Visit the frame and exit photo mode again to retry.';return 'save-failed';}
+  this.data=next.neighborhood;this.message='Photo stop saved. Yamuna viewpoint discovered.';return 'saved';
  }
  update(position:Point,driving:boolean,speed:number):boolean {
   if(this.job!=='delivery'||!driving||speed>2||distance(position,SUPPLY_TARGET)>4)return false;

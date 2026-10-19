@@ -1,0 +1,50 @@
+{
+  "runtimeCommit": "bb65c992b881ef5f19253bd467061386d9d0900f",
+  "verificationHead": "48a8b4cef2e7fb43bc9547401eaa2059387c944e",
+  "date": "2026-10-19",
+  "timezone": "Asia/Kolkata",
+  "phase": "after",
+  "evidence": [
+    {
+      "shot": "1-market-approach",
+      "calls": 708,
+      "triangles": 539978,
+      "geometries": 502,
+      "textures": 131
+    },
+    {
+      "shot": "2-chai-counter",
+      "calls": 490,
+      "triangles": 450825,
+      "geometries": 502,
+      "textures": 131
+    },
+    {
+      "shot": "3-seated-drinking",
+      "note": "real F sit flow; chai purchase not required for framing"
+    },
+    {
+      "shot": "4-beside-vehicle",
+      "calls": 657,
+      "triangles": 580276,
+      "geometries": 508,
+      "textures": 133
+    },
+    {
+      "shot": "5-cabin-driver",
+      "calls": 521,
+      "triangles": 420702,
+      "geometries": 508,
+      "textures": 133
+    },
+    {
+      "shot": "6-street-pedestrians",
+      "calls": 812,
+      "triangles": 610155,
+      "geometries": 510,
+      "textures": 133
+    }
+  ],
+  "errors": [],
+  "method": "controlled placements, high quality, 1280x720; software rendering is functional evidence only"
+}

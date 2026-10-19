@@ -1,4 +1,18 @@
-# Current verification · Living Delhi
+# Current verification · Parks/shopping repair
+
+19 October 2026 (Asia/Kolkata). Branch `repair/ncr-assets-deliveries`, based on
+parks/shopping `f290934`, draft [PR #10](https://github.com/deepdharia/NCR-Drive/pull/10).
+The current repair results, failure history, controlled-placement scope and
+publication/deployment limits are in [REPAIR_VERIFICATION.md](evidence/REPAIR_VERIFICATION.md).
+Logic: **75/75**, strict typing and packaged production build pass. Committed
+licensed character requires no Blender/download during installation or CI.
+Shipped-dist repair, parks-shopping, map-waypoint and visual benchmark browser
+gates pass locally. All software rendering; no physical-device/human/live test.
+
+The records below describe the previous Living Delhi milestone and are retained
+as historical evidence, not results for the repair head.
+
+## Previous milestone · Living Delhi
 
 19 October 2026 (Asia/Kolkata). Approved baseline36ec239; feature branch `improve/living-delhi`. Local environment: managed Debian Linux x86_64, 3 allocated CPUs on AMD EPYC9V45, Node24.19.0, Chromium154.0.8037.57, Playwright, ANGLE/SwiftShader. CI: Ubuntu24.04.5 Azure x86_64 runner, Node24.21.0 and Playwright1.62.1 Chromium. No physical M1 or phone is available.
 

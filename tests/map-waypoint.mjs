@@ -5,8 +5,8 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { mkdir, writeFile } from 'node:fs/promises';
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE ?? 'playwright');
-const origin = 'http://127.0.0.1:3005';
-const server = spawn(process.execPath, ['node_modules/vite/bin/vite.js', '--host', '127.0.0.1', '--port', '3005', '--strictPort'], { stdio: 'inherit' });
+const origin = 'http://127.0.0.1:3006';
+const server = spawn(process.execPath, ['node_modules/vite/bin/vite.js', '--host', '127.0.0.1', '--port', '3006', '--strictPort'], { stdio: 'inherit' });
 let browser, page; const errors = [];
 try {
   await mkdir('test-results', { recursive: true });
@@ -26,6 +26,9 @@ try {
   await canvas.scrollIntoViewIfNeeded();
   // Overview projection: px = 240 + (x-550)*0.072, pz = 240 + (z-1000)*0.072.
   const clickWorld = async (wx, wz) => {
+    // Hiding Clear can move the scroll position after its focused button vanishes.
+    // Re-establish the actual visible canvas before converting world to pixels.
+    await canvas.scrollIntoViewIfNeeded();
     const box = await canvas.boundingBox();
     assert.ok(box, 'overview canvas has a bounding box');
     const px = 240 + (wx - 550) * 0.072, pz = 240 + (wz - 1000) * 0.072;
