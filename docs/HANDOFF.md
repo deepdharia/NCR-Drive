@@ -42,12 +42,16 @@ succeeded. Direct goods reproduction returned `done`, second acceptance false.
 Restored source hash matches the existing manifest; generated with the existing
 Blender 4.3.2 pipeline. Runtime GLB is committed, so build/install needs no Blender.
 Current repaired logic: 75/75, strict typing and production build/asset parse PASS.
-Recovery/compatibility tests pass. The initial shipped-production repair browser
-gate, map-waypoint and six-scene benchmark pass. Expanded verification continues.
+Recovery/compatibility tests pass. Shipped-production repair, animation/takeover/
+recovery/touch/focus/routing, parks-shopping, map-waypoint and six-scene benchmark
+browser gates pass. Fresh committed-source install/build/startup needs no asset
+copy or Blender. Ordinary-input production courier/reload/mobile smoke also passed
+with an explicitly selected and persisted Low preset. CI status and failure history
+are recorded separately in the evidence record.
 Use Git log for the exact checkpoint SHA; a commit cannot contain its own hash.
 
-Browser evidence is written to `test-results/`; final results will be summarized
-in `docs/evidence/REPAIR_VERIFICATION.md`. Production repair harness reads unmodified
+Browser evidence is written to `test-results/`; current results and durable JSON
+are in [REPAIR_VERIFICATION.md](evidence/REPAIR_VERIFICATION.md). Production repair harness reads unmodified
 shipped bundle bytes and uses CDP to expose the game instance for controlled actor
 placements. This proves transitions, not full regional travel. No real-device FPS
 or human playtesting claim. Existing ordinary-input production smoke is retained.
@@ -63,7 +67,7 @@ production smoke/living/repair scripts run Vite preview against the shared dist.
 Original parks work is already published in PR #9; the old “not yet pushed”
 instruction was stale and removed. Repair branch is pushed; draft PR #10 is open:
 https://github.com/deepdharia/NCR-Drive/pull/10 .
-Runtime checkpoint `bb65c99`; expanded-test checkpoint `fcfc2a2`.
+Runtime checkpoint `bb65c99`; verified browser-test checkpoint `48a8b4c`.
 The final verification record tracks subsequent delivery corrections. No merge, force-push, production promotion or protection change.
 Read-only Vercel project inspection for `deep-07f0` returned HTTP 403; Vercel CLI
 is unavailable. Deployed commit and live-preview gameplay remain unverified.
@@ -71,7 +75,7 @@ A branch URL must not be assumed to serve its latest Git commit.
 
 ## Next owner acceptance
 
-After final automated results, review the draft repair PR and playtest on a
+Review the draft repair PR and current CI checks, then playtest on a
 physical phone. Record device/browser/settings and frame times. Wardrobe,
 image export, visual redesign, combat and new destinations remain outside this
 repair. Do not infer device performance from headless SwiftShader.

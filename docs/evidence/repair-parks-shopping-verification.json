@@ -1,0 +1,84 @@
+{
+  "runtimeCommit": "bb65c992b881ef5f19253bd467061386d9d0900f",
+  "verificationHead": "48a8b4cef2e7fb43bc9547401eaa2059387c944e",
+  "date": "2026-10-19",
+  "timezone": "Asia/Kolkata",
+  "errors": [],
+  "evidence": [
+    {
+      "label": "short drive west on the CP radial",
+      "metres": 95,
+      "wallSeconds": 89
+    },
+    {
+      "walk": "garden flower counter",
+      "wallSeconds": 0
+    },
+    {
+      "walk": "garden flower counter again",
+      "wallSeconds": 0
+    },
+    "Garden: flowers bought, flower job accepted.",
+    {
+      "goodsReceipt": {
+        "driving": true,
+        "kmh": 0,
+        "carPos": {
+          "x": -1945,
+          "z": 1785
+        },
+        "goods": "receipt",
+        "dropoff": {
+          "x": -1945,
+          "z": 1782
+        },
+        "dist": 3
+      }
+    },
+    "Gurgaon: flower job delivered, \u20b9400 paid.",
+    "Places card routes to Noida arrival.",
+    {
+      "walk": "park board",
+      "wallSeconds": 1
+    },
+    {
+      "walk": "circuit 3125,355",
+      "wallSeconds": 10
+    },
+    {
+      "walk": "circuit 3235,342",
+      "wallSeconds": 43
+    },
+    {
+      "walk": "circuit 3300,355",
+      "wallSeconds": 24
+    },
+    {
+      "walk": "circuit via north path",
+      "wallSeconds": 100
+    },
+    {
+      "walk": "circuit 3235,368",
+      "wallSeconds": 22
+    },
+    {
+      "walk": "park board return",
+      "wallSeconds": 75
+    },
+    "Noida: park circuit completed.",
+    {
+      "walk": "photo marker",
+      "wallSeconds": 0
+    },
+    "Yamuna: photo stop entered and exited, discovery recorded.",
+    {
+      "recovery": {
+        "x": 1197.69,
+        "z": -252.85,
+        "driving": false
+      }
+    },
+    "Parks & Shopping browser gameplay: all steps passed."
+  ],
+  "method": "short keyboard drive; DOM clicks + F for shops/jobs/circuit/photo; car placed at FNP counter for the goods receipt (disclosed); player.teleport for on-foot checks (disclosed); dev server + SwiftShader"
+}
