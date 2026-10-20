@@ -303,11 +303,11 @@ export class Game {
       const storyEvent = this.story.update(step, this.car.driving ? this.car.position : this.player.position, this.car.driving, this.car.driving ? this.car.kmh : this.player.speed * 3.6, () => this.persistReward(this.story.reward, false), {yaw:this.car.yaw,width:this.car.width,length:this.car.length});
       if (storyEvent === 'step') this.ui.toast(this.story.step.dialogue);
       if (storyEvent === 'failed') this.ui.toast('Time ran out. Retry Kabir’s Evening Run in DelhiOS.');
-      if (storyEvent === 'save-failed') this.ui.toast('Delivery not saved. No reward paid. Keep this tab open; retrying in one second.', 'warning');
+      if (storyEvent === 'save-failed') this.ui.toast(this.saveWritable ? 'Delivery not saved. No reward paid. Keep this tab open; retrying in one second.' : 'No payout. Saving is unavailable or this career is protected. Reopen with a supported, writable save to restart the job.', 'warning');
       if (storyEvent === 'completed') { this.mission.cash += this.story.reward; this.ui.toast(`Kabir: Delivered. ₹${this.story.reward} added. Explore the connected NCR world.`,'reward'); }
 
       this.courierRetry = Math.max(0, this.courierRetry - step);
-      if (this.courierRetry === 0 && this.mission.update(this.car.driving ? this.car.position : this.player.position, !this.car.driving, () => { const saved = this.persistReward(750, true); if (!saved) { this.courierRetry = 1; this.ui.toast('Parcel not saved. No reward paid. Stay at the handover to retry.', 'warning'); } return saved; })) { this.ui.toast('Parcel delivered. ₹750 added to your Delhi Wallet.','reward'); this.refreshUI();
+      if (this.courierRetry === 0 && this.mission.update(this.car.driving ? this.car.position : this.player.position, !this.car.driving, () => { const saved = this.persistReward(750, true); if (!saved) { this.courierRetry = 1; this.ui.toast(this.saveWritable ? 'Parcel not saved. No reward paid. Stay at the handover to retry.' : 'No payout. Saving is unavailable or this career is protected. Reopen with a supported, writable save to restart the job.', 'warning'); } return saved; })) { this.ui.toast('Parcel delivered. ₹750 added to your Delhi Wallet.','reward'); this.refreshUI();
       }
       this.accumulator -= step;
     }

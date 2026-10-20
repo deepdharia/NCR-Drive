@@ -1,0 +1,26 @@
+[
+  "Initial ordinary drive/brake complete",
+  {
+    "reverse": {
+      "p": {
+        "x": -68.43564686260622,
+        "z": 1.4962518357692891e-15
+      },
+      "yaw": -1.5707963267948966,
+      "speed": 0,
+      "index": 0,
+      "state": "active",
+      "foot": {
+        "x": -44.800000000000004,
+        "z": -1.6600000000000001
+      },
+      "driving": true,
+      "cash": 15000,
+      "cam": -1.5707963267948966,
+      "paused": false
+    }
+  },
+  "Cold store reached with keyboard input",
+  "Keyboard delivery paid ₹900",
+  "Reward survived reload"
+]

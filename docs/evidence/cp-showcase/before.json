@@ -1,0 +1,102 @@
+[
+  {
+    "device": "desktop",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "shot": "driving",
+    "quality": "balanced",
+    "fixture": "CDP controlled placement, unmodified production bundle",
+    "calls": 424,
+    "triangles": 257559,
+    "errors": []
+  },
+  {
+    "device": "desktop",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "shot": "walking",
+    "quality": "balanced",
+    "fixture": "CDP controlled placement, unmodified production bundle",
+    "calls": 349,
+    "triangles": 176586,
+    "errors": []
+  },
+  {
+    "device": "mobile",
+    "viewport": {
+      "width": 844,
+      "height": 390
+    },
+    "shot": "driving",
+    "quality": "balanced",
+    "fixture": "CDP controlled placement, unmodified production bundle",
+    "calls": 428,
+    "triangles": 257607,
+    "errors": []
+  },
+  {
+    "device": "mobile",
+    "viewport": {
+      "width": 844,
+      "height": 390
+    },
+    "shot": "walking",
+    "quality": "balanced",
+    "fixture": "CDP controlled placement, unmodified production bundle",
+    "calls": 348,
+    "triangles": 176506,
+    "errors": []
+  },
+  {
+    "device": "desktop",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "shot": "junction",
+    "quality": "balanced",
+    "fixture": "CDP controlled placement, unmodified production bundle",
+    "sampleCount": 10,
+    "frameMs": {
+      "p50": 2274.7999999998137,
+      "p95": 2439.9000000003725,
+      "p99": 2439.9000000003725
+    },
+    "renderer": "Chromium / SwiftShader, static redraw, not device performance",
+    "transfer": {
+      "wireBytes": 3130499,
+      "decodedBytes": 3823463
+    },
+    "calls": 544,
+    "triangles": 537513,
+    "errors": []
+  },
+  {
+    "device": "mobile",
+    "viewport": {
+      "width": 844,
+      "height": 390
+    },
+    "shot": "junction",
+    "quality": "balanced",
+    "fixture": "CDP controlled placement, unmodified production bundle",
+    "sampleCount": 10,
+    "frameMs": {
+      "p50": 1398.8000000002794,
+      "p95": 1615.3999999999069,
+      "p99": 1615.3999999999069
+    },
+    "renderer": "Chromium / SwiftShader, static redraw, not device performance",
+    "transfer": {
+      "wireBytes": 3130499,
+      "decodedBytes": 3823463
+    },
+    "calls": 545,
+    "triangles": 537525,
+    "errors": []
+  }
+]

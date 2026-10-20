@@ -78,3 +78,9 @@ file passes the original scale, sole, sitting, drinking and driver-grip checks.
 `npm ci && npm run build` uses this committed binary, never Blender or a download.
 The build parses the packaged GLB and checks animations, skinned geometry and
 attachment bones. Runtime loading applies the same compatibility check.
+
+## CP evening showcase
+
+See [SHOWCASE_ASSETS.md](SHOWCASE_ASSETS.md) for the original local procedural kit,
+its source URLs, authorship, CC0 dedication and changes to existing artwork.
+No new downloaded runtime assets or dependencies were added.

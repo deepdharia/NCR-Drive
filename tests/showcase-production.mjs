@@ -29,6 +29,23 @@ try{
  await page.keyboard.press('Tab');await page.locator('[data-action="accept"]').click();await page.evaluate(()=>{const g=window.__game;g.player.teleport({x:-99,z:24});window.__setItem=Storage.prototype.setItem;Storage.prototype.setItem=()=>{throw Error('quota fixture');};});await page.waitForFunction(()=>!window.__game.saveAvailable);assert.equal(await page.evaluate(()=>window.__game.mission.cash),15900);assert.equal(await page.evaluate(()=>window.__game.mission.state),'active');
  await page.evaluate(()=>{Storage.prototype.setItem=window.__setItem??Storage.prototype.setItem;});
  await page.waitForFunction(()=>window.__game.mission.state==='completed');assert.equal(await page.evaluate(()=>window.__game.mission.cash),16650);await start();assert.equal(await page.evaluate(()=>window.__game.mission.cash),16650);assert.equal(await page.evaluate(()=>window.__game.mission.state),'completed');evidence.push('Courier quota/retry fixture paid ₹750 once and saved completion across reload.');
+ // Exercise the normal Game frame wiring, not direct controller calls. A
+ // cluster actor is deliberately placed in the local road/foot path.
+ await page.evaluate(()=>{
+  const g=window.__game,p=g.populations[0].people.find(p=>p.state!=='vendor');window.__clusterFixture=p;
+  p.position={x:-283,z:0};p.target={...p.position};p.state='wait';p.time=0;
+  g.car.position={x:-280,z:0};g.car.yaw=-Math.PI/2;g.car.setDriving(true);g.car.speed=2;g.player.setActive(false);g.syncScreen();
+ });
+ await page.waitForFunction(()=>window.__game.car.position.x< -280.3&&Math.abs(window.__game.car.speed)<0.05);
+ assert.ok(await page.evaluate(()=>window.__game.car.position.x> -280.81&&window.__game.car.position.x< -280.3));
+ const stride=await page.evaluate(()=>{
+  const g=window.__game,p=window.__clusterFixture;g.car.setDriving(false);g.car.position={x:-270,z:0};
+  p.position={x:-283,z:0};p.target={...p.position};p.state='wait';p.time=0;
+  g.player.setActive(true);g.player.teleport({x:-282,z:0});g.camera.yaw=-Math.PI/2;g.syncScreen();return g.player.stride;
+ });
+ await page.keyboard.down('s');await page.waitForFunction(stride=>window.__game.player.stride-stride>10,stride);await page.keyboard.up('s');
+ assert.ok(await page.evaluate(()=>window.__game.player.position.x> -282.39&&window.__game.player.position.x< -282.3));
+ evidence.push('Injected cluster pedestrian stopped both coasting vehicle and walking player through the normal Game frame; no direct controller calls.');
  assert.deepEqual(errors,[]);await context.close();
  const missing=await browser.newContext();const p=await missing.newPage();await p.route('**/delhi-adult.glb',r=>r.abort());await p.goto(origin);await p.getByRole('button',{name:'Reload game'}).waitFor();assert.match(await p.locator('body').innerText(),/Character files could not load/);evidence.push('Intentionally missing GLB shows actionable startup error and real reload button (expected network failure).');await missing.close();
 }finally{await writeFile('docs/evidence/cp-showcase/production-fixtures.json',JSON.stringify({fixture:true,evidence,errors},null,2));await browser?.close();server.kill();}

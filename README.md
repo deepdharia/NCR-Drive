@@ -60,3 +60,10 @@ npm run test:regional-drive
 For an existing installation, set `PLAYWRIGHT_MODULE` and `CHROMIUM_EXECUTABLE_PATH`. Production smoke and Living Delhi use shipped `dist` and ordinary inputs. Regional wiring/art inspection explicitly use controlled placements; those do not establish driven journeys or physical-device FPS. Evidence goes to ignored `test-results/` and CI artifacts.
 
 Read [Living Delhi](docs/LIVING_DELHI.md), [handoff](docs/HANDOFF.md), [world topology](docs/WORLD_MAP.md), [playtests](docs/PLAYTESTS.md), [roadmap](docs/ROADMAP.md) and [asset licenses](docs/ASSET_MANIFEST.md). Quaternius' CC0 adult rig is credited there. All businesses/signage, animations, street props and synthetic sound additions are original. The world is compressed fictional geography, not a surveyed city replica.
+
+## CP evening showcase
+
+Open DelhiOS → City Stories → **Start CP evening delivery** for the 467m drive,
+parking and on-foot handover. [Controls and save behaviour](docs/CP_SHOWCASE.md),
+[original art provenance](docs/SHOWCASE_ASSETS.md), and
+[verification and device limits](docs/evidence/cp-showcase/VERIFICATION.md).
