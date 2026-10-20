@@ -51,7 +51,7 @@ test('showcase stops remain accessible and the new arcade agrees with collision'
   if(step.mode==='drive')assert.ok(world.boxIsClear({...step.target,yaw:Math.PI/2},car.width,car.length),step.title);
   else assert.ok(world.isClear(step.target),step.title);
  }
- for(const p of SHOWCASE_ARCADES){assert.equal(world.isClear(p),false);assert.equal(world.isClear({x:p.x,z:18.4}),true);}
+ for(const p of SHOWCASE_ARCADES){assert.equal(world.isClear(p),false);assert.equal(world.isClear({x:p.x,z:18.4}),true);assert.equal(world.isClear({x:p.x,z:19.3}),false);}
  assert.ok(showcaseSolids.every(s=>s.height>0));
  for(let x=-375;x< -60;x+=2)assert.ok(world.boxIsClear({x,z:3,yaw:Math.PI/2},car.width,car.length),`lane ${x}`);
 });

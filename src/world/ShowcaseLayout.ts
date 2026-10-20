@@ -6,7 +6,12 @@ export const SHOWCASE_PLANTERS = [{x:-138,z:14.4},{x:-234,z:14.4}];
 export const showcaseSolids:Solid[]=[
  ...SHOWCASE_ARCADES.flatMap(p=>[
   {...p,width:11.6,depth:8,height:7.8,yaw:0},
-  ...[-4.7,4.7].map(dx=>({x:p.x+dx,z:17.6,width:0.57,depth:0.57,height:3.7,yaw:0})),
+  ...[-4.7,4.7].flatMap(dx=>[
+   {x:p.x+dx,z:17.6,width:0.38,depth:0.38,height:3.7,yaw:0},
+   {x:p.x+dx,z:17.6,width:0.56,depth:0.56,height:0.3,yaw:0},
+   {x:p.x+dx,z:17.6,width:0.57,depth:0.57,height:0.3,base:3.4,yaw:0},
+  ]),
+  ...[-3.2,0,3.2].map(dx=>({x:p.x+dx,z:19.6,width:2.8,depth:0.8,height:0.24,base:0.1,yaw:0})),
   {x:p.x,z:18.7,width:12,depth:3.4,height:0.3,base:3.7,yaw:0},
  ]),
  ...SHOWCASE_SCOOTERS.map(p=>({...p,width:0.7,depth:1.8,height:1.3,yaw:0})),
