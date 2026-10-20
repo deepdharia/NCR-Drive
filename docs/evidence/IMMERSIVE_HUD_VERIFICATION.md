@@ -75,7 +75,18 @@ Vercel project discovery identified `ncr-drive`, project
 HTTP 403: token not authorized for this scope. The scoped CLI fallback has no
 existing credentials; its automatic login discovery failed. No interactive login,
 production deployment, promotion, protection or project-setting change was made.
-A verified Vercel preview URL cannot be claimed from this environment.
+Direct deployment control remains blocked, but the existing GitHub integration
+subsequently built runtime checkpoint `b182805274dfc2de6eeba3932cd955d2cec77e71`.
+Its commit status is **Vercel: success**, linked to [deployment
+7YyYtZuqhVDSYGdThNn5sW2Lod18](https://vercel.com/deep-07f0/ncr-drive/7YyYtZuqhVDSYGdThNn5sW2Lod18).
+The official Vercel bot on [PR #11](https://github.com/deepdharia/NCR-Drive/pull/11)
+reports **Ready** and supplies the [feature preview](https://ncr-drive-git-feature-premium-driving-walking-hud-deep-07f0.vercel.app).
+The alias is mutable; use the PR head's Vercel status for the current deployment.
+A normal curl request to that URL was rejected by the workspace proxy with
+`CONNECT tunnel failed, response 403`, before reaching the deployment. Thus the
+hosted build is reported successful by Vercel, but live-preview gameplay and
+served-byte identity are not independently browser-verified here. Local shipped
+bundle browser tests passed. No protection or production settings were changed.
 
 ## Screenshot comparisons
 
