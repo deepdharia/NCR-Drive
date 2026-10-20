@@ -1,0 +1,11 @@
+{
+  "fixture": true,
+  "evidence": [
+    "CP mission: real phone acceptance/entry/exit with injected stop placements; failed final save leaves active handover and unchanged wallet.",
+    "CP reward committed once, retry completed and ₹15,900 wallet survived reload.",
+    "Courier quota/retry fixture paid ₹750 once and saved completion across reload.",
+    "Injected cluster pedestrian stopped both coasting vehicle and walking player through the normal Game frame; no direct controller calls.",
+    "Intentionally missing GLB shows actionable startup error and real reload button (expected network failure)."
+  ],
+  "errors": []
+}

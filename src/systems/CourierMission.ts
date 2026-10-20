@@ -9,8 +9,9 @@ export class CourierMission {
     if (this.state !== 'available') return false;
     this.state = 'active'; return true;
   }
-  update(position: Point, onFoot: boolean): boolean {
+  update(position: Point, onFoot: boolean, persist: (cash: number) => boolean = () => true): boolean {
     if (this.state !== 'active' || !onFoot || distance(position, COURIER_TARGET) > 3.5) return false;
+    if (!persist(this.cash + 750)) return false;
     this.state = 'completed'; this.cash += 750; return true;
   }
 }

@@ -6,22 +6,22 @@ import type { Point } from '../core/math';
 
 /** One shadowed sun, neutral sky fill, no per-lantern lights or full-screen passes. */
 export class DaylightRig {
-  readonly sun = new THREE.DirectionalLight(0xfff0d7, 3.0);
+  readonly sun = new THREE.DirectionalLight(0xffd5a0, 2.8);
   readonly sky: THREE.Mesh;
-  private offset = new THREE.Vector3(-65, 105, -45);
+  private offset = new THREE.Vector3(-95, 68, -55);
   private quality: QualityPreset = 'balanced';
   private environment: THREE.WebGLRenderTarget;
   private shadowTargets = new Map<QualityPreset, THREE.RenderTarget>();
   constructor(scene: THREE.Scene, renderer: THREE.WebGLRenderer) {
-    scene.background = new THREE.Color(0xc9d8db);
-    scene.fog = new THREE.FogExp2(0xc9d8db, 0.0022);
+    scene.background = new THREE.Color(0xd2c9b6);
+    scene.fog = new THREE.FogExp2(0xd2c9b6, 0.0022);
     // Pre-filter once with an explicit owner, then free generator scratch data.
     // No renderer-private PMREM lifetime or lazy first-drive allocations.
     const source = environmentTexture(), pmrem = new THREE.PMREMGenerator(renderer);
     this.environment = pmrem.fromEquirectangular(source); pmrem.dispose(); source.dispose();
-    scene.environment = this.environment.texture; scene.environmentIntensity = 0.8;
-    scene.add(new THREE.HemisphereLight(0xd6e9ff, 0x726952, 1.6));
-    this.sun.name = 'Late morning sun'; this.sun.castShadow = true;
+    scene.environment = this.environment.texture; scene.environmentIntensity = 0.6;
+    scene.add(new THREE.HemisphereLight(0xc6d8e5, 0x7c6b4f, 1.45));
+    this.sun.name = 'Late-afternoon Delhi sun'; this.sun.castShadow = true;
     this.sun.shadow.normalBias = 0.025; this.sun.shadow.bias = -0.00015; this.sun.shadow.radius = 2;
     scene.add(this.sun, this.sun.target);
     this.sky = new THREE.Mesh(new THREE.SphereGeometry(9000, 24, 16), new THREE.ShaderMaterial({
@@ -29,7 +29,7 @@ export class DaylightRig {
       vertexShader: 'varying vec3 direction; void main(){direction=position; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
       fragmentShader: `uniform vec3 sunDirection; varying vec3 direction;
         void main(){ vec3 ray=normalize(direction); float h=max(0.,ray.y);
-          vec3 color=mix(vec3(.68,.76,.78),vec3(.23,.46,.68),smoothstep(0.,.85,h));
+          vec3 color=mix(vec3(.78,.73,.63),vec3(.30,.49,.65),smoothstep(0.,.85,h));
           float sun=max(0.,dot(ray,sunDirection));
           color+=vec3(.12,.10,.06)*pow(sun,24.)+vec3(1.,.92,.72)*smoothstep(.9995,.99985,sun);
           gl_FragColor=vec4(color,1.);

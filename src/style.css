@@ -318,3 +318,7 @@ kbd { font-family: inherit; font-size: 9px; border: 1px solid #dfc79d77; border-
 [data-hud-seated=true] .joystick { opacity:.35;pointer-events:none; }
 [data-hud-seated=true] .desktop-help { visibility:hidden; }
 @media (pointer:coarse) and (max-width:600px) and (min-height:501px) { .toast { top:304px; } }
+/* Short landscape viewports keep delivery notices above the driving/walking focus. */
+@media (pointer: coarse) and (max-height: 500px) {
+  .toast { top: 12px; width: auto; max-width: min(330px, calc(100vw - 330px)); }
+}

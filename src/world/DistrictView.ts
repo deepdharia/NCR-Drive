@@ -39,7 +39,9 @@ export class DistrictView {
     const stone = surfaceMaterial('paving');
     const white = surfaceMaterial('plaster');
     const grass = worldSurfaceMaterial('grass');
-    const earth = new THREE.Mesh(new THREE.PlaneGeometry(6000, 7000), new THREE.MeshStandardMaterial({ color: 0x8d9076, roughness: 1 }));
+    const earth = new THREE.Mesh(new THREE.PlaneGeometry(6000, 7000), new THREE.MeshStandardMaterial({ color: 0x8d9076, roughness: 1, polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 4 }));
+    // Bias the kilometre-scale ground behind nearby road/pavement layers.
+    // Wide mobile views otherwise expose raster-depth ties on the large plane.
     earth.rotation.x = -Math.PI / 2; earth.position.set(-1775, -0.04, 1000); earth.receiveShadow = true; this.group.add(earth);
     const eastBank=earth.clone();eastBank.position.x=4525;this.group.add(eastBank);
     this.flat(new THREE.CircleGeometry(30, 96), grass, 0.015);

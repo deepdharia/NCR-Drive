@@ -1,0 +1,15 @@
+{
+  "unitTests": {
+    "command": "npm test",
+    "passed": 85,
+    "failed": 0
+  },
+  "typecheck": "npm run lint / production build passed",
+  "productionBuild": "npm run build passed",
+  "assets": "GLB parsed, hash matched, 21 clips; 3 original HUD animations and local WASM present",
+  "keyboardLoopRuntime": "c0c3df8",
+  "visualRuntime": "2700e95",
+  "collisionAndSaveFixtureRuntime": "f6d3437",
+  "ordinaryTouchLoop": "pending final run",
+  "preview": "Git integration Ready; hosted verification blocked by proxy and Vercel scope"
+}

@@ -3,7 +3,7 @@ import { VEHICLE_SPECS } from '../vehicle/VehicleSpec';
 import { CollisionWorld } from '../core/CollisionWorld';
 import type { Solid } from '../core/CollisionWorld';
 import type { Point } from '../core/math';
-import { distance, angleDelta } from '../core/math';
+import { distance, angleDelta, clamp } from '../core/math';
 import { lanes, successors, destinations, junctionById } from '../world/WorldRoads';
 import type { Lane } from '../world/WorldRoads';
 
@@ -65,13 +65,16 @@ export class TrafficSystem {
    const towards=this.entering[i]?lane.start:lane.end;
    const cruise=lane.road.region==='delhi'?6:lane.road.region.endsWith('corridor')?12:8;
    const len=distance(car.position,towards);if(len<0.001)return;
-   const yaw=Math.atan2(towards.x-car.position.x,towards.z-car.position.z),travel=Math.min(cruise*dt,len),dx=(towards.x-car.position.x)/len,dz=(towards.z-car.position.z)/len;
+   const yaw=Math.atan2(towards.x-car.position.x,towards.z-car.position.z);
+   const targetSpeed=Math.abs(angleDelta(car.yaw,yaw))>0.35?Math.min(3,cruise):cruise;
+   const speed=Math.max(0,car.speed+clamp(targetSpeed-car.speed,-5*dt,2.8*dt));
+   const travel=Math.min(speed*dt,len),dx=(towards.x-car.position.x)/len,dz=(towards.z-car.position.z)/len;
    // Never project a probe past the turn endpoint into a roadside rail.
    // Physical body size avoids treating a following car as a rear obstruction.
    const look=Math.min(len,Math.max(6,cruise*0.8));
    const clear=world.boxIsClear({x:car.position.x+dx*look,z:car.position.z+dz*look,yaw},car.width,car.length,others);
    const move=clear?world.moveBox({...car.position,yaw:car.yaw},{x:dx*travel,z:dz*travel},angleDelta(car.yaw,yaw),car.width,car.length,others):null;
-   car.braking=!move||move.hit;car.speed=car.braking?0:cruise;
+   car.braking=!move||move.hit;car.speed=car.braking?0:speed;
    if(move&&!move.hit){car.position={x:move.pose.x,z:move.pose.z};car.yaw=move.pose.yaw;car.wheelTravel+=travel;this.stuck[i]=0;}else this.stuck[i]=Math.min(30,this.stuck[i]+dt);
    // Blocked nearby traffic waits. Distant blocked cars become eligible for safe recycling.
    if(!car.protected&&recycle&&focus&&this.stuck[i]>=30&&distance(car.position,focus)>650){const candidate=lanes.find(l=>distance(l.start,focus)>300&&distance(l.start,focus)<500&&destinations.every(d=>distance(d,l.start)>40)&&world.boxIsClear({...l.start,yaw:0},car.width+3,car.length+15,others));if(candidate){this.paths[i]=candidate;this.entering[i]=false;car.yaw=Math.atan2(candidate.end.x-candidate.start.x,candidate.end.z-candidate.start.z);car.position={...candidate.start};this.stuck[i]=0;}}

@@ -1,0 +1,188 @@
+[
+  {
+    "device": "desktop",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "shot": "driving",
+    "quality": "balanced",
+    "startupInputCheck": {
+      "ordinaryKeyboard": true,
+      "reverseSpeed": -0.597589785145661,
+      "handbrakeStoppedCar": true
+    },
+    "startupCheckReused": true,
+    "fixture": "CDP controlled placement, unmodified production bundle",
+    "sampleCount": 10,
+    "frameMs": {
+      "p50": 1399,
+      "p95": 1535.2999999998137,
+      "p99": 1535.2999999998137
+    },
+    "renderer": "Chromium / SwiftShader, static redraw, not device performance",
+    "transfer": {
+      "wireBytes": 3133444,
+      "decodedBytes": 3831557
+    },
+    "calls": 513,
+    "triangles": 275355,
+    "errors": []
+  },
+  {
+    "device": "desktop",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "shot": "walking",
+    "quality": "balanced",
+    "startupInputCheck": {
+      "ordinaryKeyboard": true,
+      "reverseSpeed": -0.597589785145661,
+      "handbrakeStoppedCar": true
+    },
+    "startupCheckReused": true,
+    "fixture": "CDP controlled placement, unmodified production bundle",
+    "sampleCount": 10,
+    "frameMs": {
+      "p50": 1017.4000000003725,
+      "p95": 2078.2999999998137,
+      "p99": 2078.2999999998137
+    },
+    "renderer": "Chromium / SwiftShader, static redraw, not device performance",
+    "transfer": {
+      "wireBytes": 3133744,
+      "decodedBytes": 3832303
+    },
+    "calls": 415,
+    "triangles": 224099,
+    "errors": []
+  },
+  {
+    "device": "desktop",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "shot": "junction",
+    "quality": "balanced",
+    "startupInputCheck": {
+      "ordinaryKeyboard": true,
+      "reverseSpeed": -0.597589785145661,
+      "handbrakeStoppedCar": true
+    },
+    "startupCheckReused": true,
+    "fixture": "CDP controlled placement, unmodified production bundle",
+    "sampleCount": 10,
+    "frameMs": {
+      "p50": 2209.5,
+      "p95": 2487.5999999996275,
+      "p99": 2487.5999999996275
+    },
+    "renderer": "Chromium / SwiftShader, static redraw, not device performance",
+    "transfer": {
+      "wireBytes": 3134044,
+      "decodedBytes": 3833049
+    },
+    "calls": 627,
+    "triangles": 563996,
+    "errors": []
+  },
+  {
+    "device": "mobile",
+    "viewport": {
+      "width": 844,
+      "height": 390
+    },
+    "shot": "driving",
+    "quality": "balanced",
+    "startupInputCheck": {
+      "ordinaryTouch": true,
+      "reverseSpeed": -0.5543502360064542,
+      "serviceBrakeStoppedCar": true,
+      "handbrake": false,
+      "pointerCancelReleased": true
+    },
+    "startupCheckReused": true,
+    "fixture": "CDP controlled placement, unmodified production bundle",
+    "sampleCount": 10,
+    "frameMs": {
+      "p50": 601.8999999999069,
+      "p95": 887.8000000002794,
+      "p99": 887.8000000002794
+    },
+    "renderer": "Chromium / SwiftShader, static redraw, not device performance",
+    "transfer": {
+      "wireBytes": 3133444,
+      "decodedBytes": 3831557
+    },
+    "calls": 517,
+    "triangles": 275403,
+    "errors": []
+  },
+  {
+    "device": "mobile",
+    "viewport": {
+      "width": 844,
+      "height": 390
+    },
+    "shot": "walking",
+    "quality": "balanced",
+    "startupInputCheck": {
+      "ordinaryTouch": true,
+      "reverseSpeed": -0.5543502360064542,
+      "serviceBrakeStoppedCar": true,
+      "handbrake": false,
+      "pointerCancelReleased": true
+    },
+    "startupCheckReused": true,
+    "fixture": "CDP controlled placement, unmodified production bundle",
+    "sampleCount": 10,
+    "frameMs": {
+      "p50": 430.90000000037253,
+      "p95": 485.39999999990687,
+      "p99": 485.39999999990687
+    },
+    "renderer": "Chromium / SwiftShader, static redraw, not device performance",
+    "transfer": {
+      "wireBytes": 3133744,
+      "decodedBytes": 3832303
+    },
+    "calls": 414,
+    "triangles": 224019,
+    "errors": []
+  },
+  {
+    "device": "mobile",
+    "viewport": {
+      "width": 844,
+      "height": 390
+    },
+    "shot": "junction",
+    "quality": "balanced",
+    "startupInputCheck": {
+      "ordinaryTouch": true,
+      "reverseSpeed": -0.5543502360064542,
+      "serviceBrakeStoppedCar": true,
+      "handbrake": false,
+      "pointerCancelReleased": true
+    },
+    "startupCheckReused": true,
+    "fixture": "CDP controlled placement, unmodified production bundle",
+    "sampleCount": 10,
+    "frameMs": {
+      "p50": 1380.5,
+      "p95": 1459.3999999999069,
+      "p99": 1459.3999999999069
+    },
+    "renderer": "Chromium / SwiftShader, static redraw, not device performance",
+    "transfer": {
+      "wireBytes": 3134044,
+      "decodedBytes": 3833049
+    },
+    "calls": 628,
+    "triangles": 564008,
+    "errors": []
+  }
+]

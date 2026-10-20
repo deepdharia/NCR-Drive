@@ -48,11 +48,11 @@ export class RegionalView {
     }
    }
    const label=r.id==='market-lane'?'MARKET LANE · DELHI ↗':r.region==='gurgaon'?'GURGAON · BUSINESS AVENUE':r.region==='noida'?'NOIDA · SECTOR 18 / 19':r.region==='gurgaon-corridor'?'GURGAON ↗   |   DELHI ↙':r.bridge?'YAMUNA CROSSING · NOIDA ↗':'NOIDA ↗   |   DELHI ↙';
-   for(const reverse of [false,true]){
+   for(const reverse of r.id==='market-lane'?[true]:[false,true]){
     const t=reverse?0.85:0.15,side=reverse?-1:1;
     const x=a.x+(b.x-a.x)*t+Math.cos(yaw)*(r.width/2+3)*side,z=a.z+(b.z-a.z)*t-Math.sin(yaw)*(r.width/2+3)*side;
     mesh(chunk,rail,x,2,z,0.2,4,0.2);
-    const sign=new THREE.Mesh(plane,new THREE.MeshBasicMaterial({map:signTexture(label),side:THREE.DoubleSide}));sign.position.set(x,4,z);sign.scale.set(12,2.5,1);sign.rotation.y=yaw+(reverse?0:Math.PI);chunk.add(sign);
+    const sign=new THREE.Mesh(plane,new THREE.MeshBasicMaterial({map:signTexture(label),side:THREE.DoubleSide}));sign.position.set(x,4,z);sign.scale.set(r.id==='market-lane'?5:12,r.id==='market-lane'?1.1:2.5,1);sign.rotation.y=yaw+(reverse?0:Math.PI);chunk.add(sign);
    }
   }
   for(const bay of [...destinations,...motorPoolBays]){

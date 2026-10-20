@@ -81,11 +81,20 @@ export class CollisionWorld {
   moveBox(start: BoxPose, motion: Point, yawMotion: number, width: number, depth: number, extra: readonly Solid[] = []): { pose: BoxPose; hit: boolean } {
     const pose = { ...start };
     const steps = Math.max(1, Math.ceil(Math.hypot(motion.x, motion.z) / 0.2), Math.ceil(Math.abs(yawMotion) / 0.025));
+    let hit = false;
     for (let i = 0; i < steps; i++) {
       const next = { x: pose.x + motion.x / steps, z: pose.z + motion.z / steps, yaw: pose.yaw + yawMotion / steps };
-      if (!this.boxIsClear(next, width, depth, extra)) return { pose, hit: true };
-      Object.assign(pose, next);
+      if (this.boxIsClear(next, width, depth, extra)) { Object.assign(pose, next); continue; }
+      hit = true;
+      // Keep the last safe heading and resolve each translation axis. Every
+      // accepted component is swept and checked, including dynamic obstacles.
+      const slideX = { ...pose, x: pose.x + motion.x / steps };
+      if (this.boxIsClear(slideX, width, depth, extra)) pose.x = slideX.x;
+      const slideZ = { ...pose, z: pose.z + motion.z / steps };
+      if (this.boxIsClear(slideZ, width, depth, extra)) pose.z = slideZ.z;
+      const turn = { ...pose, yaw: next.yaw };
+      if (this.boxIsClear(turn, width, depth, extra)) pose.yaw = turn.yaw;
     }
-    return { pose, hit: false };
+    return { pose, hit };
   }
 }

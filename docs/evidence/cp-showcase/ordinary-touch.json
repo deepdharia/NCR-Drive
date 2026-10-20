@@ -1,0 +1,65 @@
+[
+  "Initial ordinary drive/brake complete",
+  {
+    "reverseMoving": {
+      "p": {
+        "x": -71.81479351168703,
+        "z": -0.002768320897668306
+      },
+      "yaw": -1.614337195624435,
+      "speed": -0.5543502360064542,
+      "index": 0,
+      "state": "active",
+      "foot": {
+        "x": -44.800000000000004,
+        "z": -1.6600000000000001
+      },
+      "driving": true,
+      "cash": 15000,
+      "cam": -1.5707963267948966,
+      "paused": false
+    }
+  },
+  {
+    "reverse": {
+      "p": {
+        "x": -71.22532975275053,
+        "z": 0.02291076446512878
+      },
+      "yaw": -1.6143311721758644,
+      "speed": 0,
+      "index": 0,
+      "state": "active",
+      "foot": {
+        "x": -44.800000000000004,
+        "z": -1.6600000000000001
+      },
+      "driving": true,
+      "cash": 15000,
+      "cam": -1.5707963267948966,
+      "paused": false
+    }
+  },
+  "Cold store reached with keyboard input",
+  {
+    "ordinaryThreePointTurn": {
+      "x": -174.74747436694446,
+      "z": -14.555814826907273
+    }
+  },
+  {
+    "failure": "TimeoutError: page.waitForFunction: Timeout 120000ms exceeded.",
+    "state": {
+      "car": {
+        "x": -172.95575223985523,
+        "z": -12.374560878979453
+      },
+      "foot": {
+        "x": -44.800000000000004,
+        "z": -1.6600000000000001
+      },
+      "index": 1,
+      "state": "active"
+    }
+  }
+]

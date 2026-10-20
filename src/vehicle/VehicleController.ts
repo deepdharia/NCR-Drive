@@ -64,12 +64,23 @@ export class VehicleController {
     const yawRate = clamp(this.speed / 2.4 * Math.tan(this.steering), -yawLimit, yawLimit);
     const heading = this.yaw + yawRate * dt;
     const motion = { x: Math.sin(heading) * this.speed * dt, z: Math.cos(heading) * this.speed * dt };
+    const before = { ...this.position };
     const contact = world.moveBox({ ...this.position, yaw: this.yaw }, motion, yawRate * dt, this.width, this.length, extra);
     this.position = { x: contact.pose.x, z: contact.pose.z }; this.yaw = contact.pose.yaw;
     this.impact = contact.hit && !this.touching && Math.abs(this.speed) > 2;
     if(this.impact)this.condition=Math.max(0.1,this.condition-0.03);
+    const sustainedContact = this.touching;
     this.touching = contact.hit;
-    if (contact.hit) { this.speed = 0; this.acceleration = 0; }
+    if (contact.hit) {
+      const requested = Math.hypot(motion.x, motion.z);
+      const travelled = Math.hypot(this.position.x - before.x, this.position.z - before.z);
+      const retained = requested > 1e-6 ? clamp(travelled / requested, 0, 1) : 1;
+      // Normal motion is lost; tangential motion survives. Friction is time
+      // based so a sustained scrape does not compound a fixed per-step penalty.
+      this.speed *= (!sustainedContact || retained < 0.1 ? retained : Math.exp(-8 * (1-retained) * dt)) * Math.exp(-1.5 * dt);
+      this.acceleration = Math.min(Math.abs(this.acceleration), 1) * Math.sign(this.acceleration);
+      if (Math.abs(this.speed) < 0.06) this.speed = this.acceleration = 0;
+    }
     this.wheelTravel += this.speed * dt;
     this.pitch += (clamp(-this.acceleration * 0.018, -0.15, 0.15) - this.pitch) * blend(8, dt);
     this.roll += (clamp(this.speed * yawRate * 0.013, -0.17, 0.17) - this.roll) * blend(8, dt);

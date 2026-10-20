@@ -29,7 +29,9 @@ test('traffic stops for parked cars and pedestrians and resumes when clear', () 
   const obstacle = { x: Math.cos(angle) * 46.7, z: Math.sin(angle) * 46.7, width: 1, depth: 1, height: 1.8, yaw: -angle };
   for (let i = 0; i < 600; i++) traffic.update(1 / 60, world, [obstacle]);
   assert.equal(car.speed, 0); const stopped = { ...car.position };
-  traffic.update(1 / 60, world, []); assert.equal(car.speed, 6); assert.notDeepEqual(car.position, stopped);
+  traffic.update(1 / 60, world, []); assert.ok(car.speed > 0 && car.speed <= 2.8 / 60); assert.notDeepEqual(car.position, stopped);
+  for(let i=0;i<180;i++)traffic.update(1/60,world,[]);
+  assert.ok(car.speed > 0 && car.speed <= 6);
 });
 test('every roster variant sweeps against dynamic vehicles and blocked exit doors', () => {
   const world = new CollisionWorld();

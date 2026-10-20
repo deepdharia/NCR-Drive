@@ -1,0 +1,8 @@
+{
+  "os": "Linux-6.18.55-x86_64-with-glibc2.41",
+  "cpu": "AMD EPYC 9V74 80-Core Processor",
+  "cgroupMemoryMax": "8589934592",
+  "cgroupCpuMax": "200000 100000",
+  "renderer": "Headless Chromium / ANGLE SwiftShader",
+  "deviceEvidence": false
+}

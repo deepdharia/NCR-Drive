@@ -27,7 +27,7 @@ export class MarketView {
    add(awning,s.x,3,-17,8.5,0.13,4.8).rotation.x=0.09;add(awning,s.x,2.72,-14.8,8.5,0.4,0.12);
    add(wood,s.x,0.52,-16.5,5.6,1.04,0.8);add(metal,s.x,1.08,-16.5,5.9,0.08,1);
    for(const dx of [-3.5,3.5])add(metal,s.x+dx,1.55,-16,0.12,3.1,0.12);
-   label(s.name,s.x,3.65,-14.45,10,['#2e594b','#6d3b2c','#7d6b24'][i]);
+   label(s.name,s.x,3.55,-14.45,6.5,['#2e594b','#6d3b2c','#7d6b24'][i]);
    add(dark,s.x,0.8,-18.3,5,1.6,0.12);
    label(i===0?'CHAI ₹20 · GAME CURRENCY':i===1?'LOCAL NEWS · ADULTS ONLY':'FRESH JUICE ₹40 · SUPPLY DESK',s.x,2.1,-18.2,6);
    // Shelves, kettle, cups and ingredient displays use shared primitives.
@@ -45,7 +45,7 @@ export class MarketView {
    add(metal,x-1,2.8,12,0.1,5.6,0.1);add(stone,x-1,5.7,11,0.5,0.15,1.8);
   }
   add(dark,-234,0.45,-16,0.6,0.9,0.6,cylinder);add(dark,-178,0.45,-16,0.6,0.9,0.6,cylinder);
-  label('DELHI COLD STORE · GOODS BAY',-342,4,-12.8,23);label('MARKET LANE · बाज़ार गली',-137,4,-12,15);
+  label('DELHI COLD STORE · GOODS BAY',-342,4,-12.8,15);
   label('DELHI →  CP  |  GURGAON  |  NOIDA',-366,3,12,15);
   // Unequal facade modules, ventilation, roof cables, shutters and pavement wear.
   for(const [i,x] of marketFrontages.entries()){add(i%2?stone:concrete,x,3.5,-23,10.8,7,8);add(dark,x,1.5,-18.95,7.5,3,0.05);label(i%2?'गोदाम · STORE':'WORKSHOP · कार्यशाला',x,4,-18.9,9);}

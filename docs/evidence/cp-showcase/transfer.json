@@ -1,0 +1,98 @@
+{
+  "visualRuntimeCommit": "2700e9505fdd9a2650ba167f10c6c2333d85710a",
+  "note": "Actual file sizes; gzip estimates, not hosted transfer. Includes lazy HUD WASM.",
+  "totalBytes": 3836610,
+  "totalGzipBytes": 1073884,
+  "files": [
+    {
+      "path": "animations/DOTLOTTIE-LICENSE.txt",
+      "bytes": 1072,
+      "gzipBytes": 645,
+      "sha256": "779cec663b3c6590082566f2a000170d7a4d1a4bfc6f954e61efa4adddc652a8"
+    },
+    {
+      "path": "animations/LICENSE.md",
+      "bytes": 710,
+      "gzipBytes": 477,
+      "sha256": "43be35cef725613b40332ae9af98d8eea427259c95fa9f19f23b1e1113d94eac"
+    },
+    {
+      "path": "animations/success.json",
+      "bytes": 741,
+      "gzipBytes": 340,
+      "sha256": "897fce0f0cafaa5d5c70e337f238074cb0612e548f37c95f0d1b2ad50decb75c"
+    },
+    {
+      "path": "animations/transition.json",
+      "bytes": 746,
+      "gzipBytes": 338,
+      "sha256": "6666867f1b9dceb9a514cf4396636c3a4024c6789e152b5b9e6076f5c2ff1c2a"
+    },
+    {
+      "path": "animations/warning.json",
+      "bytes": 741,
+      "gzipBytes": 335,
+      "sha256": "7b32fa98bae3126d2e9e72e32b63a2c9a90168f7efc2024e7bdad055ef9cb1bb"
+    },
+    {
+      "path": "assets/dist-BwJu8uxU.js",
+      "bytes": 61358,
+      "gzipBytes": 13653,
+      "sha256": "7cac6347a39152464d54c5fe95aed6452ac16c34a7d58fcc2e99c88a36ae81d5"
+    },
+    {
+      "path": "assets/dotlottie-player-vUNKgFai.wasm",
+      "bytes": 1238072,
+      "gzipBytes": 496426,
+      "sha256": "92822207905406eee4f0785e8d4a99a504a24db6f658abfaec074a9420471b25"
+    },
+    {
+      "path": "assets/index-CbuSgoGy.js",
+      "bytes": 181443,
+      "gzipBytes": 61116,
+      "sha256": "150dde692b50f9088a5ebcc36662a2c55690b87fe6a0578a520b16798bd4166f"
+    },
+    {
+      "path": "assets/index-CgYhXcSU.css",
+      "bytes": 24278,
+      "gzipBytes": 5922,
+      "sha256": "63cdc2b78aec0c3de2ebc1d4ba13315acd5ceba519e296c7d05495a4351ea392"
+    },
+    {
+      "path": "assets/people/QUATERNIUS-LICENSE.txt",
+      "bytes": 806,
+      "gzipBytes": 419,
+      "sha256": "0f4beaf0fe360a7732e58bbe3dbf60a2422367fbea60cb9ea4add968f383268e"
+    },
+    {
+      "path": "assets/people/delhi-adult.glb",
+      "bytes": 1632396,
+      "gzipBytes": 316859,
+      "sha256": "150b3a8c45c74f4a154ddc32405acc8d1d347ce60bbc2aeedf0d84f31e715fab"
+    },
+    {
+      "path": "assets/three-Ce_dLsvV.js",
+      "bytes": 520070,
+      "gzipBytes": 140717,
+      "sha256": "4b4b4e55dc3b3db675f82968ffecca4ccc294e2e388e809734912023a62d3620"
+    },
+    {
+      "path": "assets/three-shaders-1TJXdSj1.js",
+      "bytes": 173036,
+      "gzipBytes": 35946,
+      "sha256": "e5df9dd15939fcff0a54b0f8839464fde3ccafbd600943ad18c13fa223da11a7"
+    },
+    {
+      "path": "favicon.svg",
+      "bytes": 220,
+      "gzipBytes": 183,
+      "sha256": "8cce232e96b1a79e04ab922af85283060251c2a87c65b863862e7ba9c85a9b74"
+    },
+    {
+      "path": "index.html",
+      "bytes": 921,
+      "gzipBytes": 508,
+      "sha256": "46ec9a43fe0e00a8e538325c6dd1e4bc2e4f8f2691b66837a30331b2de1232ef"
+    }
+  ]
+}
