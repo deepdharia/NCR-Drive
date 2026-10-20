@@ -35,7 +35,9 @@ test('touch reverse, pedals and sprint share the same controller state', () => {
   const input = new InputController(new Canvas() as unknown as HTMLCanvasElement, { interact() {}, phone() {}, pause() {}, rotate() {}, tap() {} });
   input.enabled = true; input.reverse = true; input.setGas(true); input.setJoystick(-1, 0);
   assert.equal(input.drive().throttle, -1); assert.equal(input.drive().steer, -1);
-  input.setBrake(true); assert.equal(input.drive().handbrake, true);
+  input.setBrake(true); assert.equal(input.drive().brake, true); assert.equal(input.drive().handbrake, false);
+  key('Space', true); assert.equal(input.drive().handbrake, true); key('Space', false);
+  input.reset(); assert.equal(input.drive().brake, false);
   input.setSprint(true); assert.equal(input.foot().sprint, true);
   input.enabled = false; assert.equal(input.drive().throttle, 0); assert.equal(input.foot().sprint, false); input.dispose();
 });

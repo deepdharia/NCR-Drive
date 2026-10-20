@@ -1,5 +1,8 @@
+import {ShowcaseView} from '../world/ShowcaseView';
+import {CP_SHOWCASE} from '../systems/StoryMission';
 import * as THREE from 'three';
 import { FrameMetrics } from './FrameMetrics';
+import { nearbySolids } from './NearbySolids';
 import { CollisionWorld } from './CollisionWorld';
 import { PlayerController } from '../player/PlayerController';
 import { PlayerView } from '../player/PlayerView';
@@ -52,6 +55,7 @@ export class Game {
   private world: CollisionWorld;
   private district: DistrictView;
   private central: CentralDelhiView;
+  private showcase: ShowcaseView;
   private regional: RegionalView;
   private camera: CameraRig;
   private input: InputController;
@@ -65,6 +69,7 @@ export class Game {
   private photoPose?:{position:THREE.Vector3;lookAt:THREE.Vector3};
   private modal=false;private shopIndex=0;private payment:number|undefined;
   private seated:string|undefined;private drinkTime=0;private standing=0;private consumedAtSeat=false;private rewardRetry=0;private handover=0;
+  private courierRetry = 0;
   private waypoint?:Point;
   private get jobBusy():boolean{return this.story.active||this.mission.state==='active'||this.neighborhood.active;}
   private saveAvailable = true;
@@ -105,14 +110,16 @@ export class Game {
     const layout = createDistrictLayout(); this.world = new CollisionWorld(layout.solids);
     this.district = new DistrictView(this.scene, layout, this.renderer);
     this.central = new CentralDelhiView(this.scene);
+    this.showcase = new ShowcaseView(this.scene);
     this.regional = new RegionalView(this.scene);
     this.market=new MarketView(this.scene);this.people=new StreetPeople(this.scene);
     this.clusters=new ClusterView(this.scene);this.populations=CLUSTERS.map(c=>new LocalPopulation(this.scene,c.population,c.id));
+    this.fleet[0].yaw = -Math.PI / 2; // Clear west-junction start, facing Market Lane.
     motorPoolBays.forEach((bay,i)=>{this.fleet[i+1].position={x:bay.x,z:bay.z};this.fleet[i+1].yaw=bay.yaw;});
     const civilian=new VehicleController(VEHICLE_SPECS[0]);civilian.position={x:-182,z:12.5};civilian.yaw=Math.PI/2;civilian.occupant=`driver-${civilian.id}`;this.fleet.push(civilian);this.fleetViews.push(new VehicleView(civilian.spec,'DL 4C LM 5831'));
     this.scene.add(this.playerView.group, ...this.fleetViews.map(v => v.group), ...this.trafficViews.map(v => v.group));
     this.camera = new CameraRig(root.clientWidth / root.clientHeight);
-    this.interaction = new InteractionSystem(this.player, this.car, this.world, () => [...this.otherCars(),...this.people.colliders,...this.populations.flatMap(p=>p.colliders)]);
+    this.interaction = new InteractionSystem(this.player, this.car, this.world, () => [...this.otherCars(),...this.nearbyPeople(this.player.position)]);
     this.interaction.onDisplaced=(id,point)=>{const target=roadsideRetreat(point);this.people.displace(id,point,this.world.isClear(target,0.35,0,1.8,this.otherCars())?target:point);this.ui.toast('Driver retreats. Nearby neighbors are startled.');};
     this.interaction.onTransferred=()=>{this.input.reset();this.input.reverse=false;if(this.car.driving)this.camera.enterVehicle();this.ui.toast(this.car.driving?'Vehicle entered · Ready to drive':'Vehicle exited · Explore on foot');this.refreshUI();};
     this.player.teleport({ x: this.interaction.door.x - 0.45, z: this.interaction.door.z });
@@ -136,6 +143,10 @@ export class Game {
       recover: () => this.recover(),
       accept: () => {
         if (!this.jobBusy && this.mission.accept()) { this.phone = false; this.syncScreen(); this.ui.toast('Parcel collected. Follow DelhiNav and deliver on foot.','success'); }
+      },
+      showcase: () => {
+        if (this.jobBusy) return;
+        this.story = new StoryMission(CP_SHOWCASE, 600, 900); this.story.accept(); this.phone=false; this.syncScreen(); this.ui.toast(this.story.step.dialogue);
       },
       journey: () => {
         if (this.jobBusy) return;
@@ -188,7 +199,7 @@ export class Game {
   }
   private recover(): void {
     if (!this.started || !this.paused) return;
-    if (!recoverToRoad(this.world, this.car, this.player, [...this.otherCars(),...this.people.colliders], this.mission, this.neighborhood, this.story)) {
+    if (!recoverToRoad(this.world, this.car, this.player, [...this.otherCars(),...this.nearbyPeople(this.car.driving ? this.car.position : this.player.position, Infinity)], this.mission, this.neighborhood, this.story)) {
       this.ui.recoveryStatus('No clear recovery space. Resume and move a blocking car, then try again.'); return;
     }
     this.interaction.cancel();this.stand(true);this.input.reset(); this.input.reverse = false; this.interaction.message = '';
@@ -257,7 +268,7 @@ export class Game {
     const quality = resolvedQuality(this.settings);
     this.fleetViews.forEach((view,i)=>{view.group.visible=distance(this.fleet[i].position,focus)<450;if(view.group.visible){view.update(this.fleet[i],dt);view.setDetail(distance(this.fleet[i].position,focus),quality);}});
     this.trafficViews.forEach((view,i)=>{view.group.visible=distance(this.traffic.cars[i].position,focus)<450;if(view.group.visible){view.update(this.traffic.cars[i],dt);view.setDetail(distance(this.traffic.cars[i].position,focus),quality);}});
-    this.central.update(focus);this.market.update(dt,focus);
+    this.showcase.update(focus);this.central.update(focus);this.market.update(dt,focus);
     this.clusters.update(focus);
     const audible=this.car.driving?this.car:this.cars.filter(c=>c.owner==='ai'&&Math.abs(c.speed)>0.1&&distance(c.position,focus)<90).sort((a,b)=>distance(a.position,focus)-distance(b.position,focus))[0];
     this.audio.update(focus,this.camera.yaw,audible?.position??this.car.position,audible?.speed??0,!!audible,audible?.braking??false,audible?.steering??0);
@@ -275,26 +286,28 @@ export class Game {
     this.metrics.add(frameMs);
     const step = 1 / 120;
     this.accumulator = Math.min(0.1, this.accumulator + dt);
+    const nearbyPeople = this.nearbyPeople(this.car.driving ? this.car.position : this.player.position);
     while (this.accumulator >= step) {
       this.handover=Math.max(0,this.handover-step);this.interaction.update(step);
-      if (!this.car.driving && !this.seated && !this.interaction.busy && this.handover<=0) this.player.update(step, this.input.foot(), this.camera.yaw, this.world, this.car.collider, [...this.otherCars(),...this.people.colliders]);
-      if(!this.interaction.busy)this.car.update(step, this.input.drive(), this.world, [...this.otherCars(),...this.people.colliders]);
+      if (!this.car.driving && !this.seated && !this.interaction.busy && this.handover<=0) this.player.update(step, this.input.foot(), this.camera.yaw, this.world, this.car.collider, [...this.otherCars(),...nearbyPeople]);
+      if(!this.interaction.busy)this.car.update(step, this.input.drive(), this.world, [...this.otherCars(),...nearbyPeople]);
       const pedestrian = { ...this.player.position, width: 0.8, depth: 0.8, height: 1.8, yaw: 0 };
-      this.traffic.update(step, this.world, [...this.fleet.map(c => c.collider), ...this.people.colliders,...(!this.car.driving ? [pedestrian] : [])], this.car.driving ? this.car.position : this.player.position);
+      this.traffic.update(step, this.world, [...this.fleet.map(c => c.collider), ...nearbyPeople,...(!this.car.driving ? [pedestrian] : [])], this.car.driving ? this.car.position : this.player.position);
       const focus=this.car.driving?this.car.position:this.player.position;
 
-      if(this.seated&&this.standing>0){this.standing-=step;if(this.standing<=0){const exits=[{x:this.player.position.x,z:this.player.position.z+0.85},{x:this.player.position.x-1,z:this.player.position.z+0.6}];const clear=exits.find(p=>this.world.isClear(p,0.32,0,1.8,[...this.cars.map(c=>c.collider),...this.people.colliders]));if(clear){this.stand(true);this.player.teleport(clear);}else{this.standing=0;this.playerView.overrideAnimation='sit';this.ui.toast('Someone is in front of the seat. Wait, then press F to stand.');}}}
+      if(this.seated&&this.standing>0){this.standing-=step;if(this.standing<=0){const exits=[{x:this.player.position.x,z:this.player.position.z+0.85},{x:this.player.position.x-1,z:this.player.position.z+0.6}];const clear=exits.find(p=>this.world.isClear(p,0.32,0,1.8,[...this.cars.map(c=>c.collider),...nearbyPeople]));if(clear){this.stand(true);this.player.teleport(clear);}else{this.standing=0;this.playerView.overrideAnimation='sit';this.ui.toast('Someone is in front of the seat. Wait, then press F to stand.');}}}
       if(this.seated&&!this.standing){this.drinkTime+=step;if(this.drinkTime>=1&&!this.consumedAtSeat){this.consumedAtSeat=true;this.neighborhood.cash=this.mission.cash;const drink=this.neighborhood.drink();this.mission.cash=this.neighborhood.cash;this.playerView.overrideAnimation=drink?'sit_drink':'sit';if(drink)this.ui.toast(`Enjoying ${drink}. Press F to stand.`);}if(this.drinkTime>5)this.playerView.overrideAnimation='sit';}
       this.neighborhood.cash=this.mission.cash;
       this.rewardRetry-=step;
       if(this.rewardRetry<=0&&this.neighborhood.update(focus,this.car.driving,this.car.kmh)){this.mission.cash=this.neighborhood.cash;this.ui.toast(this.neighborhood.message,'success');this.refreshUI();}if(this.rewardRetry<=0&&this.neighborhood.updateGoods(focus,this.car.driving,this.car.kmh)){this.mission.cash=this.neighborhood.cash;this.ui.toast(this.neighborhood.message,'success');this.refreshUI();}if(this.rewardRetry<=0)this.rewardRetry=1;
-      const storyEvent = this.story.update(step, this.car.driving ? this.car.position : this.player.position, this.car.driving, this.car.driving ? this.car.kmh : this.player.speed * 3.6);
+      const storyEvent = this.story.update(step, this.car.driving ? this.car.position : this.player.position, this.car.driving, this.car.driving ? this.car.kmh : this.player.speed * 3.6, () => this.persistReward(this.story.reward, false));
       if (storyEvent === 'step') this.ui.toast(this.story.step.dialogue);
       if (storyEvent === 'failed') this.ui.toast('Time ran out. Retry Kabir’s Evening Run in DelhiOS.');
-      if (storyEvent === 'completed') { this.mission.cash += this.story.reward; this.saveProgress(); this.ui.toast(`Kabir: Delivered. ₹${this.story.reward} added. Explore the connected NCR world.`,'reward'); }
+      if (storyEvent === 'save-failed') this.ui.toast('Delivery not saved. No reward paid. Keep this tab open; retrying in one second.', 'warning');
+      if (storyEvent === 'completed') { this.mission.cash += this.story.reward; this.ui.toast(`Kabir: Delivered. ₹${this.story.reward} added. Explore the connected NCR world.`,'reward'); }
 
-      if (this.mission.update(this.car.driving ? this.car.position : this.player.position, !this.car.driving)) {
-        this.saveProgress(); this.ui.toast('Parcel delivered. ₹750 added to your Delhi Wallet.','reward'); this.refreshUI();
+      this.courierRetry = Math.max(0, this.courierRetry - step);
+      if (this.courierRetry === 0 && this.mission.update(this.car.driving ? this.car.position : this.player.position, !this.car.driving, () => { const saved = this.persistReward(750, true); if (!saved) { this.courierRetry = 1; this.ui.toast('Parcel not saved. No reward paid. Stay at the handover to retry.', 'warning'); } return saved; })) { this.ui.toast('Parcel delivered. ₹750 added to your Delhi Wallet.','reward'); this.refreshUI();
       }
       this.accumulator -= step;
     }
@@ -307,6 +320,9 @@ export class Game {
       const frames=this.metrics.percentiles,info=this.renderer.info;
       this.ui.renderStats(`Frame ms p50 ${frames.p50.toFixed(1)} / p95 ${frames.p95.toFixed(1)} · ${info.render.calls} draws · ${info.render.triangles} triangles · ${info.memory.geometries} geometries / ${info.memory.textures} textures`); }
   };
+  private nearbyPeople(point: Point, radius = 700) {
+    return nearbySolids(point, radius, [this.people.colliders, ...this.populations.map(p => p.colliders)]);
+  }
   private otherCars() { return this.cars.filter(c=>c!==this.car).map(c=>c.collider); }
   private selectNearbyCar(): void {
     if (this.car.driving || this.interaction.busy || this.seated) return;
@@ -317,6 +333,14 @@ export class Game {
       if (d < nearest) { nearest = d; best = i; }
     });
     this.selected = best; this.interaction.car = this.car;
+  }
+  private persistReward(amount: number, courier: boolean): boolean {
+    if (!this.saveWritable) { this.saveAvailable = false; return false; }
+    try {
+      this.saveAvailable = writeProgress(localStorage, { version: 3, cash: this.mission.cash + amount,
+        neighborhood: this.neighborhood.data, courierCompleted: courier || this.mission.state === 'completed', settings: this.settings });
+    } catch { this.saveAvailable = false; }
+    return this.saveAvailable;
   }
   private saveProgress(): void {
     if (!this.saveWritable) { this.saveAvailable = false; return; }

@@ -72,7 +72,7 @@ export class InputController {
     const forward = Number(this.keys.has('KeyW') || this.keys.has('ArrowUp')) - Number(this.keys.has('KeyS') || this.keys.has('ArrowDown'));
     const steer = Number(this.keys.has('KeyD') || this.keys.has('ArrowRight')) - Number(this.keys.has('KeyA') || this.keys.has('ArrowLeft'));
     return this.enabled ? { throttle: this.gas ? (this.reverse ? -1 : 1) : forward,
-      steer: clamp((steer || this.stick.x) * this.steeringSensitivity, -1, 1), brake: this.brake, handbrake: this.brake || this.keys.has('Space') }
+      steer: clamp((steer || this.stick.x) * this.steeringSensitivity, -1, 1), brake: this.brake, handbrake: this.keys.has('Space') }
       : { throttle: 0, steer: 0, brake: false, handbrake: false };
   }
   dispose(): void { this.abort.abort(); this.reset(); }

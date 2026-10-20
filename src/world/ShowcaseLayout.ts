@@ -1,0 +1,15 @@
+import type {Solid} from '../core/CollisionWorld';
+/** 424m existing CP west-junction → Market Lane corridor, in metres. */
+export const SHOWCASE_ARCADES = Array.from({length:8},(_,i)=>({x:-142-i*12,z:24}));
+export const SHOWCASE_SCOOTERS = [{x:-185,z:13.7},{x:-208,z:13.7}];
+export const SHOWCASE_PLANTERS = [{x:-138,z:14.4},{x:-234,z:14.4}];
+export const showcaseSolids:Solid[]=[
+ ...SHOWCASE_ARCADES.flatMap(p=>[
+  {...p,width:11.6,depth:8,height:7.8,yaw:0},
+  ...[-4.7,4.7].map(dx=>({x:p.x+dx,z:17.6,width:0.57,depth:0.57,height:3.7,yaw:0})),
+  {x:p.x,z:18.7,width:12,depth:3.4,height:0.3,base:3.7,yaw:0},
+ ]),
+ ...SHOWCASE_SCOOTERS.map(p=>({...p,width:0.7,depth:1.8,height:1.3,yaw:0})),
+ ...SHOWCASE_PLANTERS.map(p=>({...p,width:1.3,depth:1.3,height:0.65,yaw:0})),
+ ...[-12.5,12.5].map(z=>({x:-130,z,width:0.28,depth:0.28,height:5,yaw:0})),
+];

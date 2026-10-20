@@ -1,3 +1,4 @@
+import {contactGround} from '../rendering/ContactGround';
 import * as THREE from 'three';
 import { HumanoidView, DRIVER_VARIANT } from '../people/HumanoidView';
 import { QUALITY } from '../rendering/QualityProfile';
@@ -17,6 +18,7 @@ export class VehicleView {
   private body = new THREE.Group();
   private doors:{pivot:THREE.Group;side:number}[]=[];
   private driver:HumanoidView;
+  private steeringWheel = new THREE.Group();
   private wheels: { pivot: THREE.Group; spin: THREE.Group; front: boolean }[] = [];
   private brakeMaterial = new THREE.MeshStandardMaterial({ color: 0x9b2520, emissive: 0xff3420, emissiveIntensity: 0.65 });
 
@@ -108,7 +110,7 @@ export class VehicleView {
     }
     if (spec.id === 'baaz') addBox(1.48, 0.08, 0.2, rubber, 0, 0.35, 1.77, 0.015);
     addBox(0.54, 0.14, 0.04, rubber, 0, 1.01, 0.62);
-    const steering = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.018, 6, 16), rubber); steering.position.set(-0.35, 1.10, 0.32); steering.rotation.x = -0.35; this.body.add(steering);
+    const steering = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.018, 6, 16), rubber); steering.position.set(-0.35, 1.10, 0.32); this.steeringWheel.position.copy(steering.position); steering.position.set(0,0,0); this.steeringWheel.rotation.x=-0.35; this.steeringWheel.add(steering); this.body.add(this.steeringWheel);
     for (const rear of [false, true]) {
       const map = signTexture(plateNumber, undefined, rear ? '#e5bd5e' : '#e9e7d9');
       // High-contrast Indian number plates use dark, unlit lettering.
@@ -141,7 +143,8 @@ export class VehicleView {
     const proxyBody = new THREE.Mesh(new THREE.BoxGeometry(1.68, 0.62, 3.65), paint); proxyBody.position.y = 0.68;
     const proxyCabin = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.62, 1.95), glass); proxyCabin.position.set(0, 1.22, -0.28);
     proxyBody.castShadow = true; this.distant.add(proxyBody, proxyCabin); this.distant.visible = false;
-    this.group.add(this.detailed, this.distant);
+    const grounding=contactGround(spec.width*1.3,spec.length*1.15);grounding.position.y=0.006;
+    this.group.add(this.detailed, this.distant,grounding);
     // Scale the coachwork, not the tires: every roster variant retains round
     // 0.32m wheels touching the same ground plane and matching wheel odometry.
     this.body.scale.set(spec.width / 1.72, spec.height / 1.65, spec.length / 3.85);
@@ -160,6 +163,7 @@ export class VehicleView {
     // Sprung visual body only; tire contact, collider and bicycle handling stay unchanged.
     this.body.rotation.set(car.pitch * 0.65, 0, car.roll * 0.65);
     this.body.position.y = Math.sin(car.wheelTravel * 2.1) * Math.min(Math.abs(car.speed) * 0.0006, 0.008);
+    this.steeringWheel.rotation.z = -car.steering * 2.5;
     this.wheels.forEach(w => { w.pivot.rotation.y = w.front ? car.steering : 0; w.spin.rotation.x = car.wheelTravel / 0.32; });
     this.doors.forEach(d=>{d.pivot.rotation.y=d.side<0?-car.doorOpen*1.05:0;});
     this.driver.group.visible=(car.occupant!==null||car.driving)&&!(car.reserved&&car.occupant==='player');if(this.driver.group.visible&&this.detailed.visible)this.driver.update(dt,'drive');
