@@ -18,7 +18,7 @@ try{
  await page.keyboard.press('f');await page.waitForFunction(()=>document.querySelector('[data-mode]').textContent.includes('PARVAAZ'));
  const held=new Set();async function key(k,on){if(on&&!held.has(k)){await page.keyboard.down(k);held.add(k);}else if(!on&&held.has(k)){await page.keyboard.up(k);held.delete(k);}}
  async function read(){return page.evaluate(()=>{const p=document.querySelector('[data-coordinates]').textContent.split(',');const heading=document.querySelector('[data-mode-detail]').textContent.match(/HDG ([\d.]+)/);return{x:parseFloat(p[0]),z:parseFloat(p[1]),yaw:Number(heading?.[1]??0)*Math.PI/180,speed:parseFloat(document.querySelector('[data-speed]').textContent)/3.6,prompt:document.querySelector('[data-prompt]').textContent};});}
- async function stop(){await key('w',false);await key('a',false);await key('d',false);await key('Space',true);await page.waitForFunction(()=>document.querySelector('[data-speed]').textContent==='0 km/h');await key('Space',false);}
+ async function stop(){await key('w',false);await key('a',false);await key('d',false);await key('Space',true);await page.waitForFunction(()=>document.querySelector('[data-speed]').textContent==='0');await key('Space',false);}
  async function drive(to,label){
   const start=await read(),points=roadRoute(start,to),length=routeLength(points),began=Date.now();assert.ok(points.length);
   let index=1,lastLog=Date.now(),stuck=0,previous=start,manoeuvres=0;

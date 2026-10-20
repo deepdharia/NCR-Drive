@@ -57,7 +57,7 @@ try {
   await page.keyboard.down('w'); await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'Recover to a clear road' }).click();
   await page.keyboard.up('w');
-  await page.waitForFunction(() => document.querySelector('[data-speed]').textContent === '0 km/h');
+  await page.waitForFunction(() => document.querySelector('[data-speed]').textContent === '0');
   const recovered = await page.locator('[data-coordinates]').innerText();
   assert.ok(parseFloat(recovered) <= -79, `Expected west approach recovery: ${recovered}`);
   await page.waitForTimeout(500);
@@ -76,7 +76,7 @@ try {
   await page.keyboard.down('w');
   await page.waitForFunction(() => parseFloat(document.querySelector('[data-coordinates]').textContent) < -95);
   await page.keyboard.up('w'); await page.keyboard.down('Space');
-  await page.waitForFunction(() => document.querySelector('[data-speed]').textContent === '0 km/h');
+  await page.waitForFunction(() => document.querySelector('[data-speed]').textContent === '0');
   await page.keyboard.up('Space'); await page.keyboard.press('f');
   await page.waitForFunction(() => document.querySelector('[data-mode]').textContent === 'ON FOOT / EXPLORER');
   const x = parseFloat(await page.locator('[data-coordinates]').innerText());

@@ -1,0 +1,25 @@
+{
+  "bundle": "unmodified shipped dist; CDP debugger exposes constructor instance only",
+  "method": "controlled actor placements and circuit-stop sampling; ordinary shop/payment/phone buttons; storage quota injection; no regional journey or real-device FPS claim",
+  "evidence": [
+    "Production shop purchase saved flowers once for ₹120.",
+    "Two goods deliveries completed through shop/phone UI, transient data cleared, duplicate clicks paid nothing; purchase/rewards survived reload.",
+    "Cake then flower also completed in one session.",
+    "Cancellation permits retry; failed receipt save pays nothing and retry pays exactly once.",
+    "Production park/photo failed saves show honest feedback, preserve retry paths and restore controls; saved and already-completed outcomes verified.",
+    "Production player and NPC cloned skeleton animation mixers advance.",
+    {
+      "controlledTakeoverSetup": {
+        "occupant": "driver-civilian-10",
+        "available": true,
+        "doorClear": true
+      }
+    },
+    "Occupied civilian takeover completed through F.",
+    "Pause-menu vehicle recovery completed.",
+    "Simultaneous touch steering and throttle registered.",
+    "Production occupied-car takeover, recovery, simultaneous touch input/cancel, focus-loss reset and Places routing passed. Controlled door placement, no regional journey.",
+    "Missing and corrupt production assets display character-specific retry feedback; reload succeeds after asset service recovers. WebGL failure has distinct graphics feedback."
+  ],
+  "errors": []
+}

@@ -1,0 +1,13 @@
+{
+  "evidence": [
+    "Actual controller speed/reverse/brake, lazy local Lottie/WASM and instance reuse passed.",
+    "Simultaneous real touch steering/throttle, cancellation, modal release and pause/resume passed.",
+    "Seated controls are inactive and standing clears queued jump input.",
+    "Job acceptance and arrival notifications follow confirmed game events.",
+    "Reduced motion, notification deduplication and corrupt-animation static fallback passed.",
+    "Portrait/landscape HUD, phone and pause bounds passed.",
+    "HUD disposal and unexpected browser errors passed."
+  ],
+  "errors": [],
+  "method": "shipped production bundle, CDP constructor exposure, controlled speed/brake values, ordinary F entry/exit, real CDP multitouch; SwiftShader, no physical device FPS"
+}

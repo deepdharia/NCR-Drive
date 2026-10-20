@@ -19,6 +19,13 @@ npm run preview
 
 `dist/` is the shipped static output. Vercel settings are preserved. No account, backend, paid API, real payment or external runtime asset host is required.
 
+## Immersive HUD
+
+The driving cluster, pedestrian HUD and touch controls share local, finite Lottie
+feedback. See [design and architecture](docs/IMMERSIVE_HUD.md) and
+[verification evidence](docs/evidence/IMMERSIVE_HUD_VERIFICATION.md).
+Run `npm run test:hud` for the production HUD regression gate.
+
 ## Controls
 
 - WASD: walk / drive; Shift: sprint; Space: jump / brake; S brakes then reverses.
