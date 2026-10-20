@@ -22,9 +22,11 @@
     "map:export": "node --import tsx scripts/export-map.ts",
     "test:map-waypoint": "node tests/map-waypoint.mjs",
     "check:production-assets": "node --import tsx scripts/check-production-assets.ts",
-    "test:visual-benchmark": "node tests/visual-benchmark.mjs"
+    "test:visual-benchmark": "node tests/visual-benchmark.mjs",
+    "test:hud": "node tests/hud-browser.mjs"
   },
   "dependencies": {
+    "@lottiefiles/dotlottie-web": "^0.81.0",
     "three": "0.186.1"
   },
   "devDependencies": {

@@ -114,7 +114,7 @@ export class Game {
     this.camera = new CameraRig(root.clientWidth / root.clientHeight);
     this.interaction = new InteractionSystem(this.player, this.car, this.world, () => [...this.otherCars(),...this.people.colliders,...this.populations.flatMap(p=>p.colliders)]);
     this.interaction.onDisplaced=(id,point)=>{const target=roadsideRetreat(point);this.people.displace(id,point,this.world.isClear(target,0.35,0,1.8,this.otherCars())?target:point);this.ui.toast('Driver retreats. Nearby neighbors are startled.');};
-    this.interaction.onTransferred=()=>{this.input.reset();this.input.reverse=false;if(this.car.driving)this.camera.enterVehicle();this.refreshUI();};
+    this.interaction.onTransferred=()=>{this.input.reset();this.input.reverse=false;if(this.car.driving)this.camera.enterVehicle();this.ui.toast(this.car.driving?'Vehicle entered · Ready to drive':'Vehicle exited · Explore on foot');this.refreshUI();};
     this.player.teleport({ x: this.interaction.door.x - 0.45, z: this.interaction.door.z });
     this.input = new InputController(this.renderer.domElement, {
       interact: () => this.interact(), phone: () => this.togglePhone(), pause: () => this.togglePause(),
@@ -135,7 +135,7 @@ export class Game {
       },
       recover: () => this.recover(),
       accept: () => {
-        if (!this.jobBusy && this.mission.accept()) { this.phone = false; this.syncScreen(); this.ui.toast('Parcel collected. Follow DelhiNav and deliver on foot.'); }
+        if (!this.jobBusy && this.mission.accept()) { this.phone = false; this.syncScreen(); this.ui.toast('Parcel collected. Follow DelhiNav and deliver on foot.','success'); }
       },
       journey: () => {
         if (this.jobBusy) return;
@@ -148,9 +148,9 @@ export class Game {
       cancelStory: () => { this.story.cancel(); this.refreshUI(); },
       buy:()=>this.clusterShop?this.orderClusterItem():this.orderDrink(),pay:()=>this.pay(),closeShop:()=>this.closeShop(),
       supply:()=>{if(this.clusterShop?.goodsJob){const job=goodsJobById(this.clusterShop.goodsJob);if(job&&!this.jobBusy&&this.neighborhood.acceptGoods(job)){this.closeShop();this.ui.toast(this.neighborhood.message);}}else if(!this.jobBusy&&this.neighborhood.accept()){this.closeShop();this.ui.toast(this.neighborhood.message);}},
-      receive:()=>{const position=this.car.driving?this.car.position:this.player.position;this.neighborhood.cash=this.mission.cash;if(this.neighborhood.confirm(position,this.car.driving?this.car.kmh:this.player.speed*3.6)){this.mission.cash=this.neighborhood.cash;this.phone=false;this.syncScreen();}this.ui.toast(this.neighborhood.message);this.refreshUI();},
+      receive:()=>{const position=this.car.driving?this.car.position:this.player.position;this.neighborhood.cash=this.mission.cash;const received=this.neighborhood.confirm(position,this.car.driving?this.car.kmh:this.player.speed*3.6);if(received){this.mission.cash=this.neighborhood.cash;this.phone=false;this.syncScreen();}this.ui.toast(this.neighborhood.message,received?'reward':'warning');this.refreshUI();},
       cancelSupply:()=>{this.neighborhood.cancelJob();this.refreshUI();},
-      receiveGoods:()=>{const position=this.car.driving?this.car.position:this.player.position;this.neighborhood.cash=this.mission.cash;if(this.neighborhood.confirmGoods(position,this.car.driving?this.car.kmh:this.player.speed*3.6)){this.mission.cash=this.neighborhood.cash;this.phone=false;this.syncScreen();}this.ui.toast(this.neighborhood.message);this.refreshUI();},
+      receiveGoods:()=>{const position=this.car.driving?this.car.position:this.player.position;this.neighborhood.cash=this.mission.cash;const received=this.neighborhood.confirmGoods(position,this.car.driving?this.car.kmh:this.player.speed*3.6);if(received){this.mission.cash=this.neighborhood.cash;this.phone=false;this.syncScreen();}this.ui.toast(this.neighborhood.message,received?'reward':'warning');this.refreshUI();},
       cancelGoods:()=>{this.neighborhood.cancelGoods();this.refreshUI();},
       exitPhoto:()=>this.exitPhotoMode(),
       waypoint:(point)=>{const road=nearestRoad(point);this.waypoint=projection(point,...ends(road)).point;this.ui.toast('Waypoint set — follow the gold marker.');this.refreshUI();},
@@ -223,13 +223,13 @@ export class Game {
       const photoCluster=CLUSTERS.find(c=>c.photo&&distance(c.photo,this.player.position)<2.2);
       if(photoCluster){this.enterPhotoMode(photoCluster);return;}
       const seat=this.nearbySeat();
-      if(seat){this.seated=seat.id;this.seatReservations?.reserve(seat.id,'player');this.player.teleport(seat);this.player.yaw=seat.yaw;this.player.speed=0;this.playerView.overrideAnimation='sit_down';this.drinkTime=0;this.consumedAtSeat=false;this.refreshUI();return;}
+      if(seat){this.input.reset();this.seated=seat.id;this.seatReservations?.reserve(seat.id,'player');this.player.teleport(seat);this.player.yaw=seat.yaw;this.player.speed=0;this.playerView.overrideAnimation='sit_down';this.drinkTime=0;this.consumedAtSeat=false;this.refreshUI();return;}
     }
     this.selectNearbyCar();
     if (this.interaction.interact()) {
       this.input.reset(); this.input.reverse = false;
       if (this.car.driving) this.camera.enterVehicle();
-    }
+    } else if(this.interaction.message) this.ui.toast(this.interaction.message,'warning');
     this.refreshUI();
   }
   private tapCar(x: number, y: number): void {
@@ -242,12 +242,12 @@ export class Game {
   private refreshUI(): void {
     this.selectNearbyCar();
     const focus=this.car.driving?this.car.position:this.player.position;
-    if(this.waypoint&&distance(focus,this.waypoint)<15){this.waypoint=undefined;this.ui.toast('Waypoint reached.');}
+    if(this.waypoint&&distance(focus,this.waypoint)<15){this.waypoint=undefined;this.ui.toast('Waypoint reached.','success');}
     const target = this.waypoint??(this.story.active ? this.story.step.target : this.mission.state==='active'?COURIER_TARGET:this.neighborhood.active?(this.neighborhood.activeTarget??MARKET):MARKET);
     this.district.delivery.visible = distance(target,this.car.driving?this.car.position:this.player.position)>20 || this.jobBusy;
     this.district.delivery.position.set(target.x, 0, target.z);
 
-    this.ui.update(this.player, this.car, this.interaction, this.mission, this.neighborhood, this.saveAvailable, this.story,this.contextPrompt(),this.interaction.busy||this.handover>0,this.waypoint);
+    this.ui.update(this.player, this.car, this.interaction, this.mission, this.neighborhood, this.saveAvailable, this.story,this.contextPrompt(),this.interaction.busy||this.handover>0||this.standing>0,this.waypoint,!!this.seated,this.contextAvailable());
   }
   private updateViews(dt: number): void {
     if(this.handover>0)this.playerView.overrideAnimation='pay';else if(this.interaction.busy)this.playerView.overrideAnimation=this.interaction.animation;else if(!this.seated&&!this.modal)this.playerView.overrideAnimation=undefined;
@@ -287,14 +287,14 @@ export class Game {
       if(this.seated&&!this.standing){this.drinkTime+=step;if(this.drinkTime>=1&&!this.consumedAtSeat){this.consumedAtSeat=true;this.neighborhood.cash=this.mission.cash;const drink=this.neighborhood.drink();this.mission.cash=this.neighborhood.cash;this.playerView.overrideAnimation=drink?'sit_drink':'sit';if(drink)this.ui.toast(`Enjoying ${drink}. Press F to stand.`);}if(this.drinkTime>5)this.playerView.overrideAnimation='sit';}
       this.neighborhood.cash=this.mission.cash;
       this.rewardRetry-=step;
-      if(this.rewardRetry<=0&&this.neighborhood.update(focus,this.car.driving,this.car.kmh)){this.mission.cash=this.neighborhood.cash;this.ui.toast(this.neighborhood.message);this.refreshUI();}if(this.rewardRetry<=0&&this.neighborhood.updateGoods(focus,this.car.driving,this.car.kmh)){this.mission.cash=this.neighborhood.cash;this.ui.toast(this.neighborhood.message);this.refreshUI();}if(this.rewardRetry<=0)this.rewardRetry=1;
+      if(this.rewardRetry<=0&&this.neighborhood.update(focus,this.car.driving,this.car.kmh)){this.mission.cash=this.neighborhood.cash;this.ui.toast(this.neighborhood.message,'success');this.refreshUI();}if(this.rewardRetry<=0&&this.neighborhood.updateGoods(focus,this.car.driving,this.car.kmh)){this.mission.cash=this.neighborhood.cash;this.ui.toast(this.neighborhood.message,'success');this.refreshUI();}if(this.rewardRetry<=0)this.rewardRetry=1;
       const storyEvent = this.story.update(step, this.car.driving ? this.car.position : this.player.position, this.car.driving, this.car.driving ? this.car.kmh : this.player.speed * 3.6);
       if (storyEvent === 'step') this.ui.toast(this.story.step.dialogue);
       if (storyEvent === 'failed') this.ui.toast('Time ran out. Retry Kabir’s Evening Run in DelhiOS.');
-      if (storyEvent === 'completed') { this.mission.cash += this.story.reward; this.saveProgress(); this.ui.toast(`Kabir: Delivered. ₹${this.story.reward} added. Explore the connected NCR world.`); }
+      if (storyEvent === 'completed') { this.mission.cash += this.story.reward; this.saveProgress(); this.ui.toast(`Kabir: Delivered. ₹${this.story.reward} added. Explore the connected NCR world.`,'reward'); }
 
       if (this.mission.update(this.car.driving ? this.car.position : this.player.position, !this.car.driving)) {
-        this.saveProgress(); this.ui.toast('Parcel delivered. ₹750 added to your Delhi Wallet.'); this.refreshUI();
+        this.saveProgress(); this.ui.toast('Parcel delivered. ₹750 added to your Delhi Wallet.','reward'); this.refreshUI();
       }
       this.accumulator -= step;
     }
@@ -329,6 +329,14 @@ export class Game {
     try{this.saveAvailable=writeProgress(localStorage,{version:3,cash:next.cash,neighborhood:next.neighborhood,courierCompleted:this.mission.state==='completed',settings:this.settings});}catch{this.saveAvailable=false;}
     return this.saveAvailable;
   }
+  private contextAvailable():boolean {
+    if(this.seated)return this.standing<=0;
+    if(this.car.driving)return false;
+    const p=this.player.position;
+    return shops.some(s=>distance(s,p)<2.6)||CLUSTER_SHOPS.some(s=>distance(s.counter,p)<2.6)
+      ||CLUSTERS.some(c=>(!!c.board&&distance(c.board,p)<2.2)||(!!c.photo&&distance(c.photo,p)<2.2))
+      ||!!this.nearbySeat();
+  }
   private contextPrompt():string|undefined {
     if(this.handover>0)return 'Collecting your cup…';
     if(this.interaction.busy)return undefined;
@@ -352,7 +360,7 @@ export class Game {
     for(const pop of this.populations){const seat=pop.seats.find(s=>distance(s,this.player.position)<1.7&&clear(s));if(seat){this.seatReservations=pop.reservations;return seat;}}
     return undefined;
   }
-  private stand(force=false):void {if(!this.seated)return;if(!force){this.standing=1;this.playerView.overrideAnimation='stand';return;}this.standing=0;this.seatReservations?.release('player');this.seatReservations=undefined;this.seated=undefined;this.drinkTime=0;this.playerView.overrideAnimation=undefined;this.player.speed=0;}
+  private stand(force=false):void {if(!this.seated)return;this.input.reset();if(!force){this.standing=1;this.playerView.overrideAnimation='stand';return;}this.standing=0;this.seatReservations?.release('player');this.seatReservations=undefined;this.seated=undefined;this.drinkTime=0;this.playerView.overrideAnimation=undefined;this.player.speed=0;}
   private openShop(index:number):void {
     this.shopIndex=index;this.modal=true;this.player.speed=0;this.player.yaw=Math.PI;this.playerView.overrideAnimation='talk';
     const shop=shops[index];this.ui.shop(shop.name,index===1?'Asha: The new cold store is at the west end. Nimbu Corner needs a fruit crate delivered. Speak to them; they pay in game currency.':'Welcome, neighbor. Drinks are optional. Pay only with fictional Delhi Wallet currency. Nothing here connects to a real bank.',index!==1,false,index===2&&!this.jobBusy&&this.neighborhood.job==='available');this.syncScreen();this.updateViews(0.2);this.renderer.render(this.scene,this.camera.camera);
@@ -362,7 +370,7 @@ export class Game {
     this.neighborhood.cash=this.mission.cash;this.payment=this.neighborhood.order(shop.item);if(this.payment===undefined)return;
     this.playerView.overrideAnimation='pay';this.ui.shop('Delhi Wallet · Fictional UPI',`${shop.item.toUpperCase()} · ₹${shop.price}. Confirm to pay and receive one cup. This uses game currency only. Cancel leaves your balance unchanged.`,false,true,false);this.updateViews(0.2);this.renderer.render(this.scene,this.camera.camera);
   }
-  private pay():void {if(this.payment===undefined)return;const id=this.payment;this.payment=undefined;const paid=this.neighborhood.pay(id);this.mission.cash=this.neighborhood.cash;const clusterShop=this.clusterShop;this.closeShop();if(paid){this.handover=1.2;if(clusterShop){const ci=CLUSTERS.findIndex(c=>c.id===clusterShop.cluster);const shopIndex=CLUSTERS[ci]?.shops.findIndex(s=>s.id===clusterShop.id)??-1;if(shopIndex>=0)this.populations[ci]?.serve(shopIndex);}else this.people.serve(this.shopIndex);}this.ui.toast(this.neighborhood.message);}
+  private pay():void {if(this.payment===undefined)return;const id=this.payment;this.payment=undefined;const paid=this.neighborhood.pay(id);this.mission.cash=this.neighborhood.cash;const clusterShop=this.clusterShop;this.closeShop();if(paid){this.handover=1.2;if(clusterShop){const ci=CLUSTERS.findIndex(c=>c.id===clusterShop.cluster);const shopIndex=CLUSTERS[ci]?.shops.findIndex(s=>s.id===clusterShop.id)??-1;if(shopIndex>=0)this.populations[ci]?.serve(shopIndex);}else this.people.serve(this.shopIndex);}this.ui.toast(this.neighborhood.message,paid?'success':'warning');}
   private closeShop():void {this.neighborhood.cancel();this.payment=undefined;this.modal=false;this.clusterShop=undefined;this.playerView.overrideAnimation=undefined;this.ui.closeShop();this.syncScreen();this.updateViews(0.02);this.renderer.render(this.scene,this.camera.camera);}
   private openClusterShop(shop:ClusterShop):void {
     this.clusterShop=shop;

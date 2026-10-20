@@ -2,7 +2,7 @@
 import { spawn } from 'node:child_process';
 import { mkdir, writeFile } from 'node:fs/promises';
 const groups={
- core:['browser-smoke','production-smoke','regional-browser-wiring'],
+ core:['hud-browser','browser-smoke','production-smoke','regional-browser-wiring'],
  living:['living-wiring','living-production'],
  parks:['parks-shopping','map-waypoint','repair-production'],
  visual:['visual-browser','visual-benchmark'],

@@ -1,3 +1,6 @@
+import {HudAnimationManager} from './animation/HudAnimationManager';
+import {HudStateAdapter,hudState,routeDirection} from './animation/HudStateAdapter';
+import type {FeedbackKind} from './animation/HudStateAdapter';
 import {distance} from '../core/math';
 import type { InputController } from '../input/InputController';
 import type { PlayerController } from '../player/PlayerController';
@@ -25,11 +28,20 @@ export class GameUI {
   private abort = new AbortController();
   private maps: Minimap[];
   private photo = false;
+  private animations:HudAnimationManager;
+  private hudAdapter=new HudStateAdapter();
+  private releaseControls: (()=>void)[]=[];
+  private lastMode?:boolean;
+  private lastSeated?:boolean;
+  private lastSaveAvailable=true;
+  private lastArc=-1;
+  private lastToast="";
+  private lastToastTime=0;
   private cachedRoute: {x:number;z:number}[]=[];
   private routeTarget: object | undefined;
   private routeTime=0;
   private toastTimer: ReturnType<typeof setTimeout> | undefined;
-  constructor(readonly root: HTMLElement, input: InputController, actions: UIActions) {
+  constructor(readonly root: HTMLElement, private input: InputController, actions: UIActions) {
     root.innerHTML = `
       <section class="welcome" aria-label="Welcome to NCR Drive">
         <div class="welcome-top"><span class="brand-mark">N</span><span>NCR DRIVE <small>NEW DELHI, INDIA</small></span><span class="edition">OPEN WORLD / 01</span></div>
@@ -38,17 +50,18 @@ export class GameUI {
       </section>
       <section class="game-ui" hidden aria-label="Game controls">
         <header class="location"><span class="eyebrow">NCR DRIVE / FREE ROAM</span><h1 data-region-title>Connaught Place · नई दिल्ली</h1><p data-region-detail>Inner Circle · A Delhi evening</p></header>
-        <div class="top-actions"><div class="wallet"><strong data-cash>₹15,000</strong><span>DELHI WALLET</span></div><button class="icon-button" data-action="phone" aria-label="Open DelhiOS phone">${phoneIcon}</button><button class="icon-button" data-action="pause" aria-label="Pause game">Ⅱ</button></div>
+        <div class="top-actions"><div class="wallet"><strong data-cash>₹15,000</strong><span>DELHI WALLET</span></div><button class="icon-button" data-action="phone" aria-label="Open DelhiOS phone">${phoneIcon}</button><button class="icon-button" data-action="pause" aria-label="Pause game"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 5v14M16 5v14"/></svg></button></div>
         <div class="radar"><canvas class="radar-map" aria-label="DelhiNav local minimap" role="img"></canvas><span>DELHINAV / LIVE</span></div>
-        <button class="gig-tracker" data-action="phone" aria-label="Open current job in DelhiOS"><span>◈</span><div><strong data-job-title>Shivaji Stadium Courier Run</strong><small data-distance>Parcel collected · Follow the gold marker</small></div></button>
-        <div class="mode-card"><span data-mode>ON FOOT / EXPLORER</span><strong data-speed>Take the long way.</strong><small data-mode-detail>The city moves at your pace.</small></div>
-        <button class="interaction" data-action="interact"><kbd>F</kbd><span data-prompt>Press [F] or Tap to Drive</span><span>↗</span></button>
+        <button class="gig-tracker" data-action="phone" aria-label="Open current job in DelhiOS"><span class="objective-bearing" aria-hidden="true">↑</span><div><span class="route-mode" data-route-mode>WALKING ROUTE</span><strong data-job-title>Shivaji Stadium Courier Run</strong><small data-distance>Parcel collected · Follow the gold marker</small></div></button>
+        <div class="mode-card" aria-label="Movement status"><span data-mode>ON FOOT / EXPLORER</span><div class="speed-dial"><svg viewBox="0 0 200 120" aria-hidden="true"><path class="dial-track" d="M20 105 A80 80 0 0 1 180 105"/><path class="dial-fill" pathLength="1" d="M20 105 A80 80 0 0 1 180 105"/></svg><strong data-speed>ON FOOT</strong><span class="speed-unit">km/h</span></div><div class="cluster-status"><b data-gear>N</b><small data-mode-detail>The city moves at your pace.</small><span data-braking hidden>BRAKE</span></div></div>
+        <div class="hud-feedback" aria-hidden="true"><canvas width="64" height="64" data-hud-animation hidden></canvas></div>
+        <button class="interaction" data-action="interact"><kbd>F</kbd><span data-prompt>Press [F] or Tap to Drive</span><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19 19 5M5 5h14v14"/></svg></span></button>
         <div class="desktop-help"><span><kbd>W A S D</kbd> Move</span><span><kbd>SHIFT</kbd> Sprint</span><span><kbd>SPACE</kbd> Jump / brake</span><span><kbd>DRAG</kbd> Camera</span><span><kbd>TAB</kbd> DelhiOS</span></div>
         <div class="touch-controls"><div class="joystick" role="group" aria-label="Movement joystick"><div class="joystick-cross"></div><div class="joystick-knob"></div></div><div class="touch-actions">
           <button data-hold="gas" data-driving aria-label="Accelerate">↑<small>ACCELERATE</small></button><button data-hold="brake" data-driving aria-label="Brake">↓<small>BRAKE</small></button>
           <button data-action="reverse" data-driving aria-label="Toggle reverse gear">R<small data-reverse>REVERSE</small></button>
           <button data-action="jump" data-foot aria-label="Jump">↑<small>JUMP</small></button><button data-hold="sprint" data-foot aria-label="Sprint">⇧<small>SPRINT</small></button>
-          <button data-action="interact" class="touch-interact" aria-label="Enter vehicle">↗<small data-touch-interact>DRIVE</small></button>
+          <button data-action="interact" class="touch-interact" aria-label="Enter vehicle"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v16h-6M3 12h12M10 7l5 5-5 5"/></svg><small data-touch-interact>DRIVE</small></button>
         </div></div>
         <div class="toast" role="status" aria-live="polite" hidden></div>
       </section>
@@ -70,6 +83,7 @@ export class GameUI {
         <button class="primary" data-action="pause">Back to the city →</button></div></section>
       <section class="shop-modal" hidden role="dialog" aria-modal="true" aria-label="Neighborhood interaction"><div><span class="eyebrow">LIVING DELHI · GAME CURRENCY ONLY</span><h2 data-shop-title></h2><p data-shop-copy></p><button class="primary" data-action="buy" hidden>Order drink</button><button class="primary" data-action="pay" hidden>Confirm fictional UPI payment</button><button class="graphics-button" data-action="supply" hidden>Help with the fruit supply · ₹650</button><button class="graphics-button" data-action="closeShop">Back to the street</button></div></section>
       <section class="photo-overlay" hidden aria-label="Photo stop"><div><span class="eyebrow">PHOTO STOP</span><h2 data-photo-title>Viewpoint</h2><p>HUD hidden. Take your screenshot, then exit.</p><button class="primary" data-action="exitPhoto">Exit photo stop →</button></div></section>`;
+    this.animations=new HudAnimationManager(this.element<HTMLCanvasElement>('[data-hud-animation]'));
     const options = { signal: this.abort.signal };
     root.addEventListener('click', event => {
       const button = (event.target as Element).closest<HTMLButtonElement>('button[data-action]');
@@ -98,7 +112,7 @@ export class GameUI {
         case 'clearWaypoint': actions.clearWaypoint(); break;
         case 'audio': actions.audio(); break;
         case 'jump': input.requestJump(); break;
-        case 'reverse': input.reverse = !input.reverse; this.text('[data-reverse]', input.reverse ? 'DRIVE' : 'REVERSE'); break;
+        case 'reverse': input.reverse = !input.reverse; this.text('[data-reverse]', input.reverse ? 'DRIVE' : 'REVERSE'); button.setAttribute('aria-pressed',String(input.reverse)); break;
       }
     }, options);
     root.addEventListener('change', event => {
@@ -110,18 +124,19 @@ export class GameUI {
     for (const button of root.querySelectorAll<HTMLButtonElement>('[data-hold]')) {
       let pointer: number | null = null;
       const apply = (held: boolean): void => {
-        button.classList.toggle('held', held);
+        button.classList.toggle('held', held); button.setAttribute('aria-pressed',String(held));
         if (button.dataset.hold === 'gas') input.setGas(held);
         if (button.dataset.hold === 'brake') input.setBrake(held);
         if (button.dataset.hold === 'sprint') input.setSprint(held);
       };
       button.addEventListener('pointerdown', event => {
-        if (pointer !== null) return;
+        if (pointer !== null || !input.enabled) return;
         event.preventDefault(); pointer = event.pointerId; button.setPointerCapture(pointer); apply(true);
       }, options);
       const release = (event: PointerEvent): void => { if (event.pointerId === pointer) { pointer = null; apply(false); } };
       button.addEventListener('pointerup', release, options); button.addEventListener('pointercancel', release, options); button.addEventListener('lostpointercapture', release, options);
-      window.addEventListener('blur', () => { pointer = null; apply(false); }, options);
+      const reset=():void=>{pointer=null;apply(false);};this.releaseControls.push(reset);
+      window.addEventListener('blur', reset, options);
     }
     const joystick = this.element<HTMLDivElement>('.joystick'), knob = this.element<HTMLDivElement>('.joystick-knob');
     let pointer: number | null = null;
@@ -133,11 +148,11 @@ export class GameUI {
       const length = Math.max(1, Math.hypot(x, z)); input.setJoystick(x / length, z / length);
       knob.style.transform = `translate(${x / length * radius}px,${z / length * radius}px)`;
     };
-    joystick.addEventListener('pointerdown', event => { if (pointer !== null) return; event.preventDefault(); pointer = event.pointerId; joystick.setPointerCapture(pointer); move(event); }, options);
+    joystick.addEventListener('pointerdown', event => { if (pointer !== null || !input.enabled) return; event.preventDefault(); pointer = event.pointerId; joystick.setPointerCapture(pointer); move(event); }, options);
     joystick.addEventListener('pointermove', move, options);
     for (const name of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) joystick.addEventListener(name, event => { if (event.pointerId === pointer) reset(); }, options);
-    window.addEventListener('blur', reset, options);
-    this.maps = [...root.querySelectorAll<HTMLCanvasElement>('canvas')].map((canvas, i) => new Minimap(canvas, i > 0));
+    window.addEventListener('blur', reset, options);this.releaseControls.push(reset);
+    this.maps = [...root.querySelectorAll<HTMLCanvasElement>('.radar-map,.phone-map canvas')].map((canvas, i) => new Minimap(canvas, i > 0));
     // Clicking anywhere on the full DelhiOS map drops a waypoint pin.
     const overviewCanvas = this.element<HTMLCanvasElement>('.phone-map canvas');
     overviewCanvas.addEventListener('click', event => {
@@ -153,6 +168,8 @@ export class GameUI {
   }
   private text(selector: string, value: string): void { this.root.querySelectorAll(selector).forEach(element => { if (element.textContent !== value) element.textContent = value; }); }
   screen(started: boolean, paused: boolean, phone: boolean): void {
+    this.setBlocked(!started||paused||phone||this.photo);
+    this.releaseControls.forEach(release=>release());
     this.element('.welcome').hidden = started;
     this.element('.game-ui').hidden = !started || this.photo;
     this.element('.game-ui').classList.toggle('phone-open', phone);
@@ -164,26 +181,42 @@ export class GameUI {
       else if (started) this.element<HTMLButtonElement>('[aria-label="Open DelhiOS phone"]').focus({ preventScroll: true });
     }
   }
-  update(player:PlayerController,car:VehicleController,interaction:InteractionSystem,mission:CourierMission,neighborhood:Neighborhood,saveAvailable:boolean,story:StoryMission,prompt?:string,locked=false,waypoint?:Point):void {
+  update(player:PlayerController,car:VehicleController,interaction:InteractionSystem,mission:CourierMission,neighborhood:Neighborhood,saveAvailable:boolean,story:StoryMission,prompt?:string,locked=false,waypoint?:Point,seated=false,contextAvailable=false):void {
     const driving=car.driving,position=driving?car.position:player.position,region=regionAt(position);
     this.text('[data-region-title]',region==='delhi'?'Delhi · नई दिल्ली':regionLabels[region].split(' · ')[0]);
     this.text('[data-region-detail]',region==='delhi'&&position.x< -130?'Market Lane · बाज़ार गली':regionLabels[region]);this.text('[data-map-region]',regionLabels[region]);
     this.text('[data-cash]',`₹${mission.cash.toLocaleString('en-IN')}`);
-    this.text('[data-mode]',driving?`${car.spec.name.toUpperCase()} / CIVILIAN`:'ON FOOT / EXPLORER');
-    this.text('[data-speed]',driving?`${Math.round(car.kmh)} km/h`:'Take the long way.');
-    this.text('[data-mode-detail]',driving?`${Math.abs(car.speed)<0.1?'IDLE':car.speed<0?'REVERSE':'DRIVE'} · HDG ${((car.yaw*180/Math.PI%360+360)%360).toFixed(0)}°`:'The city moves at your pace.');
+    const state=hudState(player,car,this.input.reverse,seated);
+    const hud=this.element('.game-ui');
+    if(this.lastMode!==driving){this.releaseControls.forEach(release=>release());this.lastMode=driving;this.routeTarget=undefined;}
+    if(this.lastSeated!==seated){this.releaseControls.forEach(release=>release());this.lastSeated=seated;hud.dataset.hudSeated=String(seated);this.element('.joystick').setAttribute('aria-disabled',String(seated));}
+    hud.dataset.hudMode=driving?'driving':'walking';
+    hud.dataset.hudBraking=String(state.braking);
+    this.text('[data-mode]',driving?car.spec.name.toUpperCase(): 'ON FOOT / EXPLORER');
+    this.text('[data-speed]',driving?String(state.speed):state.movement);
+    this.text('[data-gear]',state.gear);
+    this.text('[data-mode-detail]',driving?`${state.speed?'IN MOTION':'STATIONARY'} · HDG ${((car.yaw*180/Math.PI%360+360)%360).toFixed(0)}°`:'Explore at your own pace');
+    this.element('[data-braking]').hidden=!state.braking;
+    if(this.lastArc!==state.arc){this.element('.mode-card').style.setProperty('--speed',String(state.arc));this.lastArc=state.arc;}
+    for(const cue of this.hudAdapter.update(state))void this.animations.play(cue);
+    this.text('[data-route-mode]',driving?'DRIVING ROUTE':'WALKING ROUTE');
     this.text('[data-prompt]',prompt??interaction.prompt);
-    for(const button of this.root.querySelectorAll<HTMLButtonElement>('[data-action="interact"]')){button.disabled=locked||(!prompt&&!interaction.available);button.setAttribute('aria-label',driving?'Exit vehicle':'Interact nearby');}
-    this.text('[data-touch-interact]',driving?'EXIT':'USE');
-    this.root.querySelectorAll<HTMLElement>('[data-driving]').forEach(e=>{e.hidden=!driving;});this.root.querySelectorAll<HTMLElement>('[data-foot]').forEach(e=>{e.hidden=driving;});
+    for(const button of this.root.querySelectorAll<HTMLButtonElement>('[data-action="interact"]')){button.disabled=locked||(!contextAvailable&&!interaction.available);if(!button.classList.contains('touch-interact'))button.hidden=button.disabled&&!interaction.busy;button.setAttribute('aria-label',driving?'Exit vehicle':'Interact nearby');}
+    this.text('[data-touch-interact]',driving?'EXIT':interaction.available&&!prompt?'ENTER':seated?'STAND':'USE');
+    this.text('[data-reverse]',this.input.reverse?'DRIVE':'REVERSE');this.element('[data-action=reverse]').setAttribute('aria-pressed',String(this.input.reverse));
+    this.root.querySelectorAll<HTMLElement>('[data-driving]').forEach(e=>{e.hidden=!driving;});this.root.querySelectorAll<HTMLElement>('[data-foot]').forEach(e=>{e.hidden=driving||seated;});
     const courier=mission.state==='active',supply=neighborhood.active,receipt=neighborhood.job==='receipt';
     const goodsActive=neighborhood.goodsActive,goodsReceipt=neighborhood.goods==='receipt',supplyJob=neighborhood.job==='delivery'||neighborhood.job==='receipt';
     const target=waypoint??(story.active?story.step.target:courier?COURIER_TARGET:supply?(neighborhood.activeTarget??MARKET):MARKET);
     if(target!==this.routeTarget||performance.now()-this.routeTime>750){this.cachedRoute=driving?roadRoute(position,target):walkingRoute(position,target);this.routeTarget=target;this.routeTime=performance.now();}
+    const bearing=routeDirection(position,driving?car.yaw:player.yaw,this.cachedRoute);
+    const direction=this.element('.objective-bearing');direction.hidden=bearing===undefined;
+    if(bearing!==undefined)direction.style.transform=`rotate(${bearing}rad)`;
     const route=this.cachedRoute,metres=Math.round(routeLength(route));
     this.text('[data-job-title]',story.active?story.step.title:courier?'Shivaji Stadium Courier Run':goodsActive?neighborhood.goodsName:receipt?'Cold-store receipt · Follow-up':supply?'Fruit crate → Delhi Cold Store':'Explore the neighborhood');
     this.text('[data-distance]',story.active?`${metres} m · ${Math.ceil(story.remaining)}s · ${story.step.mode==='foot'?'On-foot handover':'Stop in car'}`:courier?`${metres} m · Deliver on foot`:goodsReceipt?`${metres} m · Stop at the counter → DelhiOS → Confirm handover`:goodsActive?`${metres} m · Deliver the prepared order · ₹${neighborhood.goodsReward}`:receipt?`${metres} m · Stop by bay → DelhiOS → Confirm receipt`:supply?`${metres} m · Stop in the goods bay · ₹650`:`${metres} m · Visit Neem Chai on Market Lane`);
     this.text('[data-coordinates]',`${position.x.toFixed(1)}, ${position.z.toFixed(1)} · ${driving?'Driving':'On foot'}`);
+    if(!saveAvailable&&this.lastSaveAvailable)this.toast('Progress could not be saved on this device.','warning');this.lastSaveAvailable=saveAvailable;
     this.text('[data-save]',saveAvailable?'Progress saved on this device':'Saving unavailable · Purchases and neighborhood rewards require a successful save');
     this.text('[data-career]',`Neighborhood trust ${neighborhood.data.relationship} · ${neighborhood.data.completed?'Trusted local helper':'Local explorer'}`);
     this.text('[data-neighborhood]',`Bag: ${neighborhood.data.chai} chai · ${neighborhood.data.juice} juice · ${neighborhood.data.flowers} flowers · ${neighborhood.data.sweets} sweets · ${neighborhood.data.cake} cake. ${neighborhood.message}`);
@@ -210,8 +243,9 @@ export class GameUI {
     this.element('.photo-overlay').hidden = !show;
     if (show && name) this.text('[data-photo-title]', name);
   }
+  private setBlocked(value:boolean):void {this.animations.suspend(value);this.element('.game-ui').classList.toggle('hud-blocked',value);if(value)this.releaseControls.forEach(release=>release());}
   shop(title:string,copy:string,buy=false,pay=false,supply=false,supplyLabel?:string):void {
-    this.element('.shop-modal').hidden=false;this.text('[data-shop-title]',title);this.text('[data-shop-copy]',copy);
+    this.setBlocked(true);this.element('.shop-modal').hidden=false;this.text('[data-shop-title]',title);this.text('[data-shop-copy]',copy);
     for(const [action,show] of [['buy',buy],['pay',pay],['supply',supply]] as const)this.element(`[data-action="${action}"]`).hidden=!show;
     if(supplyLabel)this.text('[data-action="supply"]',supplyLabel);else this.text('[data-action="supply"]','Help with the fruit supply · ₹650');
     this.element<HTMLButtonElement>(pay?'[data-action="pay"]':'[data-action="closeShop"]').focus();
@@ -231,10 +265,13 @@ export class GameUI {
     this.text('[data-camera-value]', `${settings.cameraSensitivity.toFixed(1)}×`);
   }
   recoveryStatus(message: string): void { this.text('[data-recovery-status]', message); }
-  toast(message: string): void {
+  toast(message: string,kind:FeedbackKind='neutral'): void {
+    const now=performance.now();if(message===this.lastToast&&now-this.lastToastTime<1500)return;this.lastToast=message;this.lastToastTime=now;
+    this.element('.toast').dataset.kind=kind;
+    void this.animations.play(kind==='warning'?'warning':kind==='success'||kind==='reward'?'success':'mode');
     clearTimeout(this.toastTimer);
     const element = this.element('.toast'); element.textContent = message; element.hidden = false;
     this.toastTimer = setTimeout(() => { element.hidden = true; }, 5500);
   }
-  dispose(): void { clearTimeout(this.toastTimer); this.abort.abort(); this.root.replaceChildren(); }
+  dispose(): void { this.releaseControls.forEach(release=>release());this.animations.dispose(); clearTimeout(this.toastTimer); this.abort.abort(); this.root.replaceChildren(); }
 }

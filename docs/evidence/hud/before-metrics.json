@@ -1,0 +1,25 @@
+[
+  {
+    "quality": "low",
+    "viewport": [
+      1280,
+      720
+    ],
+    "pixelRatio": 0.75,
+    "hudRefreshMeanMs": 1.9699999999953435,
+    "rafP50": 1133.2999999999956,
+    "rafP95": 2266.5999999999985,
+    "renderer": {
+      "frame": 70,
+      "calls": 145,
+      "triangles": 173381,
+      "points": 0,
+      "lines": 0
+    },
+    "memory": {
+      "geometries": 121,
+      "textures": 86
+    },
+    "method": "controlled frozen scene rendered each RAF, 24 RAF samples / first 4 discarded, 30 synchronous HUD refreshes; software rendering, no physical-device FPS claim"
+  }
+]
