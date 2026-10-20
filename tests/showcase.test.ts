@@ -55,3 +55,14 @@ test('showcase stops remain accessible and the new arcade agrees with collision'
  assert.ok(showcaseSolids.every(s=>s.height>0));
  for(let x=-375;x< -60;x+=2)assert.ok(world.boxIsClear({x,z:3,yaw:Math.PI/2},car.width,car.length),`lane ${x}`);
 });
+
+test('CP parking requires the full stopped footprint in the marked bay',async()=>{
+ const {CP_SHOWCASE,parkedInBay}=await import('../src/systems/StoryMission');
+ const step=CP_SHOWCASE[1],bay=step.parking!,car={yaw:Math.PI,width:1.72,length:3.85};
+ assert.equal(parkedInBay(step.target,step.target,bay,car),true);
+ assert.equal(parkedInBay({...step.target,x:step.target.x-2},step.target,bay,car),false);
+ assert.equal(parkedInBay(step.target,step.target,bay,{...car,yaw:Math.PI/2}),false);
+ const m=new StoryMission(CP_SHOWCASE);m.accept();m.index=1;
+ assert.equal(m.update(2,step.target,true,0,()=>true,{...car,yaw:Math.PI/2}),null);assert.equal(m.index,1);
+ assert.equal(m.update(2,step.target,true,0,()=>true,car),'step');assert.equal(m.index,2);
+});

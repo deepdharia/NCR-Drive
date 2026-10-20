@@ -17,7 +17,7 @@ try{
  const start=async()=>{await page.goto(origin);await page.locator('[data-action="start"]').click();};
  await start();await page.keyboard.press('Tab');await page.locator('[data-action="showcase"]').click();await page.keyboard.press('f');await page.waitForFunction(()=>window.__game.car.driving);
  for(const index of [0,1]){
- await page.evaluate(index=>{const g=window.__game;g.car.position={...g.story.steps[index].target};g.car.speed=0;g.car.acceleration=0;},index);
+ await page.evaluate(index=>{const g=window.__game;g.car.position={...g.story.steps[index].target};g.car.speed=0;g.car.acceleration=0;if(index===1)g.car.yaw=Math.PI;},index);
  await page.waitForFunction(index=>window.__game.story.index===index+1,index);
  }
  await page.keyboard.press('f');await page.waitForFunction(()=>!window.__game.car.driving&&!window.__game.interaction.busy);

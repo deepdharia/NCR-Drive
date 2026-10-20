@@ -300,7 +300,7 @@ export class Game {
       this.neighborhood.cash=this.mission.cash;
       this.rewardRetry-=step;
       if(this.rewardRetry<=0&&this.neighborhood.update(focus,this.car.driving,this.car.kmh)){this.mission.cash=this.neighborhood.cash;this.ui.toast(this.neighborhood.message,'success');this.refreshUI();}if(this.rewardRetry<=0&&this.neighborhood.updateGoods(focus,this.car.driving,this.car.kmh)){this.mission.cash=this.neighborhood.cash;this.ui.toast(this.neighborhood.message,'success');this.refreshUI();}if(this.rewardRetry<=0)this.rewardRetry=1;
-      const storyEvent = this.story.update(step, this.car.driving ? this.car.position : this.player.position, this.car.driving, this.car.driving ? this.car.kmh : this.player.speed * 3.6, () => this.persistReward(this.story.reward, false));
+      const storyEvent = this.story.update(step, this.car.driving ? this.car.position : this.player.position, this.car.driving, this.car.driving ? this.car.kmh : this.player.speed * 3.6, () => this.persistReward(this.story.reward, false), {yaw:this.car.yaw,width:this.car.width,length:this.car.length});
       if (storyEvent === 'step') this.ui.toast(this.story.step.dialogue);
       if (storyEvent === 'failed') this.ui.toast('Time ran out. Retry Kabir’s Evening Run in DelhiOS.');
       if (storyEvent === 'save-failed') this.ui.toast('Delivery not saved. No reward paid. Keep this tab open; retrying in one second.', 'warning');

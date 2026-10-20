@@ -15,11 +15,11 @@ try{
  const held=new Set();async function keys(wanted){for(const k of held)if(!wanted.includes(k)){await page.keyboard.up(k);held.delete(k);}for(const k of wanted)if(!held.has(k)){await page.keyboard.down(k);held.add(k);}}
  // Read-only telemetry drives ordinary keyboard controls. No teleports, actor
  // writes, time scale changes or direct mission transitions.
- async function drive(target,max=2000){for(let i=0;i<max;i++){
+ async function drive(target,max=2000,stopRadius=3.3){for(let i=0;i<max;i++){
  const s=await read();const dx=target.x-s.p.x,dz=target.z-s.p.z,d=Math.hypot(dx,dz);const desired=Math.atan2(dx,dz),err=Math.atan2(Math.sin(desired-s.yaw),Math.cos(desired-s.yaw));
- if(d<3.3&&Math.abs(s.speed)<0.45){await keys([]);return s;}
+ if(d<stopRadius&&Math.abs(s.speed)<0.45){await keys([]);return s;}
  const limit=d<12?Math.max(1,d*0.45):Math.abs(err)>0.9?3:Math.abs(err)>0.35?5:12;
- const wanted=[];if(d<3.3||Math.abs(s.speed)>limit)wanted.push('Space');else if(d>2.5)wanted.push('w');
+ const wanted=[];if(d<stopRadius||Math.abs(s.speed)>limit)wanted.push('Space');else if(d>stopRadius)wanted.push('w');
  if(err>0.05)wanted.push('a');else if(err< -0.05)wanted.push('d');await keys(wanted);
  await page.waitForTimeout(120);
  if(i%30===0)console.log('drive',target,JSON.stringify(s));
@@ -30,9 +30,9 @@ try{
  await keys(['s']);await page.waitForTimeout(700);await keys(['Space']);await page.waitForTimeout(900);await keys([]);log.push({reverse:await read()});
  await drive({x:-120,z:3},1000);await drive({x:-342,z:4},2000);
  await page.waitForFunction(()=>window.__game.story.index===1);log.push('Cold store reached with keyboard input');
- await drive({x:-350,z:-3},1000);await drive({x:-330,z:-3},1000);await drive({x:-185,z:-3},2000);await drive({x:-173,z:-12.5},1000);
+ await drive({x:-350,z:-3},1000);await drive({x:-330,z:-3},1000);await drive({x:-185,z:-3},2000);await drive({x:-173,z:1},1000);await drive({x:-173,z:-12.5},1500,0.25);
  await page.waitForFunction(()=>window.__game.story.index===2);await page.keyboard.press('f');await page.waitForFunction(()=>!window.__game.car.driving&&!window.__game.interaction.busy);
- for(let i=0;i<150;i++){
+ for(let i=0;i<600;i++){
  const s=await read();if(s.state==='completed')break;const dx=-164-s.foot.x,dz=-12-s.foot.z;const x=Math.cos(s.cam)*dx-Math.sin(s.cam)*dz,z=Math.sin(s.cam)*dx+Math.cos(s.cam)*dz;
  const wanted=[];if(Math.abs(x)>0.3)wanted.push(x>0?'d':'a');if(Math.abs(z)>0.3)wanted.push(z>0?'s':'w');if(Math.hypot(dx,dz)<2)await keys([]);else await keys(wanted);await page.waitForTimeout(150);
  }
