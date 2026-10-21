@@ -1,26 +1,63 @@
 [
+  "Intro dialogue advanced with ordinary input; chapter active",
   "Initial ordinary drive/brake complete",
   {
-    "reverse": {
+    "reverseMoving": {
       "p": {
-        "x": -68.43564686260622,
-        "z": 1.4962518357692891e-15
+        "x": -68.519227819349,
+        "z": 1.501369693326531e-15
       },
       "yaw": -1.5707963267948966,
-      "speed": 0,
+      "speed": -0.5543502360064542,
       "index": 0,
       "state": "active",
+      "phase": "travel",
       "foot": {
         "x": -44.800000000000004,
         "z": -1.6600000000000001
       },
       "driving": true,
       "cash": 15000,
+      "chai": 0,
       "cam": -1.5707963267948966,
       "paused": false
     }
   },
-  "Cold store reached with keyboard input",
-  "Keyboard delivery paid ₹900",
-  "Reward survived reload"
+  {
+    "reverse": {
+      "p": {
+        "x": -68.4658211100736,
+        "z": 1.4980994755481758e-15
+      },
+      "yaw": -1.5707963267948966,
+      "speed": -0.4258100377284383,
+      "index": 0,
+      "state": "active",
+      "phase": "travel",
+      "foot": {
+        "x": -44.800000000000004,
+        "z": -1.6600000000000001
+      },
+      "driving": true,
+      "cash": 15000,
+      "chai": 0,
+      "cam": -1.5707963267948966,
+      "paused": false
+    }
+  },
+  "Cold store reached with ordinary input; kulhad choice charged ₹120 atomically",
+  {
+    "ordinaryThreePointTurn": {
+      "x": -332.477392869228,
+      "z": 4.470269845616547
+    }
+  },
+  {
+    "ordinaryThreePointTurn": {
+      "x": -332.5166236038101,
+      "z": 5.438890680191563
+    }
+  },
+  "Keyboard chapter complete: ₹1,050 paid, free chai in bag",
+  "Reward and free chai survived reload"
 ]
