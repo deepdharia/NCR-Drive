@@ -20,7 +20,13 @@ export interface ClusterShop {
 }
 export interface ClusterSeat { id: string; cluster: string; x: number; z: number; yaw: number; }
 export interface ClusterPlace { id: string; name: string; category: PlaceCategory; arrival: Point; blurb: string; }
-export interface GoodsJobDef { id: string; name: string; pickupShop: string; dropoffShop: string; dropoff: Point; reward: number; brief: string; }
+export interface GoodsJobDef { id: string; name: string; pickupShop: string; dropoffShop: string; dropoff: Point; reward: number; brief: string;
+  /** "Make the Surprise": an optional extra pickup for the same celebration,
+   * offered at a second shop in the pickup cluster while the job is carried.
+   * The consequence is stated in `pitch` before acceptance; declining is
+   * free and final for that run. The extra fare is paid exactly once ever
+   * (with the first Surprise completion), like the care bonus. */
+  extra?: { shopId: string; itemLabel: string; reward: number; pitch: string }; }
 export interface PopulationSpec {
   variants: HumanVariant[];
   vendors: { position: Point; shop: number }[];
@@ -198,8 +204,8 @@ export function clusterById(id: string): Cluster | undefined { return CLUSTERS.f
 export function shopById(id: string): ClusterShop | undefined { return CLUSTER_SHOPS.find(s => s.id === id); }
 
 export const GOODS_JOBS: GoodsJobDef[] = [
- { id: 'flower-order', name: 'Flower Order · Garden → Gurgaon', pickupShop: 'garden-flowers', dropoffShop: 'gurgaon-fnp', dropoff: gurgaonFNP.counter, reward: 400, brief: 'Collect the prepared bouquet at Highway Blooms (Garden Stop) and hand it over at FNP, Gurgaon. ₹400 on confirmed handover. No timer.' },
- { id: 'cake-order', name: 'Cake Order · Noida → Garden', pickupShop: 'noida-bakery', dropoffShop: 'garden-sweets', dropoff: gardenSweets.counter, reward: 500, brief: 'Collect the prepared cake at Crumb & Co. (Noida) and hand it over at Halwai Corner (Garden Stop). ₹500 on confirmed handover. No timer.' },
+ { id: 'flower-order', name: 'Flower Order · Garden → Gurgaon', pickupShop: 'garden-flowers', dropoffShop: 'gurgaon-fnp', dropoff: gurgaonFNP.counter, reward: 400, brief: 'Collect the prepared bouquet at Highway Blooms (Garden Stop) and hand it over at FNP, Gurgaon. ₹400 on confirmed handover. No timer.', extra: { shopId: 'garden-sweets', itemLabel: 'sweets box', reward: 150, pitch: 'It is one celebration, driver ji. Halwai Corner — right here at Garden Stop — can add a sweets box for the same Gurgaon party: +₹150 on handover if it travels with the flowers. One more careful load; your care bonus covers both. Or skip it — no penalty, the flowers still pay in full.' } },
+ { id: 'cake-order', name: 'Cake Order · Noida → Garden', pickupShop: 'noida-bakery', dropoffShop: 'garden-sweets', dropoff: gardenSweets.counter, reward: 500, brief: 'Collect the prepared cake at Crumb & Co. (Noida) and hand it over at Halwai Corner (Garden Stop). ₹500 on confirmed handover. No timer.', extra: { shopId: 'noida-sweets', itemLabel: 'sweets tray', reward: 150, pitch: 'One celebration, two counters. Aggarwal Sweets next door can add a sweets tray for the same Garden Stop party: +₹150 on handover if it travels with the cake. One more careful load; your care bonus covers both. Or skip it — no penalty, the cake still pays in full.' } },
 ];
 export function goodsJobById(id: string): GoodsJobDef | undefined { return GOODS_JOBS.find(j => j.id === id); }
 

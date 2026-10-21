@@ -5,8 +5,8 @@ export type Drink = 'chai' | 'juice';
 /** Purchasable items. Chai/juice are drinks; flowers/sweets/cake are
  * cluster-shop goods with a purpose (gifts, offerings, the goods jobs). */
 export type ShopItem = 'chai' | 'juice' | 'flowers' | 'sweets' | 'cake';
-export interface NeighborhoodSave { chai:number; juice:number; relationship:number; completed:boolean; flowers:number; sweets:number; cake:number; parkCircuit:boolean; photoViewpoint:boolean; goodsDone:string[] }
-export const freshNeighborhood = ():NeighborhoodSave => ({chai:0,juice:0,relationship:0,completed:false,flowers:0,sweets:0,cake:0,parkCircuit:false,photoViewpoint:false,goodsDone:[]});
+export interface NeighborhoodSave { chai:number; juice:number; relationship:number; completed:boolean; flowers:number; sweets:number; cake:number; parkCircuit:boolean; photoViewpoint:boolean; goodsDone:string[]; surpriseDone:string[] }
+export const freshNeighborhood = ():NeighborhoodSave => ({chai:0,juice:0,relationship:0,completed:false,flowers:0,sweets:0,cake:0,parkCircuit:false,photoViewpoint:false,goodsDone:[],surpriseDone:[]});
 export const MARKET = {x:-164,z:-12};
 export const SUPPLY_TARGET = {x:-342,z:4};
 export const shops = [
@@ -25,7 +25,17 @@ export class Neighborhood {
  /** Goods jobs (cluster shops) share the supply state machine: one at a time,
   * transient while active, completed ids persisted in `goodsDone`. */
  goods:'idle'|'delivery'|'receipt'; goodsId?:string; goodsName=''; goodsDropoff?:Point; goodsReward=0;
- constructor(snapshot:WalletSnapshot,private commit:(next:WalletSnapshot)=>boolean){this.cash=snapshot.cash;this.data={...snapshot.neighborhood};this.job=this.data.completed?'completed':'available';this.goods='idle';}
+ /** "Make the Surprise" layer on the goods jobs: an optional extra pickup
+  * (offered → carried | declined), replay runs after the base fare is
+  * earned, and a care bonus. Extra fare and care bonus are each paid
+  * exactly once ever — at the first Surprise completion, recorded in
+  * `surpriseDone` inside the same atomic commit as the reward. */
+ goodsExtra:'none'|'offered'|'carried'|'declined'='none'; goodsExtraShop?:string; goodsExtraLabel=''; goodsExtraReward=0; goodsReplay=false;
+ /** Set by Game each UI refresh while a goods run is carried (cargo care
+  * summary) and after completion (payoff lines, rereadable in DelhiOS). */
+ cargoSummary=''; cardReady=false; cargoCondition:number|undefined;
+ lastGoodsSummary?: { id:string; total:number; base:number; extra:number; care:number; replay:boolean };
+ constructor(snapshot:WalletSnapshot,private commit:(next:WalletSnapshot)=>boolean){this.cash=snapshot.cash;this.data={...snapshot.neighborhood};if(!Array.isArray(this.data.surpriseDone))this.data.surpriseDone=[];this.job=this.data.completed?'completed':'available';this.goods='idle';}
  order(item:ShopItem,priceOverride?:number):number|undefined {
   if(this.pending)return;
   const price=priceOverride??(item==='chai'?20:item==='juice'?40:undefined);
@@ -64,23 +74,53 @@ export class Neighborhood {
  get goodsDoneIds():string[]{return [...this.data.goodsDone];}
  accept():boolean {if(this.job!=='available'||this.active)return false;this.job='delivery';this.message='Nimbu: Our chiller has failed. Take this sealed fruit crate to the west-end cold store, then confirm their receipt in DelhiOS. ₹650 + trust. No timer.';return true;}
  cancelJob():void {if(this.job==='delivery'||this.job==='receipt'){this.job='available';this.message='Supply run cancelled. No reward paid. Speak to Nimbu Corner to try again.';}this.cancelGoods();}
- acceptGoods(job:{id:string;name:string;dropoff:Point;reward:number;brief:string}):boolean {
-  if(this.active||this.goods!=='idle'||this.data.goodsDone.includes(job.id))return false;
-  this.goods='delivery';this.goodsId=job.id;this.goodsName=job.name;this.goodsDropoff=job.dropoff;this.goodsReward=job.reward;this.message=job.brief;return true;
+ acceptGoods(job:{id:string;name:string;dropoff:Point;reward:number;brief:string;extra?:{shopId:string;itemLabel:string;reward:number}},replay=false):boolean {
+  if(this.active||this.goods!=='idle')return false;
+  const done=this.data.goodsDone.includes(job.id);
+  if(done!==replay)return false; // standard runs need an unearned job; replays need an earned one
+  this.goods='delivery';this.goodsId=job.id;this.goodsName=job.name;this.goodsDropoff=job.dropoff;
+  this.goodsReplay=replay;this.goodsReward=replay?0:job.reward;
+  this.goodsExtra=job.extra?'offered':'none';this.goodsExtraShop=job.extra?.shopId;this.goodsExtraLabel=job.extra?.itemLabel??'';
+  // The extra fare is payable only until the first Surprise completion.
+  this.goodsExtraReward=job.extra&&!this.data.surpriseDone.includes(job.id)?job.extra.reward:0;
+  this.message=job.brief;return true;
  }
- private clearGoods():void {this.goods='idle';this.goodsId=undefined;this.goodsName='';this.goodsDropoff=undefined;this.goodsReward=0;}
+ /** Take the optional extra pickup. Its fare joins the run total now and is
+  * committed (or not) with the rest of the reward at handover. */
+ acceptGoodsExtra():boolean {
+  if(this.goods!=='delivery'||this.goodsExtra!=='offered')return false;
+  this.goodsExtra='carried';this.goodsReward+=this.goodsExtraReward;
+  this.message=`Extra loaded · ${this.goodsExtraLabel} travels with the order. Care bonus covers both — drive gentle.`;return true;
+ }
+ /** Declining is free and final for this run; the base job is untouched. */
+ declineGoodsExtra():void {
+  if(this.goodsExtra!=='offered')return;
+  this.goodsExtra='declined';this.message='Extra declined. No penalty — the delivery pays as agreed.';
+ }
+ private clearGoods():void {this.goods='idle';this.goodsId=undefined;this.goodsName='';this.goodsDropoff=undefined;this.goodsReward=0;this.goodsExtra='none';this.goodsExtraShop=undefined;this.goodsExtraLabel='';this.goodsExtraReward=0;this.goodsReplay=false;}
  cancelGoods():void {const active=this.goodsActive;this.clearGoods();if(active)this.message='Goods delivery cancelled. No reward paid. Speak to the shop to try again.';}
  updateGoods(position:Point,driving:boolean,speed:number):boolean {
   if(this.goods!=='delivery'||!this.goodsDropoff||!driving||speed>2||distance(position,this.goodsDropoff)>4)return false;
   this.goods='receipt';this.message=`Arrived at the handover counter. Open DelhiOS and confirm the receipt to finish · ₹${this.goodsReward}.`;return true;
  }
- confirmGoods(position:Point,speed:number):boolean {
+ confirmGoods(position:Point,speed:number,careBonus=0):boolean {
   if(this.goods!=='receipt'||!this.goodsDropoff||!this.goodsId||speed>2||distance(position,this.goodsDropoff)>5)return false;
-  if(this.data.goodsDone.includes(this.goodsId))return false;
-  const reward=this.goodsReward;
-  const next={cash:this.cash+reward,neighborhood:{...this.data,goodsDone:[...this.data.goodsDone,this.goodsId]}};
+  if(!this.goodsReplay&&this.data.goodsDone.includes(this.goodsId))return false;
+  const id=this.goodsId,replay=this.goodsReplay;
+  const surprisePayable=!this.data.surpriseDone.includes(id);
+  const care=surprisePayable?Math.max(0,Math.round(careBonus)):0;
+  const extra=this.goodsExtra==='carried'?this.goodsExtraReward:0;
+  const base=replay?0:this.goodsReward-extra;
+  const total=base+extra+care;
+  const next={cash:this.cash+total,neighborhood:{...this.data,
+   goodsDone:replay?this.data.goodsDone:[...this.data.goodsDone,id],
+   surpriseDone:surprisePayable?[...this.data.surpriseDone,id]:this.data.surpriseDone}};
   if(!this.commit(next)){this.message='Receipt could not be saved. No reward paid. Stay by the counter and retry confirmation in DelhiOS.';return false;}
-  this.cash=next.cash;this.data=next.neighborhood;this.clearGoods();this.message=`Order handed over · ₹${reward} earned. The shop remembers.`;return true;
+  this.cash=next.cash;this.data=next.neighborhood;
+  this.lastGoodsSummary={id,total,base,extra,care,replay};
+  this.clearGoods();
+  this.message=total>0?`Order handed over · ₹${total} earned${care?` (care bonus ₹${care})`:''}${extra?` (extra ₹${extra})`:''}. The shop remembers.`:'Practice run handed over · Card updated — every fare for this job was already earned. The shop remembers.';
+  return true;
  }
  /** One-time, idempotent: re-walking the circuit or re-taking a photo never re-pays. */
  completeParkCircuit():ActivitySaveResult {

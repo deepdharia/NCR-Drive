@@ -16,6 +16,10 @@ export class RegionalView {
   const asphalt=worldSurfaceMaterial('asphalt');
   const verge=new THREE.MeshStandardMaterial({color:0x788263,roughness:1});
   const paint=new THREE.MeshBasicMaterial({color:0xe9dbad});
+  const edgePaint=new THREE.MeshBasicMaterial({color:0xd8d2ba});
+  // Restrained wheel-track wear: translucent darkening over the two lane
+  // centres, under the dashes. Purely visual; lanes come from WorldRoads.
+  const wear=new THREE.MeshBasicMaterial({color:0x0a0a0a,transparent:true,opacity:0.15,depthWrite:false});
   const rail=new THREE.MeshStandardMaterial({color:0xc5bda0,roughness:0.85});
   const glass=new THREE.MeshStandardMaterial({color:0x587e8b,metalness:0.35,roughness:0.3,emissive:0x284558,emissiveIntensity:0.15});
   const residential=new THREE.MeshStandardMaterial({color:0xffffff,roughness:0.9});
@@ -32,6 +36,13 @@ export class RegionalView {
    if(!r.bridge)mesh(chunk,verge,cx,-0.15,cz,r.width+95,0.2,length+32,yaw);
    // Slightly overlapping ends close junction seams; deck top equals CP road height.
    mesh(chunk,asphalt,cx,-0.075,cz,r.width,0.2,length+r.width,yaw);
+   // Edge lines + wheel wear, derived from the same width/lane offsets the
+   // traffic model uses, so the driven lanes are the marked lanes.
+   const laneOffset=r.width<=12?2.7:4,side={x:Math.cos(yaw),z:-Math.sin(yaw)};
+   for(const s of [-1,1]){
+    mesh(chunk,edgePaint,cx+side.x*(r.width/2-0.6)*s,0.032,cz+side.z*(r.width/2-0.6)*s,0.14,0.012,length,yaw);
+    mesh(chunk,wear,cx+side.x*laneOffset*s,0.028,cz+side.z*laneOffset*s,1.6,0.008,length,yaw);
+   }
    const markings=new THREE.InstancedMesh(box,paint,Math.floor(length/18));const dummy=new THREE.Object3D();
    for(let i=0;i<markings.count;i++){const t=(i+0.5)/markings.count;dummy.position.set(a.x+(b.x-a.x)*t,0.04,a.z+(b.z-a.z)*t);dummy.rotation.y=yaw;dummy.scale.set(0.16,0.02,6);dummy.updateMatrix();markings.setMatrixAt(i,dummy.matrix);}chunk.add(markings);
    for(const barrier of worldBarriers.filter(s=>s.road===r.id))mesh(chunk,rail,barrier.x,0.5,barrier.z,barrier.width,1,barrier.depth,barrier.yaw);

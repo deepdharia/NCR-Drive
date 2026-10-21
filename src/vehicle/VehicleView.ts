@@ -140,7 +140,9 @@ export class VehicleView {
     mergeStaticMeshes(this.body); this.detailed.add(this.body);
     this.driver=new HumanoidView(DRIVER_VARIANT);this.driver.group.position.set(-0.35,0.18,-0.2);this.body.add(this.driver.group);
     // Two-mesh traffic LOD. Detailed wheels, interior and lamps stay local.
-    const proxyBody = new THREE.Mesh(new THREE.BoxGeometry(1.68, 0.62, 3.65), paint); proxyBody.position.y = 0.68;
+    // The proxy body reaches the ground plane (0.03–1.0 m): an earlier
+    // 0.37 m lower edge made distant cars read as floating boxes.
+    const proxyBody = new THREE.Mesh(new THREE.BoxGeometry(1.68, 0.97, 3.65), paint); proxyBody.position.y = 0.515;
     const proxyCabin = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.62, 1.95), glass); proxyCabin.position.set(0, 1.22, -0.28);
     proxyBody.castShadow = true; this.distant.add(proxyBody, proxyCabin); this.distant.visible = false;
     const grounding=contactGround(spec.width*1.3,spec.length*1.15);grounding.position.y=0.006;

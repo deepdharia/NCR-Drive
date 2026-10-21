@@ -160,6 +160,15 @@ export class ClusterView {
         break;
       }
       case 'planter': mesh(g, stone, p.x, 0.3, p.z, p.w, 0.6, p.d, p.yaw); blob(g, foliage, p.x - 0.5, 0.85, p.z, 0.55); blob(g, foliage2, p.x + 0.5, 0.85, p.z, 0.5); break;
+      case 'parasol': {
+        // Café shade over the benches: slim pole (the only solid), canvas
+        // cone, and a small round table beneath.
+        const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 2.6, 6), metal); pole.position.set(p.x, 1.3, p.z); g.add(pole);
+        const canopy = new THREE.Mesh(new THREE.ConeGeometry(1.7, 0.55, 10), new THREE.MeshStandardMaterial({ color: 0xc96a3a, roughness: 0.9, side: THREE.DoubleSide })); canopy.position.set(p.x, 2.62, p.z); g.add(canopy);
+        const table = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.06, 10), white); table.position.set(p.x + 0.85, 0.74, p.z); g.add(table);
+        const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.74, 6), dark); leg.position.set(p.x + 0.85, 0.37, p.z); g.add(leg);
+        break;
+      }
       case 'water': mesh(g, metal, p.x, 0.55, p.z, 0.18, 1.1, 0.18); mesh(g, stone, p.x, 0.1, p.z, 0.6, 0.2, 0.6); break;
     }
   }

@@ -1,0 +1,59 @@
+[
+  {
+    "shot": "gurgaon-corridor",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "quality": "balanced",
+    "fixture": "CDP controlled placement, unmodified production bundle",
+    "sampleCount": 20,
+    "frameMs": {
+      "p50": 1057.7999999999884,
+      "p95": 9388.900000000023,
+      "p99": 15399.5
+    },
+    "renderer": "Chromium / SwiftShader, static redraw, not device performance",
+    "calls": 278,
+    "triangles": 64548,
+    "errors": []
+  },
+  {
+    "shot": "garden-stop",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "quality": "balanced",
+    "fixture": "CDP controlled placement, unmodified production bundle",
+    "sampleCount": 20,
+    "frameMs": {
+      "p50": 35.90000000002328,
+      "p95": 3520.5,
+      "p99": 5308.5
+    },
+    "renderer": "Chromium / SwiftShader, static redraw, not device performance",
+    "calls": 223,
+    "triangles": 45251,
+    "errors": []
+  },
+  {
+    "shot": "gurgaon-skyline",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "quality": "balanced",
+    "fixture": "CDP controlled placement, unmodified production bundle",
+    "sampleCount": 20,
+    "frameMs": {
+      "p50": 42.699999999953434,
+      "p95": 4010.5999999999767,
+      "p99": 4348.099999999977
+    },
+    "renderer": "Chromium / SwiftShader, static redraw, not device performance",
+    "calls": 242,
+    "triangles": 62986,
+    "errors": []
+  }
+]
