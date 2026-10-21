@@ -1,21 +1,24 @@
 [
+  "Intro dialogue advanced with ordinary input; chapter active",
   "Initial ordinary drive/brake complete",
   {
     "reverseMoving": {
       "p": {
-        "x": -71.81479351168703,
-        "z": -0.002768320897668306
+        "x": -71.18506668559212,
+        "z": 0.0002851441659680647
       },
-      "yaw": -1.614337195624435,
+      "yaw": -1.5799504279412493,
       "speed": -0.5543502360064542,
       "index": 0,
       "state": "active",
+      "phase": "travel",
       "foot": {
         "x": -44.800000000000004,
         "z": -1.6600000000000001
       },
       "driving": true,
       "cash": 15000,
+      "chai": 0,
       "cam": -1.5707963267948966,
       "paused": false
     }
@@ -23,36 +26,38 @@
   {
     "reverse": {
       "p": {
-        "x": -71.22532975275053,
-        "z": 0.02291076446512878
+        "x": -70.46701124730477,
+        "z": 0.00685485067759023
       },
-      "yaw": -1.6143311721758644,
+      "yaw": -1.5799444428930816,
       "speed": 0,
       "index": 0,
       "state": "active",
+      "phase": "travel",
       "foot": {
         "x": -44.800000000000004,
         "z": -1.6600000000000001
       },
       "driving": true,
       "cash": 15000,
+      "chai": 0,
       "cam": -1.5707963267948966,
       "paused": false
     }
   },
-  "Cold store reached with keyboard input",
+  "Cold store reached with ordinary input; kulhad choice charged ₹120 atomically",
   {
     "ordinaryThreePointTurn": {
-      "x": -174.74747436694446,
-      "z": -14.555814826907273
+      "x": -370.9696676150358,
+      "z": 12.526000446281257
     }
   },
   {
-    "failure": "TimeoutError: page.waitForFunction: Timeout 120000ms exceeded.",
+    "failure": "Error: drive timeout {\"p\":{\"x\":-179.9053551540337,\"z\":8.911775214224617},\"yaw\":-8.436767035329439,\"speed\":3.510186917227767,\"index\":1,\"state\":\"active\",\"phase\":\"travel\",\"branch\":\"kulhad\",\"foot\":{\"x\":-44.800000000000004,\"z\":-1.6600000000000001},\"driving\":true,\"cash\":14880,\"chai\":0,\"cam\":-1.5707963267948966,\"paused\":false}",
     "state": {
       "car": {
-        "x": -172.95575223985523,
-        "z": -12.374560878979453
+        "x": -179.9053551540337,
+        "z": 8.911775214224617
       },
       "foot": {
         "x": -44.800000000000004,

@@ -60,6 +60,13 @@ export class ShowcaseView {
    for(const dz of [-0.64,0.64]){const wheel=add(dark,p.x,0.23,p.z+dz,0.23,0.12,0.23,new THREE.CylinderGeometry(1,1,1,14));wheel.rotation.z=Math.PI/2;}
    add(metal,p.x+0.25,0.16,p.z-0.15,0.05,0.32,0.12); // centre stand
   }
+  // Chapter dressing (solids in ShowcaseLayout agree): crate stacks where the
+  // story happens — Salim's cold-store wall and beside the Neem Chai counter.
+  const crate=(x:number,z:number,base=0.035,s=0.55)=>{add(wood,x,base+s/2,z,s,s,s);add(dark,x,base+s+0.02,z,s*1.03,0.045,s*1.03);};
+  crate(-345,-12.15);crate(-345,-12.15,0.035+0.575);
+  add(wood,-336.8,0.08,-12.15,1.2,0.09,1.0);
+  crate(-337.05,-12.2,0.125,0.5);crate(-336.5,-12.1,0.125,0.5);
+  crate(-166.8,-13.05);
   // Road repairs and grated drains lie flat, with world-metre texture UVs.
   const asphalt=worldSurfaceMaterial('asphalt');asphalt.color.setHex(0x77736c);
   for(let i=0;i<9;i++)add(asphalt,-145-i*25,0.037,i%2?4:-4,4+(i%3),0.003,1.7);

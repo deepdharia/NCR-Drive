@@ -322,3 +322,20 @@ kbd { font-family: inherit; font-size: 9px; border: 1px solid #dfc79d77; border-
 @media (pointer: coarse) and (max-height: 500px) {
   .toast { top: 12px; width: auto; max-width: min(330px, calc(100vw - 330px)); }
 }
+/* Story dialogue: subtitle bar above the touch controls, objective text stays in the tracker. */
+.dialogue { position:absolute; left:50%; transform:translateX(-50%); bottom:calc(18px + env(safe-area-inset-bottom)); width:min(620px,calc(100vw - 32px)); z-index:58; pointer-events:none; }
+.dialogue[hidden] { display:none; }
+.dialogue-box { background:#191e23f2; border:1px solid #c8cbcc55; border-left:3px solid var(--gold); border-radius:8px; color:#eeede5; padding:14px 18px 12px; box-shadow:0 12px 40px #0007; }
+.dialogue-speaker { display:block; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--gold); margin-bottom:5px; }
+.dialogue-box p { margin:0; font-size:16px; line-height:1.55; }
+.dialogue-actions { display:flex; justify-content:space-between; align-items:center; margin-top:10px; }
+.dialogue-actions[hidden] { display:none; }
+.dialogue-hint { font-size:11px; letter-spacing:.08em; color:#b9bcbb; text-transform:uppercase; }
+.dialogue-skip { pointer-events:auto; background:transparent; border:1px solid #c8cbcc55; color:#eeede5; border-radius:6px; padding:5px 12px; font-size:12px; cursor:pointer; }
+.dialogue-choices { display:grid; gap:8px; margin-top:12px; }
+.dialogue-choices[hidden] { display:none; }
+.dialogue-choice { pointer-events:auto; text-align:left; background:#232a30; border:1px solid #c8cbcc55; border-radius:8px; color:#eeede5; padding:10px 14px; cursor:pointer; }
+.dialogue-choice:hover,.dialogue-choice:focus-visible { border-color:var(--gold); }
+.dialogue-choice strong { display:block; font-size:14px; }
+.dialogue-choice small { display:block; margin-top:3px; font-size:12px; line-height:1.45; color:#c9cbc4; }
+@media (pointer:coarse) { .dialogue { bottom:calc(118px + env(safe-area-inset-bottom)); } }

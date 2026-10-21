@@ -20,7 +20,7 @@ import type { Settings } from '../systems/ProgressStore';
 import { nextQuality, QUALITY, resolvedQuality } from '../rendering/QualityProfile';
 import { CLUSTER_PLACES } from '../world/ClusterData';
 
-interface UIActions { showcase: () => void; journey:()=>void; start:()=>void; phone:()=>void; pause:()=>void; interact:()=>void; accept:()=>void; story:()=>void; cancelStory:()=>void; quality:()=>void; recover:()=>void; sensitivity:(kind:'steeringSensitivity'|'cameraSensitivity',value:number)=>void; buy:()=>void; pay:()=>void; closeShop:()=>void; supply:()=>void; cancelSupply:()=>void; receive:()=>void; receiveGoods:()=>void; cancelGoods:()=>void; exitPhoto:()=>void; audio:()=>void; volume:(value:number)=>void; waypoint:(point:Point)=>void; clearWaypoint:()=>void }
+interface UIActions { showcase: () => void; journey:()=>void; start:()=>void; phone:()=>void; pause:()=>void; interact:()=>void; accept:()=>void; story:()=>void; cancelStory:()=>void; quality:()=>void; recover:()=>void; sensitivity:(kind:'steeringSensitivity'|'cameraSensitivity',value:number)=>void; buy:()=>void; pay:()=>void; closeShop:()=>void; supply:()=>void; cancelSupply:()=>void; receive:()=>void; receiveGoods:()=>void; cancelGoods:()=>void; exitPhoto:()=>void; audio:()=>void; volume:(value:number)=>void; waypoint:(point:Point)=>void; clearWaypoint:()=>void; skipDialogue:()=>void; choose:(index:number)=>void }
 
 const phoneIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10 18h4"/></svg>';
 
@@ -64,6 +64,17 @@ export class GameUI {
           <button data-action="interact" class="touch-interact" aria-label="Enter vehicle"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v16h-6M3 12h12M10 7l5 5-5 5"/></svg><small data-touch-interact>DRIVE</small></button>
         </div></div>
         <div class="toast" role="status" aria-live="polite" hidden></div>
+        <section class="dialogue" hidden aria-label="Conversation">
+          <div class="dialogue-box">
+            <span class="dialogue-speaker" data-dlg-speaker></span>
+            <p data-dlg-text></p>
+            <div class="dialogue-choices" hidden>
+              <button class="dialogue-choice" data-action="choose0"><strong data-choice0-label></strong><small data-choice0-detail></small></button>
+              <button class="dialogue-choice" data-action="choose1"><strong data-choice1-label></strong><small data-choice1-detail></small></button>
+            </div>
+            <div class="dialogue-actions"><span class="dialogue-hint">F / Tap · Continue</span><button class="dialogue-skip" data-action="skipDialogue">Skip ▸▸</button></div>
+          </div>
+        </section>
       </section>
       <aside class="phone" hidden aria-label="DelhiOS smartphone" aria-modal="true" role="dialog">
         <div class="phone-notch"></div><header class="phone-header"><span>DelhiOS<small>CONNECTED TO YOUR CITY</small></span><button data-action="phone" aria-label="Close phone">×</button></header>
@@ -72,7 +83,7 @@ export class GameUI {
           <div class="app-heading"><span>↗ Neighborhood</span><small>LIVING DELHI</small></div><article class="activity-card"><h3>Market Lane · बाज़ार गली</h3><p>Head west from CP. Park, walk to Neem Chai, pay with fictional game currency, sit and drink. Visit Gali Baithak for local news and Nimbu Corner for a fruit supply job.</p><p data-neighborhood></p><button class="primary" data-action="receive" hidden>Confirm cold-store receipt · ₹650</button><button class="cancel-job" data-action="cancelSupply" hidden>Cancel supply delivery</button></article>
           <div class="app-heading"><span>↗ Parks & Shopping</span><small>NEW PLACES</small></div><article class="activity-card"><h3>Parks, boulevards & a viewpoint</h3><p>Route to a usable arrival point — parking or gate, never a building centre. Drive in, park, walk around.</p>${CLUSTER_PLACES.map(p => `<button class="graphics-button" data-action="place" data-x="${p.arrival.x}" data-z="${p.arrival.z}">Route → ${p.name}</button>`).join('')}</article>
           <div class="app-heading"><span>↗ Goods delivery</span><small>LOCAL JOBS</small></div><article class="activity-card"><h3 data-goods-title>No goods job yet</h3><p data-goods-status>Accept a prepared order at a cluster shop — flowers or cake — and hand it over at the destination counter.</p><button class="primary" data-action="receiveGoods" hidden>Confirm handover</button><button class="cancel-job" data-action="cancelGoods" hidden>Cancel goods delivery</button></article>
-          <div class="app-heading"><span>↗ City Stories</span><small>CHAPTER 01</small></div><article class="activity-card"><span class="story-tag" data-story-name>KABIR’S EVENING RUN</span><h3 data-story-description>One evening. Three stops.</h3><p data-story-status>Collect paperwork, cross the circle and finish a handover on foot. 4 minutes · ₹1,200.</p><p>CP west junction → Market Lane → park → Neem Chai. 467m driving, then a short walk. 10 minutes · ₹900.</p><button class="primary" data-action="showcase">Start CP evening delivery →</button><button class="primary" data-action="story">Start chapter →</button><p>Kabir’s Regional Dispatch: Delhi pickup → Gurgaon delivery. 12 minutes · ₹2,400. All three regions remain open for exploration.</p><button class="cancel-job" data-action="journey">Start regional dispatch →</button><button class="cancel-job" data-action="cancelStory" hidden>Abandon chapter</button></article>
+          <div class="app-heading"><span>↗ City Stories</span><small>CHAPTER 01</small></div><article class="activity-card"><span class="story-tag" data-story-name>KABIR’S EVENING RUN</span><h3 data-story-description>One evening. Three stops.</h3><p data-story-status>Collect paperwork, cross the circle and finish a handover on foot. 4 minutes · ₹1,200.</p><p><strong>Chapter 01 · Cups Before Customers.</strong> Meera’s chai shop opens tonight — but her cups are still at Salim’s cold store. Drive Market Lane, make the call on the wrong cups, park, and hand over on foot. ~10 minutes · ₹900+.</p><button class="primary" data-action="showcase">Start Cups Before Customers →</button><button class="primary" data-action="story">Start chapter →</button><p>Kabir’s Regional Dispatch: Delhi pickup → Gurgaon delivery. 12 minutes · ₹2,400. All three regions remain open for exploration.</p><button class="cancel-job" data-action="journey">Start regional dispatch →</button><button class="cancel-job" data-action="cancelStory" hidden>Abandon chapter</button></article>
           <div class="app-heading"><span>↗ Motor pool</span><small>THREE CARS · FREE TO DRIVE</small></div><article class="activity-card"><p>Gold Parvaaz: inner circle. Additional prototype cars: west/east approaches. Any stopped civilian car is usable. Approach its right-hand door and press F. Occupied cars need a short takeover. Taken cars remain in this session and are never recycled.</p></article>
           <div class="app-heading"><span>◈ Hustle</span><small>LOCAL GIGS</small></div><article class="gig-card"><span class="gig-tag">YOUR FIRST GIG</span><h3>Shivaji Stadium<br>Courier Run</h3><p>One parcel. A short drive through CP. Hand it over on foot at the stadium metro.</p><div class="gig-reward"><strong>₹750</strong><span>No time limit<br>Parcel included</span></div><button class="primary" data-action="accept">Accept delivery →</button></article><p class="phone-footer">A little hustle. A bigger city.</p>
         </div><div class="phone-home"></div>
@@ -108,6 +119,9 @@ export class GameUI {
         case 'receiveGoods': actions.receiveGoods(); break;
         case 'cancelGoods': actions.cancelGoods(); break;
         case 'exitPhoto': actions.exitPhoto(); break;
+        case 'skipDialogue': actions.skipDialogue(); break;
+        case 'choose0': actions.choose(0); break;
+        case 'choose1': actions.choose(1); break;
         case 'cancelSupply': actions.cancelSupply(); break;
         case 'place': { const x = Number(button.dataset.x), z = Number(button.dataset.z); if (Number.isFinite(x) && Number.isFinite(z)) actions.waypoint({ x, z }); break; }
         case 'clearWaypoint': actions.clearWaypoint(); break;
@@ -239,6 +253,25 @@ export class GameUI {
     if(prompt?.includes('Stand')||prompt?.includes('Standing'))this.text('[data-distance]','Enjoy the neighborhood · F to stand');
     this.maps.forEach(map=>map.draw(position,driving?car.yaw:player.yaw,car.position,target,route,false));
   }
+  /** Subtitle dialogue: speaker + line, kept separate from objective text.
+   *  Advancement is owned by Game (timer, F/tap, skip); this only renders. */
+  showDialogue(speaker: string, text: string): void {
+    this.element('.dialogue').hidden = false;
+    this.element('.dialogue-choices').hidden = true;
+    this.element('.dialogue-actions').hidden = false;
+    this.text('[data-dlg-speaker]', speaker);
+    this.text('[data-dlg-text]', text);
+  }
+  showChoice(options: readonly { label: string; detail: string }[]): void {
+    this.element('.dialogue').hidden = false;
+    this.element('.dialogue-actions').hidden = true;
+    const box = this.element('.dialogue-choices'); box.hidden = false;
+    options.slice(0, 2).forEach((option, i) => {
+      this.text(`[data-choice${i}-label]`, option.label);
+      this.text(`[data-choice${i}-detail]`, option.detail);
+    });
+  }
+  hideDialogue(): void { this.element('.dialogue').hidden = true; }
   setPhotoMode(show: boolean, name?: string): void {
     this.photo = show;
     this.element('.photo-overlay').hidden = !show;

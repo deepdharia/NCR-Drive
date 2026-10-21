@@ -14,8 +14,13 @@ try{
  await page.goto(origin);await (touchMode?page.locator('[data-action="start"]').tap():page.locator('[data-action="start"]').click());
  if(touchMode)await page.getByRole('button',{name:'Open DelhiOS phone',exact:true}).tap();else await page.keyboard.press('Tab');
  await (touchMode?page.locator('[data-action="showcase"]').tap():page.locator('[data-action="showcase"]').click());
- const interact=()=>touchMode?page.locator('.touch-interact').tap():page.keyboard.press('f');await interact();await page.waitForFunction(()=>window.__game.car.driving);
- const read=()=>page.evaluate(()=>{const g=window.__game;return {p:{...g.car.position},yaw:g.car.yaw,speed:g.car.speed,index:g.story.index,state:g.story.state,foot:{...g.player.position},driving:g.car.driving,cash:g.mission.cash,cam:g.camera.yaw,paused:g.paused};});
+ const interact=()=>touchMode?page.locator('.touch-interact').tap():page.keyboard.press('f');
+ // Chapter accept opens Kabir's phone dialogue; advancing it accepts the job.
+ for(let i=0;i<10&&!(await page.evaluate(()=>window.__game.story.active));i++){await interact();await page.waitForTimeout(300);}
+ assert.ok(await page.evaluate(()=>window.__game.story.active),'chapter accepted after intro dialogue');
+ log.push('Intro dialogue advanced with ordinary input; chapter active');
+ if(!(await page.evaluate(()=>window.__game.car.driving))){await interact();await page.waitForFunction(()=>window.__game.car.driving);}
+ const read=()=>page.evaluate(()=>{const g=window.__game;return {p:{...g.car.position},yaw:g.car.yaw,speed:g.car.speed,index:g.story.index,state:g.story.state,phase:g.story.phase,branch:g.story.branch,foot:{...g.player.position},driving:g.car.driving,cash:g.mission.cash,chai:g.neighborhood.data.chai,cam:g.camera.yaw,paused:g.paused};});
  const held=new Set();async function keys(wanted){
   if(!touchMode){for(const k of held)if(!wanted.includes(k)){await page.keyboard.up(k);held.delete(k);}for(const k of wanted)if(!held.has(k)){await page.keyboard.down(k);held.add(k);}return;}
   if(wanted.length===held.size&&wanted.every(k=>held.has(k)))return;
@@ -50,13 +55,24 @@ try{
  await drive({x:-70,z:0},600);log.push('Initial ordinary drive/brake complete');
  await keys(['s']);await page.waitForFunction(()=>window.__game.car.speed< -0.5);log.push({reverseMoving:await read()});await keys(['Space']);await page.waitForTimeout(900);await keys([]);log.push({reverse:await read()});
  await drive({x:-120,z:3},1000);await drive({x:-342,z:4},2000);
- await page.waitForFunction(()=>window.__game.story.index===1);log.push('Cold store reached with keyboard input');
+ // Arrival opens Salim's dialogue, then the wrong-cups choice.
+ await page.waitForFunction(()=>window.__game.story.phase==='dialogue');
+ await page.screenshot({path:'docs/evidence/cp-showcase/journey-dialogue-coldstore.png'});
+ for(let i=0;i<8&&(await page.evaluate(()=>window.__game.story.phase))==='dialogue';i++){await interact();await page.waitForTimeout(300);}
+ await page.waitForFunction(()=>window.__game.story.phase==='choice');
+ await page.screenshot({path:'docs/evidence/cp-showcase/journey-choice.png'});
+ await (touchMode?page.locator('[data-action="choose0"]').tap():page.locator('[data-action="choose0"]').click());
+ await page.waitForFunction(()=>window.__game.story.index===1);
+ assert.equal((await read()).cash,14880);log.push('Cold store reached with ordinary input; kulhad choice charged ₹120 atomically');
  await drive({x:-365,z:4},1000);await drive({x:-365,z:9},1000);await drive({x:-340,z:4},1000);await drive({x:-195,z:0},2000);await drive({x:-179,z:0},1200,0.25);await drive({x:-174,z:-5},1200,0.25);await drive({x:-173,z:-12.5},1500,0.25);
  await page.waitForFunction(()=>window.__game.story.index===2);await interact();await page.waitForFunction(()=>!window.__game.car.driving&&!window.__game.interaction.busy);driving=false;reverse=false;
+ let handoverShot=false;
  for(let i=0;i<600;i++){
- const s=await read();if(s.state==='completed')break;const dx=-164-s.foot.x,dz=-12-s.foot.z;const x=Math.cos(s.cam)*dx-Math.sin(s.cam)*dz,z=Math.sin(s.cam)*dx+Math.cos(s.cam)*dz;
+ const s=await read();if(s.state==='completed')break;
+ if(s.phase==='dialogue'){if(!handoverShot){handoverShot=true;await page.screenshot({path:'docs/evidence/cp-showcase/journey-dialogue-meera.png'});}await keys([]);await interact();await page.waitForTimeout(300);continue;}
+ const dx=-164-s.foot.x,dz=-12-s.foot.z;const x=Math.cos(s.cam)*dx-Math.sin(s.cam)*dz,z=Math.sin(s.cam)*dx+Math.cos(s.cam)*dz;
  const wanted=[];if(Math.abs(x)>0.3)wanted.push(x>0?'d':'a');if(Math.abs(z)>0.3)wanted.push(z>0?'s':'w');if(Math.hypot(dx,dz)<2)await keys([]);else await keys(wanted);await page.waitForTimeout(150);
  }
- await keys([]);assert.equal((await read()).state,'completed');assert.equal((await read()).cash,15900);log.push(touchMode?'Touch delivery paid ₹900':'Keyboard delivery paid ₹900');
- await page.reload();await (touchMode?page.locator('[data-action="start"]').tap():page.locator('[data-action="start"]').click());assert.equal((await read()).cash,15900);log.push('Reward survived reload');assert.deepEqual(errors,[]);
+ await keys([]);const done=await read();assert.equal(done.state,'completed');assert.equal(done.branch,'kulhad');assert.equal(done.cash,15930);assert.equal(done.chai,1);log.push(touchMode?'Touch chapter complete: ₹1,050 paid, free chai in bag':'Keyboard chapter complete: ₹1,050 paid, free chai in bag');
+ await page.reload();await (touchMode?page.locator('[data-action="start"]').tap():page.locator('[data-action="start"]').click());const reloaded=await read();assert.equal(reloaded.cash,15930);assert.equal(reloaded.chai,1);log.push('Reward and free chai survived reload');assert.deepEqual(errors,[]);
 }catch(e){log.push({failure:String(e),state:await page?.evaluate(()=>{const g=window.__game;return g?{car:g.car.position,foot:g.player.position,index:g.story.index,state:g.story.state}:null;}).catch(()=>null)});throw e;}finally{await writeFile(`docs/evidence/cp-showcase/ordinary${touchMode?'-touch':''}.json`,JSON.stringify(log,null,2));await browser?.close();server.kill();}

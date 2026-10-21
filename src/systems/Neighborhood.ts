@@ -43,6 +43,15 @@ export class Neighborhood {
   this.cash=next.cash;this.data=next.neighborhood;
   this.message=`Fictional UPI successful · ${p.item} received. ${(p.item==='chai'||p.item==='juice')?'Find a seat and press F to drink.':'It is in your bag.'}`;return true;
  }
+ /** A story gift (e.g. Meera's free chai) lands in the bag through the same
+  *  atomic wallet+bag commit as a purchase, at no cost. */
+ grant(item:ShopItem):boolean {
+  if(this.data[item]>=9){this.message='Your bag already holds enough of that.';return false;}
+  const next={cash:this.cash,neighborhood:{...this.data,[item]:this.data[item]+1}};
+  if(!this.commit(next)){this.message='Gift could not be saved. Nothing was added to your bag.';return false;}
+  this.data=next.neighborhood;
+  this.message=`${item} received · It is in your bag.`;return true;
+ }
  drink():Drink|undefined {
   const item:Drink|undefined=this.data.chai?'chai':this.data.juice?'juice':undefined;if(!item)return;
   const next={cash:this.cash,neighborhood:{...this.data,[item]:this.data[item]-1}};

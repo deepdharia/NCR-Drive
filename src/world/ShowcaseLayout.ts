@@ -17,4 +17,7 @@ export const showcaseSolids:Solid[]=[
  ...SHOWCASE_SCOOTERS.map(p=>({...p,width:0.7,depth:1.8,height:1.3,yaw:0})),
  ...SHOWCASE_PLANTERS.map(p=>({...p,width:1.3,depth:1.3,height:0.65,yaw:0})),
  ...[-12.5,12.5].map(z=>({x:-130,z,width:0.28,depth:0.28,height:5,yaw:0})),
+ {x:-345,z:-12.15,width:0.55,depth:0.55,height:1.17,yaw:0},
+ {x:-336.8,z:-12.15,width:1.2,depth:1.0,height:0.67,yaw:0},
+ {x:-166.8,z:-13.05,width:0.55,depth:0.55,height:0.62,yaw:0},
 ];
