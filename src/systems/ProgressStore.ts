@@ -28,7 +28,8 @@ function parse(value: string | null): Progress | null {
     const count = (v: unknown): number => Number.isSafeInteger(v) && (v as number) >= 0 && (v as number) <= 9 ? (v as number) : 0;
     const flag = (v: unknown): boolean => v === true;
     const goodsDone = Array.isArray(n.goodsDone) ? n.goodsDone.filter((x: unknown): x is string => typeof x === 'string') : [];
-    return { version: 3, cash: p.cash, neighborhood: {chai:n.chai,juice:n.juice,relationship:n.relationship,completed:n.completed,flowers:count(n.flowers),sweets:count(n.sweets),cake:count(n.cake),parkCircuit:flag(n.parkCircuit),photoViewpoint:flag(n.photoViewpoint),goodsDone}, courierCompleted: p.courierCompleted, settings: {
+    const surpriseDone = Array.isArray(n.surpriseDone) ? n.surpriseDone.filter((x: unknown): x is string => typeof x === 'string') : [];
+    return { version: 3, cash: p.cash, neighborhood: {chai:n.chai,juice:n.juice,relationship:n.relationship,completed:n.completed,flowers:count(n.flowers),sweets:count(n.sweets),cake:count(n.cake),parkCircuit:flag(n.parkCircuit),photoViewpoint:flag(n.photoViewpoint),goodsDone,surpriseDone}, courierCompleted: p.courierCompleted, settings: {
       muted: p.settings?.muted === true, volume: typeof p.settings?.volume === 'number' && p.settings.volume>=0 && p.settings.volume<=1 ? p.settings.volume : 0.35,
       performanceMode: p.version >= 2 && p.settings?.performanceMode === true,
       ...(p.version >= 2 && isQualityPreset(p.settings?.graphicsQuality) ? { graphicsQuality: p.settings.graphicsQuality, performanceMode: p.settings.graphicsQuality === 'low' } : {}),

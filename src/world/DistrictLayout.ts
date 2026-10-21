@@ -3,6 +3,7 @@ import { marketSolids } from './MarketLayout';
 import { centralSolids } from './CentralDelhiLayout';
 import { clusterSolids } from './ClusterLayout';
 import { worldBarriers, regionalBuildings, riverBanks, medianTrees } from './WorldRoads';
+import { regionalScenerySolids } from './RegionalScenery';
 import type { Point } from '../core/math';
 import { localToWorld } from '../core/math';
 import type { Solid } from '../core/CollisionWorld';
@@ -33,7 +34,7 @@ export function createDistrictLayout(): DistrictLayout {
     const angle = i / 12 * Math.PI * 2 + Math.PI / 12;
     lamps.push({ x: Math.cos(angle) * 34, z: Math.sin(angle) * 34 });
   }
-  const solids: Solid[] = [...showcaseSolids, ...marketSolids, ...centralSolids, ...clusterSolids, ...medianTrees, ...riverBanks, ...worldBarriers, ...regionalBuildings, ...buildings, ...columns,
+  const solids: Solid[] = [...showcaseSolids, ...marketSolids, ...centralSolids, ...clusterSolids, ...medianTrees, ...riverBanks, ...worldBarriers, ...regionalBuildings, ...regionalScenerySolids, ...buildings, ...columns,
     ...trees.map(p => ({ ...p, width: 0.4, depth: 0.4, height: 4, yaw: 0 })),
     ...lamps.map(p => ({ ...p, width: 0.2, depth: 0.2, height: 5, yaw: 0 })),
     { x: 0, z: 0, width: 7, depth: 7, height: 0.65, yaw: 0 },

@@ -2,6 +2,7 @@ import {ShowcaseView} from '../world/ShowcaseView';
 import {CP_SHOWCASE, CP_SHOWCASE_INTRO} from '../systems/StoryMission';
 import type {DialogueLine} from '../systems/StoryMission';
 import {StoryCast} from '../people/StoryCast';
+import { AmbientLife } from '../people/AmbientLife';
 import * as THREE from 'three';
 import { FrameMetrics } from './FrameMetrics';
 import { nearbySolids } from './NearbySolids';
@@ -29,15 +30,21 @@ import { recoverToRoad } from '../systems/RecoverySystem';
 import { createDistrictLayout } from '../world/DistrictLayout';
 import { motorPoolBays, roadsideRetreat, nearestRoad, projection, ends } from '../world/WorldRoads';
 import { RegionalView } from '../world/RegionalView';
+import { RegionalScenery } from '../world/RegionalScenery';
 import { DistrictView } from '../world/DistrictView';
 import { CentralDelhiView } from '../world/CentralDelhiView';
 import { nextQuality, QUALITY, resolvedQuality } from '../rendering/QualityProfile';
 import { GameUI } from '../ui/GameUI';
 import { ClusterView } from '../world/ClusterView';
 import { LocalPopulation } from '../people/LocalPopulation';
-import { CLUSTERS, CLUSTER_SHOPS, goodsJobById, shopLabel } from '../world/ClusterData';
+import { CLUSTERS, CLUSTER_SHOPS, goodsJobById, shopById, shopLabel } from '../world/ClusterData';
 import type { Cluster, ClusterShop } from '../world/ClusterData';
 import { Reservations } from '../systems/Neighborhood';
+import { CargoCare } from '../systems/CargoCare';
+import { payoffLines, loadBests, recordBest } from '../systems/Surprise';
+import type { FinishRecord } from '../systems/Surprise';
+import { downloadFinishCard } from '../ui/FinishCard';
+import { GOODS_JOBS } from '../world/ClusterData';
 
 /** One owner for simulation, rendering, DOM controls and their lifecycle. */
 export class Game {
@@ -59,6 +66,7 @@ export class Game {
   private central: CentralDelhiView;
   private showcase: ShowcaseView;
   private regional: RegionalView;
+  private scenery: RegionalScenery;
   private camera: CameraRig;
   private input: InputController;
   private interaction: InteractionSystem;
@@ -66,6 +74,7 @@ export class Game {
   private neighborhood!:Neighborhood;
   private market!:MarketView;private people!:StreetPeople;private audio=new StreetAudio();
   private cast!:StoryCast;
+  private life!:AmbientLife;
   private dialogue?: { lines: readonly DialogueLine[]; index: number; timer: number; onDone: () => void; choiceOpen?: boolean };
   private clusters!:ClusterView;private populations:LocalPopulation[]=[];
   private clusterShop?:ClusterShop;private seatReservations?:Reservations;
@@ -74,6 +83,10 @@ export class Game {
   private modal=false;private shopIndex=0;private payment:number|undefined;
   private seated:string|undefined;private drinkTime=0;private standing=0;private consumedAtSeat=false;private rewardRetry=0;private handover=0;
   private courierRetry = 0;
+  private cargo = new CargoCare();
+  private cargoToastCooldown = 0;
+  private lastFinish?: FinishRecord;
+  private extraOfferShop?: string;
   private waypoint?:Point;
   private get jobBusy():boolean{return this.story.active||this.mission.state==='active'||this.neighborhood.active;}
   private saveAvailable = true;
@@ -102,6 +115,7 @@ export class Game {
       this.saveProgress();
     } catch { this.saveAvailable = this.saveWritable = false; }
     this.neighborhood ??= new Neighborhood({cash:this.mission.cash,neighborhood:freshNeighborhood()},next=>this.commitNeighborhood(next));
+    try { this.neighborhood.cardReady = Object.keys(loadBests(localStorage)).length > 0; } catch { /* storage unavailable: cards simply stay hidden */ }
     const mobile = matchMedia('(pointer: coarse)').matches;
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, mobile ? 1.25 : 1.5));
@@ -116,7 +130,8 @@ export class Game {
     this.central = new CentralDelhiView(this.scene);
     this.showcase = new ShowcaseView(this.scene);
     this.regional = new RegionalView(this.scene);
-    this.market=new MarketView(this.scene);this.people=new StreetPeople(this.scene);this.cast=new StoryCast(this.scene);
+    this.scenery = new RegionalScenery(this.scene);
+    this.market=new MarketView(this.scene);this.people=new StreetPeople(this.scene);this.cast=new StoryCast(this.scene);this.life=new AmbientLife(this.scene);
     this.clusters=new ClusterView(this.scene);this.populations=CLUSTERS.map(c=>new LocalPopulation(this.scene,c.population,c.id));
     this.fleet[0].yaw = -Math.PI / 2; // Clear west-junction start, facing Market Lane.
     motorPoolBays.forEach((bay,i)=>{this.fleet[i+1].position={x:bay.x,z:bay.z};this.fleet[i+1].yaw=bay.yaw;});
@@ -165,10 +180,42 @@ export class Game {
       },
       cancelStory: () => { this.clearDialogue(); this.story.cancel(); this.syncScreen(); this.refreshUI(); },
       buy:()=>this.clusterShop?this.orderClusterItem():this.orderDrink(),pay:()=>this.pay(),closeShop:()=>this.closeShop(),
-      supply:()=>{if(this.clusterShop?.goodsJob){const job=goodsJobById(this.clusterShop.goodsJob);if(job&&!this.jobBusy&&this.neighborhood.acceptGoods(job)){this.closeShop();this.ui.toast(this.neighborhood.message);}}else if(!this.jobBusy&&this.neighborhood.accept()){this.closeShop();this.ui.toast(this.neighborhood.message);}},
+      supply:()=>{
+        const shop=this.clusterShop;
+        // The Surprise extra offer lives at the second shop while carried.
+        if(shop&&this.extraOfferShop===shop.id&&this.neighborhood.goodsExtra==='offered'){
+          if(this.neighborhood.acceptGoodsExtra()){this.extraOfferShop=undefined;this.closeShop();this.ui.toast(this.neighborhood.message,'success');}
+          return;
+        }
+        if(shop?.goodsJob){const job=goodsJobById(shop.goodsJob);if(!job)return;
+          const replay=this.neighborhood.data.goodsDone.includes(job.id);
+          if(!this.jobBusy&&this.neighborhood.acceptGoods(job,replay)){this.cargo.reset();this.closeShop();this.ui.toast(this.neighborhood.message);}
+          return;}
+        if(!this.jobBusy&&this.neighborhood.accept()){this.closeShop();this.ui.toast(this.neighborhood.message);}
+      },
       receive:()=>{const position=this.car.driving?this.car.position:this.player.position;this.neighborhood.cash=this.mission.cash;const received=this.neighborhood.confirm(position,this.car.driving?this.car.kmh:this.player.speed*3.6);if(received){this.mission.cash=this.neighborhood.cash;this.phone=false;this.syncScreen();}this.ui.toast(this.neighborhood.message,received?'reward':'warning');this.refreshUI();},
       cancelSupply:()=>{this.neighborhood.cancelJob();this.refreshUI();},
-      receiveGoods:()=>{const position=this.car.driving?this.car.position:this.player.position;this.neighborhood.cash=this.mission.cash;const received=this.neighborhood.confirmGoods(position,this.car.driving?this.car.kmh:this.player.speed*3.6);if(received){this.mission.cash=this.neighborhood.cash;this.phone=false;this.syncScreen();}this.ui.toast(this.neighborhood.message,received?'reward':'warning');this.refreshUI();},
+      receiveGoods:()=>{const position=this.car.driving?this.car.position:this.player.position;this.neighborhood.cash=this.mission.cash;
+        const carriedJob=this.neighborhood.goodsId,carriedExtra=this.neighborhood.goodsExtra==='carried',carriedLabel=this.neighborhood.goodsExtraLabel;
+        const received=this.neighborhood.confirmGoods(position,this.car.driving?this.car.kmh:this.player.speed*3.6,this.cargo.bonus);
+        if(received){this.mission.cash=this.neighborhood.cash;this.phone=false;this.syncScreen();}
+        this.ui.toast(this.neighborhood.message,received?'reward':'warning');
+        if(received&&carriedJob){
+          const summary=this.neighborhood.lastGoodsSummary,job=goodsJobById(carriedJob);
+          if(summary&&job){
+            const pickup=shopById(job.pickupShop),drop=shopById(job.dropoffShop);
+            const record:FinishRecord={jobId:job.id,jobName:job.name,routeLabel:`${pickup?shopLabel(pickup):job.pickupShop} → ${drop?shopLabel(drop):job.dropoffShop}`,extra:carriedExtra,extraLabel:carriedLabel,condition:this.cargo.condition,title:this.cargo.title,explanation:this.cargo.explanation,base:summary.base,extraReward:summary.extra,care:summary.care,total:summary.total,replay:summary.replay};
+            this.lastFinish=record;
+            try{recordBest(localStorage,job.id,record.condition,record.title);}catch{/* bests are a bonus */}
+            this.neighborhood.cardReady=true;
+            this.neighborhood.cargoSummary=`Finish card ready below · Care ${Math.round(record.condition)}/100 · “${record.title}”. ${record.explanation}`;
+            // Payoff dialogue plays only after the reward commit succeeded.
+            this.startDialogue(payoffLines({jobId:job.id,extra:carriedExtra,condition:record.condition}),()=>{});
+          }
+        }
+        this.refreshUI();},
+      finishCard:()=>{const record=this.lastFinish??this.cardFromBest();if(record){try{downloadFinishCard(record,loadBests(localStorage)[record.jobId]);this.ui.toast('Finish card downloaded · PNG');}catch{this.ui.toast('Finish card could not be drawn on this device.','warning');}}},
+      savePhoto:()=>{if(!this.photoMode)return;this.framePhoto();this.renderer.domElement.toBlob(blob=>{if(!blob){this.ui.toast('Photo could not be captured on this device.','warning');return;}const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='yamuna-viewpoint.png';a.click();setTimeout(()=>URL.revokeObjectURL(url),4000);this.ui.toast('Photo saved · PNG downloaded.');});},
       cancelGoods:()=>{this.neighborhood.cancelGoods();this.refreshUI();},
       exitPhoto:()=>this.exitPhotoMode(),
       waypoint:(point)=>{const road=nearestRoad(point);this.waypoint=projection(point,...ends(road)).point;this.ui.toast('Waypoint set — follow the gold marker.');this.refreshUI();},
@@ -206,7 +253,7 @@ export class Game {
     const quality = resolvedQuality(this.settings), profile = QUALITY[quality];
     this.renderer.shadowMap.enabled = profile.shadowSize > 0;
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, mobile ? Math.min(1.25, profile.pixelRatio) : profile.pixelRatio));
-    this.district.setQuality(quality); this.central.setQuality(quality); this.regional.setQuality(quality);
+    this.district.setQuality(quality); this.central.setQuality(quality); this.regional.setQuality(quality); this.scenery.setQuality(quality);
     this.ui.setSettings(this.settings);this.audio.settings(this.settings,!this.started||this.paused||this.phone);
   }
   private recover(): void {
@@ -273,6 +320,17 @@ export class Game {
     this.ui.toast(this.story.branch === 'kulhad' ? 'Salim: Kulhads packed. Meera’s opening just got real.' : 'Salim: Crate loaded. Paper pours fine.');
     this.refreshUI();
   }
+  /** A card for a past best when no run finished this session. */
+  private cardFromBest(): FinishRecord | undefined {
+    let bests: ReturnType<typeof loadBests>;
+    try { bests = loadBests(localStorage); } catch { return undefined; }
+    for (const job of GOODS_JOBS) {
+      const best = bests[job.id]; if (!best) continue;
+      const pickup = shopById(job.pickupShop), drop = shopById(job.dropoffShop);
+      return { jobId: job.id, jobName: job.name, routeLabel: `${pickup ? shopLabel(pickup) : job.pickupShop} → ${drop ? shopLabel(drop) : job.dropoffShop}`, extra: false, extraLabel: '', condition: best.condition, title: best.title, explanation: 'This card shows your LOCAL best for the job. Finish another run to mint a fresh card with its fares.', base: 0, extraReward: 0, care: 0, total: 0, replay: true };
+    }
+    return undefined;
+  }
   private togglePhone(): void {
     if (!this.started || this.paused || this.modal || this.interaction.busy || this.handover>0 || this.dialogue) return;
     this.phone = !this.phone; this.syncScreen();
@@ -324,6 +382,8 @@ export class Game {
     this.district.delivery.position.set(target.x, 0, target.z);
 
     if (this.dialogue && (this.story.state === 'failed' || this.story.state === 'completed')) this.clearDialogue();
+    this.neighborhood.cargoCondition=this.neighborhood.goodsActive?this.cargo.condition:undefined;
+    if(this.neighborhood.goodsActive)this.neighborhood.cargoSummary=`Cargo care ${Math.round(this.cargo.condition)}/100 · care bonus at handover ₹${this.cargo.bonus} (60+ scores; a perfect run pays ₹100) · impacts ${this.cargo.events.impact} · hard brakes ${this.cargo.events.brake} · hard corners ${this.cargo.events.corner} · harsh starts ${this.cargo.events.accel}.`;
     const inDialogue = !!this.dialogue;
     this.ui.update(this.player, this.car, this.interaction, this.mission, this.neighborhood, this.saveAvailable, this.story, inDialogue ? 'Continue ▸' : this.contextPrompt(), inDialogue ? false : this.interaction.busy||this.handover>0||this.standing>0, this.waypoint, !!this.seated, inDialogue ? true : this.contextAvailable());
   }
@@ -341,6 +401,7 @@ export class Game {
     const audible=this.car.driving?this.car:this.cars.filter(c=>c.owner==='ai'&&Math.abs(c.speed)>0.1&&distance(c.position,focus)<90).sort((a,b)=>distance(a.position,focus)-distance(b.position,focus))[0];
     this.audio.update(focus,this.camera.yaw,audible?.position??this.car.position,audible?.speed??0,!!audible,audible?.braking??false,audible?.steering??0);
     this.regional.update(this.car.driving ? this.car.position : this.player.position);
+    this.scenery.update(focus, dt);
     this.district.update(this.car.driving ? this.car.position : this.player.position); this.camera.update(dt, this.player, this.car, this.world);
   }
   private frame = (time: number): void => {
@@ -361,6 +422,13 @@ export class Game {
       if(!this.interaction.busy)this.car.update(step, this.input.drive(), this.world, [...this.otherCars(),...nearbyPeople]);
       const pedestrian = { ...this.player.position, width: 0.8, depth: 0.8, height: 1.8, yaw: 0 };
       this.traffic.update(step, this.world, [...this.fleet.map(c => c.collider), ...nearbyPeople,...(!this.car.driving ? [pedestrian] : [])], this.car.driving ? this.car.position : this.player.position);
+      // Cargo care is sampled in the fixed-step loop (frame-rate independent)
+      // only while a goods order is actually being carried, in the car.
+      if(this.neighborhood.goods==='delivery'&&this.car.driving){
+        this.cargo.sample(step,{acceleration:this.car.acceleration,speed:this.car.speed,steering:this.car.steering,impact:this.car.impact});
+        this.cargoToastCooldown-=step;
+        if(this.cargoToastCooldown<=0){const events=this.cargo.drainEvents();if(events.length){this.ui.toast(events[0].message,'warning');this.cargoToastCooldown=5;}}
+      }
       const focus=this.car.driving?this.car.position:this.player.position;
 
       if(this.seated&&this.standing>0){this.standing-=step;if(this.standing<=0){const exits=[{x:this.player.position.x,z:this.player.position.z+0.85},{x:this.player.position.x-1,z:this.player.position.z+0.6}];const clear=exits.find(p=>this.world.isClear(p,0.32,0,1.8,[...this.cars.map(c=>c.collider),...nearbyPeople]));if(clear){this.stand(true);this.player.teleport(clear);}else{this.standing=0;this.playerView.overrideAnimation='sit';this.ui.toast('Someone is in front of the seat. Wait, then press F to stand.');}}}
@@ -391,6 +459,7 @@ export class Game {
     }
     this.people.update(dt,this.world,this.cars,this.car.driving?this.car.position:this.player.position,this.car.driving?undefined:this.player.position);
     this.populations.forEach(p=>p.update(dt,this.world,this.cars,this.car.driving?this.car.position:this.player.position,this.car.driving?undefined:this.player.position));
+    this.life.update(dt,this.car.driving?this.car.position:this.player.position,this.cars);
     this.updateCircuit();
     if (this.dialogue && !this.dialogue.choiceOpen) {
       this.dialogue.timer += dt;
@@ -404,7 +473,7 @@ export class Game {
       this.ui.renderStats(`Frame ms p50 ${frames.p50.toFixed(1)} / p95 ${frames.p95.toFixed(1)} · ${info.render.calls} draws · ${info.render.triangles} triangles · ${info.memory.geometries} geometries / ${info.memory.textures} textures`); }
   };
   private nearbyPeople(point: Point, radius = 700) {
-    return nearbySolids(point, radius, [this.people.colliders, this.cast.colliders, ...this.populations.map(p => p.colliders)]);
+    return nearbySolids(point, radius, [this.people.colliders, this.cast.colliders, this.life.colliders, ...this.populations.map(p => p.colliders)]);
   }
   private otherCars() { return this.cars.filter(c=>c!==this.car).map(c=>c.collider); }
   private selectNearbyCar(): void {
@@ -478,14 +547,29 @@ export class Game {
     this.playerView.overrideAnimation='pay';this.ui.shop('Delhi Wallet · Fictional UPI',`${shop.item.toUpperCase()} · ₹${shop.price}. Confirm to pay and receive one cup. This uses game currency only. Cancel leaves your balance unchanged.`,false,true,false);this.updateViews(0.2);this.renderer.render(this.scene,this.camera.camera);
   }
   private pay():void {if(this.payment===undefined)return;const id=this.payment;this.payment=undefined;const paid=this.neighborhood.pay(id);this.mission.cash=this.neighborhood.cash;const clusterShop=this.clusterShop;this.closeShop();if(paid){this.handover=1.2;if(clusterShop){const ci=CLUSTERS.findIndex(c=>c.id===clusterShop.cluster);const shopIndex=CLUSTERS[ci]?.shops.findIndex(s=>s.id===clusterShop.id)??-1;if(shopIndex>=0)this.populations[ci]?.serve(shopIndex);}else this.people.serve(this.shopIndex);}this.ui.toast(this.neighborhood.message,paid?'success':'warning');}
-  private closeShop():void {this.neighborhood.cancel();this.payment=undefined;this.modal=false;this.clusterShop=undefined;this.playerView.overrideAnimation=undefined;this.ui.closeShop();this.syncScreen();this.updateViews(0.02);this.renderer.render(this.scene,this.camera.camera);}
+  private closeShop():void {
+    // Leaving the extra-offer chat unanswered declines it — free, no penalty.
+    if(this.extraOfferShop&&this.neighborhood.goodsExtra==='offered'){this.neighborhood.declineGoodsExtra();this.ui.toast(this.neighborhood.message);}
+    this.extraOfferShop=undefined;
+    this.neighborhood.cancel();this.payment=undefined;this.modal=false;this.clusterShop=undefined;this.playerView.overrideAnimation=undefined;this.ui.closeShop();this.syncScreen();this.updateViews(0.02);this.renderer.render(this.scene,this.camera.camera);
+  }
   private openClusterShop(shop:ClusterShop):void {
     this.clusterShop=shop;
     this.modal=true;this.player.speed=0;this.player.yaw=shop.frontYaw;this.playerView.overrideAnimation='talk';
+    // Surprise extra offer: this shop is the active run's extra pickup point.
+    if(this.neighborhood.goods==='delivery'&&this.neighborhood.goodsExtra==='offered'&&this.neighborhood.goodsExtraShop===shop.id){
+      const job=this.neighborhood.goodsId?goodsJobById(this.neighborhood.goodsId):undefined;
+      this.extraOfferShop=shop.id;
+      const copy=`${job?.extra?.pitch??''} (Closing this chat skips the extra for this run — no penalty.)`;
+      this.ui.shop(`${shopLabel(shop)} · ${shop.hindi}`,copy,false,false,true,job?.extra?`Add the ${job.extra.itemLabel} · +₹${job.extra.reward} first-Surprise fare`:undefined);
+      this.syncScreen();this.updateViews(0.2);this.renderer.render(this.scene,this.camera.camera);
+      return;
+    }
     const job=shop.goodsJob?goodsJobById(shop.goodsJob):undefined;
-    const jobAvailable=job&&!this.neighborhood.data.goodsDone.includes(job.id)&&!this.neighborhood.goodsActive&&!this.jobBusy;
-    const copy=`${shop.blurb}${job?` ${job.brief}`:''}${!shop.item&&!job?' Browse the collection; no purchase is needed here.':''}`;
-    this.ui.shop(`${shopLabel(shop)} · ${shop.hindi}`,copy,!!shop.item,false,!!jobAvailable,!!job?`${job.name} · ₹${job.reward}`:undefined);
+    const jobDone=job?this.neighborhood.data.goodsDone.includes(job.id):false;
+    const jobAvailable=job&&!this.neighborhood.goodsActive&&!this.jobBusy;
+    const copy=`${shop.blurb}${job?` ${job.brief}`:''}${job&&jobDone?' Surprise replay: the base fare is already earned. A replay can still earn the extra fare and care bonus once (if unearned) and always updates your finish card and LOCAL best.':''}${!shop.item&&!job?' Browse the collection; no purchase is needed here.':''}`;
+    this.ui.shop(`${shopLabel(shop)} · ${shop.hindi}`,copy,!!shop.item,false,!!jobAvailable,job?(jobDone?`${job.name} · Surprise replay`:`${job.name} · ₹${job.reward}`):undefined);
     this.syncScreen();this.updateViews(0.2);this.renderer.render(this.scene,this.camera.camera);
   }
   private orderClusterItem():void {
@@ -540,7 +624,7 @@ export class Game {
   };
   dispose(): void {
     if (this.disposed) return; this.disposed = true;
-    this.audio.dispose();this.people.dispose();this.cast.dispose();this.populations.forEach(p=>p.dispose());this.playerView.dispose();this.fleetViews.forEach(v=>v.dispose());this.trafficViews.forEach(v=>v.dispose());this.interaction.cancel();cancelAnimationFrame(this.frameId); this.abort.abort(); this.input.dispose(); this.ui.dispose();
+    this.audio.dispose();this.people.dispose();this.cast.dispose();this.life.dispose();this.populations.forEach(p=>p.dispose());this.playerView.dispose();this.fleetViews.forEach(v=>v.dispose());this.trafficViews.forEach(v=>v.dispose());this.interaction.cancel();cancelAnimationFrame(this.frameId); this.abort.abort(); this.input.dispose(); this.ui.dispose();
     const skeletons=new Set<THREE.Skeleton>();
     const geometries = new Set<THREE.BufferGeometry>(), materials = new Set<THREE.Material>(), textures = new Set<THREE.Texture>();
     this.scene.traverse(object => {

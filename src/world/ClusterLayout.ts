@@ -30,14 +30,19 @@ const bin = (cluster: string, x: number, z: number): PlacedProp => ({ kind: 'bin
 
 function extras(c: Cluster): PlacedProp[] {
   if (c.id === 'garden-stop') return [
-    bed('garden-stop', -935, 758, 0.4), bed('garden-stop', -918, 774, -0.3),
+    bed('garden-stop', -935, 758, 0.4), bed('garden-stop', -918, 774, -0.3), bed('garden-stop', -905, 764, 0.2),
     bin('garden-stop', -936, 756), bin('garden-stop', -916, 776),
     { kind: 'water', cluster: 'garden-stop', x: -938, z: 772, yaw: 0, w: 0.5, d: 0.5, h: 1.1 },
+    { kind: 'parasol', cluster: 'garden-stop', x: -927, z: 748.6, yaw: 0, w: 0.3, d: 0.3, h: 2.6 },
+    { kind: 'parasol', cluster: 'garden-stop', x: -912, z: 763.6, yaw: 0, w: 0.3, d: 0.3, h: 2.6 },
     tree('garden-stop', -945, 752, 1.1), tree('garden-stop', -920, 748, 0.9), tree('garden-stop', -938, 782, 1), tree('garden-stop', -918, 784, 1.15), tree('garden-stop', -927, 746, 0.85),
     planter('garden-stop', -934, 770, 0.6),
   ];
   if (c.id === 'gurgaon-boulevard') return [
     planter('gurgaon-boulevard', -2080, 1810, 0), planter('gurgaon-boulevard', -2020, 1810, 0), planter('gurgaon-boulevard', -1960, 1810, 0), planter('gurgaon-boulevard', -1925, 1795, Math.PI / 2),
+    { kind: 'parasol', cluster: 'gurgaon-boulevard', x: -2040, z: 1796.6, yaw: 0, w: 0.3, d: 0.3, h: 2.6 },
+    { kind: 'parasol', cluster: 'gurgaon-boulevard', x: -2000, z: 1796.6, yaw: 0, w: 0.3, d: 0.3, h: 2.6 },
+    { kind: 'parasol', cluster: 'gurgaon-boulevard', x: -1960, z: 1796.6, yaw: 0, w: 0.3, d: 0.3, h: 2.6 },
     tree('gurgaon-boulevard', -2085, 1788, 1.1), tree('gurgaon-boulevard', -1990, 1788, 1), tree('gurgaon-boulevard', -1930, 1788, 1.2), tree('gurgaon-boulevard', -2085, 1812, 0.9), tree('gurgaon-boulevard', -1970, 1812, 1),
     bin('gurgaon-boulevard', -2050, 1810), bin('gurgaon-boulevard', -1980, 1810),
   ];
@@ -45,6 +50,8 @@ function extras(c: Cluster): PlacedProp[] {
     { kind: 'fountain', cluster: 'noida-park', x: 3235, z: 355, yaw: 0, w: 4.4, d: 4.4, h: 1 },
     { kind: 'exercise', cluster: 'noida-park', x: 3150, z: 352, yaw: 0, w: 3, d: 1.2, h: 2.2 },
     { kind: 'board', cluster: 'noida-park', x: 3110, z: 335, yaw: Math.PI / 4, w: 0.25, d: 0.25, h: 2.2, label: 'PARK CIRCUIT' },
+    { kind: 'parasol', cluster: 'noida-park', x: 3180, z: 339.6, yaw: 0, w: 0.3, d: 0.3, h: 2.6 },
+    { kind: 'parasol', cluster: 'noida-park', x: 3280, z: 365.6, yaw: 0, w: 0.3, d: 0.3, h: 2.6 },
     bed('noida-park', 3180, 338, 0, 6, 1.4), bed('noida-park', 3280, 372, 0, 6, 1.4), bed('noida-park', 3300, 348, Math.PI / 2, 5, 1.4),
     tree('noida-park', 3125, 342, 1.1), tree('noida-park', 3130, 368, 1), tree('noida-park', 3200, 338, 0.9), tree('noida-park', 3300, 340, 1.2), tree('noida-park', 3352, 368, 1), tree('noida-park', 3250, 372, 0.95), tree('noida-park', 3170, 370, 1.05), tree('noida-park', 3310, 338, 0.9),
     bin('noida-park', 3120, 348), bin('noida-park', 3335, 360),

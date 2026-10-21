@@ -1,0 +1,97 @@
+[
+  {
+    "shot": "gurgaon-corridor",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "quality": "balanced",
+    "fixture": "CDP controlled placement, unmodified production bundle",
+    "sampleCount": 20,
+    "frameMs": {
+      "p50": 4683.700000000186,
+      "p95": 17176.200000000186,
+      "p99": 28630
+    },
+    "renderer": "Chromium / SwiftShader, static redraw, not device performance",
+    "calls": 218,
+    "triangles": 59032,
+    "errors": []
+  },
+  {
+    "shot": "garden-stop",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "quality": "balanced",
+    "fixture": "CDP controlled placement, unmodified production bundle",
+    "sampleCount": 20,
+    "frameMs": {
+      "p50": 46.5,
+      "p95": 5476.799999999814,
+      "p99": 10403.400000000373
+    },
+    "renderer": "Chromium / SwiftShader, static redraw, not device performance",
+    "calls": 126,
+    "triangles": 57282,
+    "errors": []
+  },
+  {
+    "shot": "gurgaon-skyline",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "quality": "balanced",
+    "fixture": "CDP controlled placement, unmodified production bundle",
+    "sampleCount": 20,
+    "frameMs": {
+      "p50": 43.3000000002794,
+      "p95": 10790.799999999814,
+      "p99": 11254.600000000093
+    },
+    "renderer": "Chromium / SwiftShader, static redraw, not device performance",
+    "calls": 184,
+    "triangles": 59522,
+    "errors": []
+  },
+  {
+    "shot": "yamuna-bridge",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "quality": "balanced",
+    "fixture": "CDP controlled placement, unmodified production bundle",
+    "sampleCount": 20,
+    "frameMs": {
+      "p50": 3033.399999999907,
+      "p95": 25529.899999999907,
+      "p99": 33282.299999999814
+    },
+    "renderer": "Chromium / SwiftShader, static redraw, not device performance",
+    "calls": 109,
+    "triangles": 57266,
+    "errors": []
+  },
+  {
+    "shot": "noida-sectors",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "quality": "balanced",
+    "fixture": "CDP controlled placement, unmodified production bundle",
+    "sampleCount": 20,
+    "frameMs": {
+      "p50": 235.89999999990687,
+      "p95": 7094.600000000093,
+      "p99": 14728.399999999907
+    },
+    "renderer": "Chromium / SwiftShader, static redraw, not device performance",
+    "calls": 257,
+    "triangles": 60950,
+    "errors": []
+  }
+]
