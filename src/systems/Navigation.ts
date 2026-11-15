@@ -2,6 +2,31 @@ import type { Point } from '../core/math';
 import { distance } from '../core/math';
 import { lanes, projection, successors, ends } from '../world/WorldRoads';
 import type { Lane } from '../world/WorldRoads';
+import { nearestSegment } from '../world/RealNcrRoads';
+
+/** Shield of the real road under a point (NH-48, NE-3, Ring Rd …), or
+ * undefined off-road. Powers the named-road guidance in DelhiNav. */
+export function roadNameAt(p: Point): string | undefined {
+  const near = nearestSegment(p.x, p.z);
+  return near.dist <= near.road.width / 2 + 2 ? near.road.shield : undefined;
+}
+
+/** Distinct real-road shields along a route, in driving order — taken from
+ * the lanes actually driven, not from whatever road happens to pass near a
+ * route point: at a junction several roads sit within metres of each other,
+ * and point proximity names them all, in the wrong order. A leg is named
+ * only when both its ends lie on the same lane (a connector between two
+ * lanes names nothing); CP fabric (shield 'CP') is skipped. */
+export function routeRoadNames(route: readonly Point[]): string[] {
+  const names: string[] = [];
+  const onLanes = (p: Point): Lane[] => lanes.filter((l) => projection(p, l.start, l.end).distance < 1.5);
+  for (let i = 0; i + 1 < route.length; i++) {
+    const shared = onLanes(route[i]).find((l) => onLanes(route[i + 1]).includes(l));
+    const name = shared?.road.shield;
+    if (name && name !== 'CP' && names.at(-1) !== name) names.push(name);
+  }
+  return names;
+}
 
 /** Directed Dijkstra on left-hand lanes; reject endpoints outside the road envelope.
  * Local destination approaches are explicit short links inside the paved width. */

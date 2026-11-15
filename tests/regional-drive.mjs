@@ -55,25 +55,25 @@ try{
  }
  if(scope==='central'){
  await drive({x:92,z:0},'Central Delhi · ring and east radial');
- await drive({x:250,z:-4},'Central Delhi · corridor seam and flyover underpass');
+ await drive({x:550,z:-150},'Central Delhi · ITO junction on NH-9');
  await page.screenshot({path:'test-results/visual-input-underpass.png'});
  }else{
  if(scope!=='noida'){
  await page.keyboard.press('Tab');await page.locator('[data-action="journey"]').click();
- await drive({x:92,z:0},'Delhi paperwork pickup');await page.waitForFunction(()=>document.querySelector('[data-job-title]').textContent.includes('Gurgaon'));
+ await drive({x:92,z:0},'Delhi paperwork pickup');await page.waitForFunction(()=>document.querySelector('[data-job-title]').textContent.includes('Gurugram'));
  await drive(destinations[0],'Delhi → Gurgaon');await page.waitForFunction(()=>document.querySelector('[data-cash]').textContent==='₹17,400');
  log('Regional goods dispatch completed and ₹2400 awarded.');
  await page.screenshot({path:'test-results/regional-gurgaon.png'});
  await page.keyboard.press('Escape');await page.locator('[data-action="recover"]').click();const recovered=await read();assert.ok(recovered.x< -1800);log({regionalRecovery:recovered});
- await drive({x:-2296,z:2050},'Gurgaon return · west avenue');
- await drive({x:-2100,z:2296},'Gurgaon return · south avenue');
- await drive({x:-1904,z:2100},'Gurgaon return · east avenue');
+ await drive({x:-2050,z:2250},'Gurgaon return · HUDA City Centre');
+ await drive({x:-1950,z:2000},'Gurgaon return · IFFCO Chowk');
+ await drive({x:-1750,z:1950},'Gurgaon return · MG Road mid');
  await drive({x:92,z:0},'Gurgaon → Delhi');
  }else{await drive({x:92,z:0},'Delhi departure');}
  if(scope!=='gurgaon'){
- await drive({x:3004,z:250},'Delhi → Noida · sector west');
- await drive({x:3250,z:246},'Noida · middle sector avenue');
- await drive({x:3396,z:120},'Noida · east sector avenue');
+ await drive({x:1500,z:1025},'Delhi → Noida · DND bridge midpoint');
+ await drive({x:2200,z:1200},'Noida · Noida–Greater Noida Expressway mid');
+ await drive({x:2700,z:1650},'Noida · Pari Chowk');
  await drive(destinations[2],'Noida · Sector 18 arrival');await page.screenshot({path:'test-results/regional-noida.png'});
  await drive({x:92,z:0},'Noida → Delhi');
  }

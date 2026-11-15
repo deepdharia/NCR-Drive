@@ -3,6 +3,7 @@
 // Output: ~/workspace/your_files/ncr-drive-complete-map.svg (shared with the user).
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { roads, ends, destinations, uniqueRoadLength } from '../src/world/WorldRoads.ts';
+import { YAMUNA_RIVER } from '../src/world/RealNcrRoads.ts';
 import { CLUSTER_PLACES, CLUSTER_SHOPS, PLACE_CATEGORY_COLORS } from '../src/world/ClusterData.ts';
 
 // Shop coordinates mirror the `shops` consts in src/systems/Neighborhood.ts.
@@ -34,9 +35,11 @@ parts.push(`<rect width="${W}" height="${H}" fill="#12211d"/>`);
 parts.push(`<text x="40" y="46" font-size="30" font-weight="700" fill="#f1c369" letter-spacing="2">NCR DRIVE · COMPLETE MAP</text>`);
 parts.push(`<text x="1560" y="46" font-size="16" fill="#a4c9af" text-anchor="end">N ↑</text>`);
 parts.push(`<rect x="${MAP_X}" y="${MAP_Y}" width="${MAP_W}" height="${MAP_H}" rx="12" fill="#203b35"/>`);
-// Yamuna river between its banks (x 1220–1530, z −740…400).
-parts.push(`<rect x="${X(1220).toFixed(1)}" y="${Y(-740).toFixed(1)}" width="${((1530 - 1220) * s).toFixed(1)}" height="${((400 - -740) * s).toFixed(1)}" fill="#386977" opacity="0.9"/>`);
-parts.push(label('YAMUNA', 1375, -300, 15, '#cfe6ea'));
+// Yamuna river as its real polyline (the banks sit ~100 m either side).
+const yamunaPts = YAMUNA_RIVER.map(p => `${X(p.x).toFixed(1)},${Y(p.z).toFixed(1)}`).join(' ');
+parts.push(`<polyline points="${yamunaPts}" fill="none" stroke="#386977" stroke-width="${(300 * s).toFixed(1)}" stroke-linecap="round" opacity="0.9"/>`);
+const yamunaMid = YAMUNA_RIVER[Math.floor(YAMUNA_RIVER.length / 2)];
+parts.push(label('YAMUNA', yamunaMid.x, yamunaMid.z, 15, '#cfe6ea'));
 // Roads: dark casing, then surface. Bridges in tan, Market Lane in gold.
 for (const r of roads) { const [a, b] = ends(r); parts.push(line(a, b, '#16281f', Math.max(1.5, r.width * s * 0.45 + 2))); }
 for (const r of roads) {
@@ -64,8 +67,12 @@ for (const shop of CLUSTER_SHOPS) {
 parts.push(label('MARKET LANE · 250 m', -255, -60, 14, '#f1c369'));
 parts.push(label('CONNAUGHT PLACE', 0, -120, 18, '#eee3c7'));
 parts.push(label('DELHI', 0, 260, 26, '#eee3c7'));
-parts.push(label('GURGAON', -2100, 1800, 26, '#eee3c7'));
-parts.push(label('NOIDA', 3200, 120, 26, '#eee3c7'));
+parts.push(label('GURUGRAM', -1950, 1800, 26, '#eee3c7'));
+parts.push(label('NOIDA', 1750, 850, 26, '#eee3c7'));
+parts.push(label('GREATER NOIDA', 2750, 1500, 18, '#eee3c7'));
+parts.push(label('GHAZIABAD', 2320, -600, 18, '#eee3c7'));
+parts.push(label('FARIDABAD', 990, 2650, 18, '#eee3c7'));
+parts.push(label('BAHADURGARH', -2750, -600, 18, '#eee3c7'));
 // Market Lane detail inset (bottom-right, over the empty south-east corner).
 // The main map is too zoomed-out for shop labels; the inset carries them.
 {
@@ -97,7 +104,7 @@ parts.push(`<rect x="${barX}" y="${barY}" width="${barW.toFixed(1)}" height="8" 
 // Legend + footer.
 parts.push(`<text x="40" y="1135" font-size="15" fill="#d7e8d5">— Road &#160;&#160; — Bridge &#160;&#160; — Market Lane &#160;&#160; ● Destination &#160;&#160; ● Shop &#160;&#160; ◆ Parks &amp; Shopping place</text>`);
 parts.push(`<text x="40" y="1162" font-size="15" fill="#a4c9af">In game: open DelhiOS (Tab) and click anywhere on this map to drop a waypoint — DelhiNav routes you there. Click again to move it, Clear to drop it.</text>`);
-parts.push(`<text x="40" y="1189" font-size="15" fill="#8fae98">Fictional geography, not a surveyed map · Road centreline ${uniqueRoadLength.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')} m · No teleport — drive it.</text>`);
+parts.push(`<text x="40" y="1189" font-size="15" fill="#8fae98">Real NCR geography · schematic, not surveyed · Road centreline ${uniqueRoadLength.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')} m · No teleport — drive it.</text>`);
 parts.push(`</svg>`);
 const outPath = new URL('../../your_files/ncr-drive-complete-map.svg', import.meta.url);
 mkdirSync(new URL('../../your_files/', import.meta.url), { recursive: true });

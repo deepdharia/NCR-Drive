@@ -73,121 +73,121 @@ const YAMUNA_VARIANTS: HumanVariant[] = [
  { shirt: 0xc97a7a, trousers: 0x4a4a4a, shoes: 0x2e2620, skin: 0xc09a78, hair: 0x2a201a, scale: 1, accessory: 'none', phase: 1.1 },
 ];
 
-const gardenFlowers: ClusterShop = { id: 'garden-flowers', cluster: 'garden-stop', kind: 'flowers', brand: 'Highway Blooms', fictional: 'Highway Blooms', hindi: 'हाईवे ब्लूम्स', position: { x: -903, z: 756 }, frontYaw: -1.22, width: 12, depth: 8, height: 4.5, counter: facing(-903, 756, -1.22, 8), item: 'flowers', price: 120, blurb: 'Fresh bouquets and gift boxes, wrapped to travel. Fictional game currency only.', goodsJob: 'flower-order' };
-const gardenSweets: ClusterShop = { id: 'garden-sweets', cluster: 'garden-stop', kind: 'sweets', brand: 'Halwai Corner', fictional: 'Halwai Corner', hindi: 'हलवाई कॉर्नर', position: { x: -898, z: 778 }, frontYaw: -2.05, width: 12, depth: 8, height: 4.5, counter: facing(-898, 778, -2.05, 8), item: 'sweets', price: 90, blurb: 'Hot jalebi, laddoo trays and takeaway boxes. Fictional game currency only.' };
-const gurgaonSouled: ClusterShop = { id: 'gurgaon-souled', cluster: 'gurgaon-boulevard', kind: 'streetwear', brand: 'The Souled Store', fictional: 'Soul Street', hindi: 'द सोल्ड स्टोर', position: { x: -2065, z: 1775 }, frontYaw: 0, width: 24, depth: 10, height: 5.5, counter: facing(-2065, 1775, 0, 10), price: 0, blurb: 'Graphic tees and streetwear. Browsing only — wardrobe changes arrive in a later update.' };
-const gurgaonHM: ClusterShop = { id: 'gurgaon-hm', cluster: 'gurgaon-boulevard', kind: 'fashion', brand: 'H&M', fictional: 'AURA Fashion', hindi: 'एच एंड एम', position: { x: -2025, z: 1775 }, frontYaw: 0, width: 24, depth: 10, height: 5.5, counter: facing(-2025, 1775, 0, 10), price: 0, blurb: 'Contemporary fashion, mannequins and racks. Browsing only — wardrobe changes arrive in a later update.' };
-const gurgaonZara: ClusterShop = { id: 'gurgaon-zara', cluster: 'gurgaon-boulevard', kind: 'fashion', brand: 'Zara', fictional: 'ZINE', hindi: 'ज़ारा', position: { x: -1985, z: 1775 }, frontYaw: 0, width: 24, depth: 10, height: 5.5, counter: facing(-1985, 1775, 0, 10), price: 0, blurb: 'Sharp tailoring and seasonal edits. Browsing only — wardrobe changes arrive in a later update.' };
-const gurgaonFNP: ClusterShop = { id: 'gurgaon-fnp', cluster: 'gurgaon-boulevard', kind: 'flowers', brand: 'FNP', fictional: 'Bloom & Gift Co.', hindi: 'एफएनपी', position: { x: -1945, z: 1775 }, frontYaw: 0, width: 24, depth: 10, height: 5.5, counter: facing(-1945, 1775, 0, 10), item: 'flowers', price: 150, blurb: 'Bouquets, gift boxes and wrapping counter. Fictional game currency only.', goodsJob: 'flower-order' };
-const gurgaonCafe: ClusterShop = { id: 'gurgaon-cafe', cluster: 'gurgaon-boulevard', kind: 'cafe', brand: 'Brew & Crumb', fictional: 'Brew & Crumb', hindi: 'ब्रू एंड क्रंब', position: { x: -1910, z: 1775 }, frontYaw: 0, width: 24, depth: 10, height: 5.5, counter: facing(-1910, 1775, 0, 10), item: 'cake', price: 140, blurb: 'Cakes, bakes and a collection counter. Fictional game currency only.' };
-const noidaSweets: ClusterShop = { id: 'noida-sweets', cluster: 'noida-park', kind: 'sweets', brand: 'Aggarwal Sweets', fictional: 'Sharma Sweets', hindi: 'अग्रवाल स्वीट्स', position: { x: 3160, z: 280 }, frontYaw: Math.PI, width: 16, depth: 8, height: 4.5, counter: facing(3160, 280, Math.PI, 8), item: 'sweets', price: 90, blurb: 'Glass display counter, fresh trays and takeaway boxes. Fictional game currency only.' };
-const noidaBakery: ClusterShop = { id: 'noida-bakery', cluster: 'noida-park', kind: 'bakery', brand: 'Crumb & Co.', fictional: 'Crumb & Co.', hindi: 'क्रंब एंड कंपनी', position: { x: 3200, z: 280 }, frontYaw: Math.PI, width: 16, depth: 8, height: 4.5, counter: facing(3200, 280, Math.PI, 8), item: 'cake', price: 130, blurb: 'Cake display, menu and collection counter. Fictional game currency only.', goodsJob: 'cake-order' };
-const noidaWear: ClusterShop = { id: 'noida-wear', cluster: 'noida-park', kind: 'fashion', brand: 'Campus Wear', fictional: 'Campus Wear', hindi: 'कैंपस वियर', position: { x: 3240, z: 280 }, frontYaw: Math.PI, width: 16, depth: 8, height: 4.5, counter: facing(3240, 280, Math.PI, 8), price: 0, blurb: 'Casual clothing and everyday fits. Browsing only — wardrobe changes arrive in a later update.' };
+const gardenFlowers: ClusterShop = { id: 'garden-flowers', cluster: 'garden-stop', kind: 'flowers', brand: 'Highway Blooms', fictional: 'Highway Blooms', hindi: 'हाईवे ब्लूम्स', position: { x: -1391, z: 1194 }, frontYaw: -1.22, width: 12, depth: 8, height: 4.5, counter: facing(-1391, 1194, -1.22, 8), item: 'flowers', price: 120, blurb: 'Fresh bouquets and gift boxes, wrapped to travel. Fictional game currency only.', goodsJob: 'flower-order' };
+const gardenSweets: ClusterShop = { id: 'garden-sweets', cluster: 'garden-stop', kind: 'sweets', brand: 'Halwai Corner', fictional: 'Halwai Corner', hindi: 'हलवाई कॉर्नर', position: { x: -1386, z: 1216 }, frontYaw: -2.05, width: 12, depth: 8, height: 4.5, counter: facing(-1386, 1216, -2.05, 8), item: 'sweets', price: 90, blurb: 'Hot jalebi, laddoo trays and takeaway boxes. Fictional game currency only.' };
+const gurgaonSouled: ClusterShop = { id: 'gurgaon-souled', cluster: 'gurgaon-boulevard', kind: 'streetwear', brand: 'The Souled Store', fictional: 'Soul Street', hindi: 'द सोल्ड स्टोर', position: { x: -1720, z: 2005 }, frontYaw: 0, width: 24, depth: 10, height: 5.5, counter: facing(-1720, 2005, 0, 10), price: 0, blurb: 'Graphic tees and streetwear. Browsing only — wardrobe changes arrive in a later update.' };
+const gurgaonHM: ClusterShop = { id: 'gurgaon-hm', cluster: 'gurgaon-boulevard', kind: 'fashion', brand: 'H&M', fictional: 'AURA Fashion', hindi: 'एच एंड एम', position: { x: -1680, z: 2005 }, frontYaw: 0, width: 24, depth: 10, height: 5.5, counter: facing(-1680, 2005, 0, 10), price: 0, blurb: 'Contemporary fashion, mannequins and racks. Browsing only — wardrobe changes arrive in a later update.' };
+const gurgaonZara: ClusterShop = { id: 'gurgaon-zara', cluster: 'gurgaon-boulevard', kind: 'fashion', brand: 'Zara', fictional: 'ZINE', hindi: 'ज़ारा', position: { x: -1640, z: 2005 }, frontYaw: 0, width: 24, depth: 10, height: 5.5, counter: facing(-1640, 2005, 0, 10), price: 0, blurb: 'Sharp tailoring and seasonal edits. Browsing only — wardrobe changes arrive in a later update.' };
+const gurgaonFNP: ClusterShop = { id: 'gurgaon-fnp', cluster: 'gurgaon-boulevard', kind: 'flowers', brand: 'FNP', fictional: 'Bloom & Gift Co.', hindi: 'एफएनपी', position: { x: -1600, z: 2005 }, frontYaw: 0, width: 24, depth: 10, height: 5.5, counter: facing(-1600, 2005, 0, 10), item: 'flowers', price: 150, blurb: 'Bouquets, gift boxes and wrapping counter. Fictional game currency only.', goodsJob: 'flower-order' };
+const gurgaonCafe: ClusterShop = { id: 'gurgaon-cafe', cluster: 'gurgaon-boulevard', kind: 'cafe', brand: 'Brew & Crumb', fictional: 'Brew & Crumb', hindi: 'ब्रू एंड क्रंब', position: { x: -1565, z: 2005 }, frontYaw: 0, width: 24, depth: 10, height: 5.5, counter: facing(-1565, 2005, 0, 10), item: 'cake', price: 140, blurb: 'Cakes, bakes and a collection counter. Fictional game currency only.' };
+const noidaSweets: ClusterShop = { id: 'noida-sweets', cluster: 'noida-park', kind: 'sweets', brand: 'Aggarwal Sweets', fictional: 'Sharma Sweets', hindi: 'अग्रवाल स्वीट्स', position: { x: 2010, z: 1180 }, frontYaw: Math.PI, width: 16, depth: 8, height: 4.5, counter: facing(2010, 1180, Math.PI, 8), item: 'sweets', price: 90, blurb: 'Glass display counter, fresh trays and takeaway boxes. Fictional game currency only.' };
+const noidaBakery: ClusterShop = { id: 'noida-bakery', cluster: 'noida-park', kind: 'bakery', brand: 'Crumb & Co.', fictional: 'Crumb & Co.', hindi: 'क्रंब एंड कंपनी', position: { x: 2050, z: 1180 }, frontYaw: Math.PI, width: 16, depth: 8, height: 4.5, counter: facing(2050, 1180, Math.PI, 8), item: 'cake', price: 130, blurb: 'Cake display, menu and collection counter. Fictional game currency only.', goodsJob: 'cake-order' };
+const noidaWear: ClusterShop = { id: 'noida-wear', cluster: 'noida-park', kind: 'fashion', brand: 'Campus Wear', fictional: 'Campus Wear', hindi: 'कैंपस वियर', position: { x: 2090, z: 1180 }, frontYaw: Math.PI, width: 16, depth: 8, height: 4.5, counter: facing(2090, 1180, Math.PI, 8), price: 0, blurb: 'Casual clothing and everyday fits. Browsing only — wardrobe changes arrive in a later update.' };
 
 export const CLUSTERS: Cluster[] = [
  {
-  id: 'garden-stop', name: 'Garden Stop · Corridor', arrival: { x: -912, z: 812 },
+  id: 'garden-stop', name: 'Garden Stop · Corridor', arrival: { x: -1400, z: 1250 },
   shops: [gardenFlowers, gardenSweets],
   seats: [
-   { id: 'garden-bench-n', cluster: 'garden-stop', x: -927, z: 751, yaw: 0 },
-   { id: 'garden-bench-e', cluster: 'garden-stop', x: -912, z: 766, yaw: -Math.PI / 2 },
-   { id: 'garden-bench-s', cluster: 'garden-stop', x: -927, z: 781, yaw: Math.PI },
+   { id: 'garden-bench-n', cluster: 'garden-stop', x: -1415, z: 1189, yaw: 0 },
+   { id: 'garden-bench-e', cluster: 'garden-stop', x: -1400, z: 1204, yaw: -Math.PI / 2 },
+   { id: 'garden-bench-s', cluster: 'garden-stop', x: -1415, z: 1219, yaw: Math.PI },
   ],
-  parking: { x: -914.4, z: 790.2, yaw: -2.398, w: 22, d: 12 },
+  parking: { x: -1470, z: 1210, yaw: -2.398, w: 22, d: 12 },
   signs: [
-   { x: -865.6, z: 763.4, yaw: -0.71, text: 'GARDEN STOP → 100 m' },
-   { x: -955.6, z: 868.4, yaw: -0.71, text: 'GARDEN STOP · PARKING' },
+   { x: -1353.6, z: 1201.4, yaw: -0.71, text: 'GARDEN STOP → 100 m' },
+   { x: -1430, z: 1230, yaw: -0.71, text: 'GARDEN STOP · PARKING' },
   ],
   population: {
    variants: GARDEN_VARIANTS,
-   vendors: [{ position: { x: -908.6, z: 758.1 }, shop: 0 }, { position: { x: -903.3, z: 775.2 }, shop: 1 }],
-   shopTargets: [{ x: -910.5, z: 758.8 }, { x: -905.1, z: 774.3 }],
-   walkerSpawns: [{ x: -927, z: 751 }, { x: -912, z: 766 }, { x: -927, z: 781 }],
+   vendors: [{ position: { x: -1396.6, z: 1196.1 }, shop: 0 }, { position: { x: -1391.3, z: 1213.2 }, shop: 1 }],
+   shopTargets: [{ x: -1398.5, z: 1196.8 }, { x: -1393.1, z: 1212.3 }],
+   walkerSpawns: [{ x: -1415, z: 1189 }, { x: -1400, z: 1204 }, { x: -1415, z: 1219 }],
    seats: [
-    { id: 'garden-bench-n', x: -927, z: 751, yaw: 0 },
-    { id: 'garden-bench-e', x: -912, z: 766, yaw: -Math.PI / 2 },
-    { id: 'garden-bench-s', x: -927, z: 781, yaw: Math.PI },
+    { id: 'garden-bench-n', x: -1415, z: 1189, yaw: 0 },
+    { id: 'garden-bench-e', x: -1400, z: 1204, yaw: -Math.PI / 2 },
+    { id: 'garden-bench-s', x: -1415, z: 1219, yaw: Math.PI },
    ],
-   leaveTarget: () => ({ x: -956, z: 764 }),
+   leaveTarget: () => ({ x: -1444, z: 1202 }),
   },
-  place: { id: 'garden-stop', name: 'Garden Stop · Corridor', category: 'flowers', arrival: { x: -912, z: 812 }, blurb: 'Roadside garden, flowers and sweets off the Delhi–Gurgaon corridor.' },
+  place: { id: 'garden-stop', name: 'Garden Stop · Corridor', category: 'flowers', arrival: { x: -1400, z: 1250 }, blurb: 'Roadside garden, flowers and sweets off NH-48 near Rajokri.' },
  },
  {
-  id: 'gurgaon-boulevard', name: 'Gurgaon Shopping Boulevard', arrival: { x: -2100, z: 1845 },
+  id: 'gurgaon-boulevard', name: 'Gurugram Shopping Boulevard', arrival: { x: -1775, z: 2075 },
   shops: [gurgaonSouled, gurgaonHM, gurgaonZara, gurgaonFNP, gurgaonCafe],
   seats: [
-   { id: 'plaza-bench-w', cluster: 'gurgaon-boulevard', x: -2040, z: 1800, yaw: 0 },
-   { id: 'plaza-bench-c', cluster: 'gurgaon-boulevard', x: -2000, z: 1800, yaw: 0 },
-   { id: 'plaza-bench-e', cluster: 'gurgaon-boulevard', x: -1960, z: 1800, yaw: 0 },
+   { id: 'plaza-bench-w', cluster: 'gurgaon-boulevard', x: -1715, z: 2030, yaw: 0 },
+   { id: 'plaza-bench-c', cluster: 'gurgaon-boulevard', x: -1675, z: 2030, yaw: 0 },
+   { id: 'plaza-bench-e', cluster: 'gurgaon-boulevard', x: -1635, z: 2030, yaw: 0 },
   ],
-  parking: { x: -2155.5, z: 1800, yaw: 0, w: 93, d: 30 },
+  parking: { x: -1830, z: 2030, yaw: 0, w: 93, d: 30 },
   signs: [
-   { x: -2090, z: 1860, yaw: 0, text: 'GURGAON SHOPPING →' },
-   { x: -2085, z: 1798, yaw: 0, text: 'PLAZA · SHOPS' },
+   { x: -1765, z: 2090, yaw: 0, text: 'GURGAON SHOPPING →' },
+   { x: -1700, z: 2030, yaw: 0, text: 'PLAZA · SHOPS' },
   ],
   population: {
    variants: GURGAON_VARIANTS,
-   vendors: [{ position: { x: -1945, z: 1782 }, shop: 3 }, { position: { x: -1910, z: 1782 }, shop: 4 }],
-   shopTargets: [{ x: -2065, z: 1782 }, { x: -2025, z: 1782 }, { x: -1985, z: 1782 }, { x: -1945, z: 1782 }, { x: -1910, z: 1782 }],
-   walkerSpawns: [{ x: -2040, z: 1800 }, { x: -2000, z: 1800 }, { x: -1960, z: 1800 }],
+   vendors: [{ position: { x: -1600, z: 2012 }, shop: 3 }, { position: { x: -1565, z: 2012 }, shop: 4 }],
+   shopTargets: [{ x: -1720, z: 2012 }, { x: -1680, z: 2012 }, { x: -1640, z: 2012 }, { x: -1600, z: 2012 }, { x: -1565, z: 2012 }],
+   walkerSpawns: [{ x: -1715, z: 2030 }, { x: -1675, z: 2030 }, { x: -1635, z: 2030 }],
    seats: [
-    { id: 'plaza-bench-w', x: -2040, z: 1800, yaw: 0 },
-    { id: 'plaza-bench-c', x: -2000, z: 1800, yaw: 0 },
-    { id: 'plaza-bench-e', x: -1960, z: 1800, yaw: 0 },
+    { id: 'plaza-bench-w', x: -1715, z: 2030, yaw: 0 },
+    { id: 'plaza-bench-c', x: -1675, z: 2030, yaw: 0 },
+    { id: 'plaza-bench-e', x: -1635, z: 2030, yaw: 0 },
    ],
-   leaveTarget: () => ({ x: -2100, z: 1845 }),
+   leaveTarget: () => ({ x: -1775, z: 2075 }),
   },
-  place: { id: 'gurgaon-boulevard', name: 'Gurgaon Shopping Boulevard', category: 'shopping', arrival: { x: -2100, z: 1845 }, blurb: 'Fashion, flowers and café on a planted plaza north of Gurgaon Avenue.' },
+  place: { id: 'gurgaon-boulevard', name: 'Gurugram Shopping Boulevard', category: 'shopping', arrival: { x: -1775, z: 2075 }, blurb: 'Fashion, flowers and café on a planted plaza east of MG Road, Gurugram.' },
  },
  {
-  id: 'noida-park', name: 'Noida Sector Park & Market', arrival: { x: 3200, z: 250 },
+  id: 'noida-park', name: 'Noida Sector Park & Market', arrival: { x: 2050, z: 1125 },
   shops: [noidaSweets, noidaBakery, noidaWear],
   seats: [
-   { id: 'park-bench-a', cluster: 'noida-park', x: 3180, z: 342, yaw: Math.PI },
-   { id: 'park-bench-b', cluster: 'noida-park', x: 3280, z: 368, yaw: 0 },
-   { id: 'park-bench-c', cluster: 'noida-park', x: 3290, z: 355, yaw: -Math.PI / 2 },
+   { id: 'park-bench-a', cluster: 'noida-park', x: 2045, z: 1280, yaw: Math.PI },
+   { id: 'park-bench-b', cluster: 'noida-park', x: 2130, z: 1243, yaw: 0 },
+   { id: 'park-bench-c', cluster: 'noida-park', x: 2140, z: 1230, yaw: -Math.PI / 2 },
   ],
-  board: { x: 3110, z: 335 },
-  circuit: [{ x: 3125, z: 355 }, { x: 3235, z: 342 }, { x: 3300, z: 355 }, { x: 3235, z: 368 }],
-  parking: { x: 3080, z: 270, yaw: 0, w: 80, d: 12 },
+  board: { x: 1960, z: 1210 },
+  circuit: [{ x: 1975, z: 1230 }, { x: 2085, z: 1217 }, { x: 2150, z: 1230 }, { x: 2085, z: 1243 }],
+  parking: { x: 2030, z: 1330, yaw: 0, w: 80, d: 12 },
   signs: [
-   { x: 3020, z: 266, yaw: 0, text: 'SECTOR PARK →' },
-   { x: 3200, z: 266, yaw: 0, text: 'PARK · SHOPS' },
+   { x: 1870, z: 1170, yaw: 0, text: 'SECTOR PARK →' },
+   { x: 2050, z: 1170, yaw: 0, text: 'PARK · SHOPS' },
   ],
   population: {
    variants: NOIDA_VARIANTS,
-   vendors: [{ position: { x: 3160, z: 274 }, shop: 0 }, { position: { x: 3200, z: 274 }, shop: 1 }],
-   shopTargets: [{ x: 3160, z: 270 }, { x: 3200, z: 270 }, { x: 3240, z: 270 }],
-   walkerSpawns: [{ x: 3180, z: 342 }, { x: 3280, z: 368 }, { x: 3290, z: 355 }],
+   vendors: [{ position: { x: 2010, z: 1174 }, shop: 0 }, { position: { x: 2050, z: 1174 }, shop: 1 }],
+   shopTargets: [{ x: 2010, z: 1170 }, { x: 2050, z: 1170 }, { x: 2090, z: 1170 }],
+   walkerSpawns: [{ x: 2045, z: 1280 }, { x: 2130, z: 1243 }, { x: 2140, z: 1230 }],
    seats: [
-    { id: 'park-bench-a', x: 3180, z: 342, yaw: Math.PI },
-    { id: 'park-bench-b', x: 3280, z: 368, yaw: 0 },
-    { id: 'park-bench-c', x: 3290, z: 355, yaw: -Math.PI / 2 },
+    { id: 'park-bench-a', x: 2045, z: 1280, yaw: Math.PI },
+    { id: 'park-bench-b', x: 2130, z: 1243, yaw: 0 },
+    { id: 'park-bench-c', x: 2140, z: 1230, yaw: -Math.PI / 2 },
    ],
-   leaveTarget: () => ({ x: 3110, z: 335 }),
+   leaveTarget: () => ({ x: 1960, z: 1210 }),
   },
-  place: { id: 'noida-park', name: 'Noida Sector Park & Market', category: 'park', arrival: { x: 3200, z: 250 }, blurb: 'Park loop, fountain, sweets, bakery and casual clothing.' },
+  place: { id: 'noida-park', name: 'Noida Sector Park & Market', category: 'park', arrival: { x: 2050, z: 1125 }, blurb: 'Park loop, fountain, sweets, bakery and casual clothing.' },
  },
  {
-  id: 'yamuna-view', name: 'Yamuna Viewpoint', arrival: { x: 1200, z: -270 },
+  id: 'yamuna-view', name: 'Yamuna Viewpoint', arrival: { x: 1125, z: -550 },
   shops: [],
   seats: [
-   { id: 'view-bench', cluster: 'yamuna-view', x: 1206, z: -278, yaw: -Math.PI / 2 },
+   { id: 'view-bench', cluster: 'yamuna-view', x: 1355, z: -545, yaw: -Math.PI / 2 },
   ],
-  photo: { x: 1208, z: -280 }, photoYaw: Math.PI / 2,
-  parking: { x: 1180, z: -245, yaw: 0, w: 25, d: 30 },
+  photo: { x: 1358, z: -550 }, photoYaw: Math.PI / 2,
+  parking: { x: 1300, z: -550, yaw: 0, w: 25, d: 30 },
   signs: [
-   { x: 1200, z: -190, yaw: 0, text: 'YAMUNA VIEWPOINT →' },
+   { x: 1320, z: -600, yaw: 0, text: 'YAMUNA VIEWPOINT →' },
   ],
   population: {
    variants: YAMUNA_VARIANTS,
    vendors: [],
-   shopTargets: [{ x: 1206, z: -278 }],
-   walkerSpawns: [{ x: 1206, z: -278 }, { x: 1204, z: -284 }],
-   seats: [{ id: 'view-bench', x: 1206, z: -278, yaw: -Math.PI / 2 }],
-   leaveTarget: () => ({ x: 1200, z: -270 }),
+   shopTargets: [{ x: 1355, z: -545 }],
+   walkerSpawns: [{ x: 1355, z: -545 }, { x: 1353, z: -539 }],
+   seats: [{ id: 'view-bench', x: 1355, z: -545, yaw: -Math.PI / 2 }],
+   leaveTarget: () => ({ x: 1125, z: -550 }),
   },
-  place: { id: 'yamuna-view', name: 'Yamuna Viewpoint', category: 'viewpoint', arrival: { x: 1200, z: -270 }, blurb: 'Railed viewpoint over the Yamuna with a photo stop.' },
+  place: { id: 'yamuna-view', name: 'Yamuna Viewpoint', category: 'viewpoint', arrival: { x: 1125, z: -550 }, blurb: 'Railed viewpoint over the Yamuna with a photo stop.' },
  },
 ];
 
@@ -198,7 +198,7 @@ export function clusterById(id: string): Cluster | undefined { return CLUSTERS.f
 export function shopById(id: string): ClusterShop | undefined { return CLUSTER_SHOPS.find(s => s.id === id); }
 
 export const GOODS_JOBS: GoodsJobDef[] = [
- { id: 'flower-order', name: 'Flower Order · Garden → Gurgaon', pickupShop: 'garden-flowers', dropoffShop: 'gurgaon-fnp', dropoff: gurgaonFNP.counter, reward: 400, brief: 'Collect the prepared bouquet at Highway Blooms (Garden Stop) and hand it over at FNP, Gurgaon. ₹400 on confirmed handover. No timer.' },
+ { id: 'flower-order', name: 'Flower Order · Garden → Gurugram', pickupShop: 'garden-flowers', dropoffShop: 'gurgaon-fnp', dropoff: gurgaonFNP.counter, reward: 400, brief: 'Collect the prepared bouquet at Highway Blooms (Garden Stop) and hand it over at FNP, Gurugram. ₹400 on confirmed handover. No timer.' },
  { id: 'cake-order', name: 'Cake Order · Noida → Garden', pickupShop: 'noida-bakery', dropoffShop: 'garden-sweets', dropoff: gardenSweets.counter, reward: 500, brief: 'Collect the prepared cake at Crumb & Co. (Noida) and hand it over at Halwai Corner (Garden Stop). ₹500 on confirmed handover. No timer.' },
 ];
 export function goodsJobById(id: string): GoodsJobDef | undefined { return GOODS_JOBS.find(j => j.id === id); }

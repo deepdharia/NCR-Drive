@@ -114,12 +114,12 @@ try {
   await pressF(() => page.evaluate(() => !window.__game.car.driving));
 
   // 2. Garden: buy flowers, then accept the flower goods job (two modal opens).
-  await teleportPlayer(-908.6, 758.1);
-  await walkTo({ x: -908.6, z: 758.1 }, 'garden flower counter', 2.2);
+  await teleportPlayer(-1396.6, 1196.1);
+  await walkTo({ x: -1396.6, z: 1196.1 }, 'garden flower counter', 2.2);
   await pressF(modalOpen); assert.ok(await modalOpen(), 'flower shop modal opens');
   await page.locator('[data-action="supply"]').click(); await page.waitForFunction(() => window.__game.neighborhood.goods === 'delivery');
-  assert.equal(await page.evaluate(() => window.__game.neighborhood.goodsDropoff.x), -1945, 'flower job dropoff is the Gurgaon FNP counter');
-  await walkTo({ x: -908.6, z: 758.1 }, 'garden flower counter again', 2.2);
+  assert.equal(await page.evaluate(() => window.__game.neighborhood.goodsDropoff.x), -1600, 'flower job dropoff is the Gurugram FNP counter');
+  await walkTo({ x: -1396.6, z: 1196.1 }, 'garden flower counter again', 2.2);
   await pressF(modalOpen); assert.ok(await modalOpen(), 'flower shop modal reopens');
   await page.locator('[data-action="buy"]').click(); await page.waitForTimeout(300);
   await page.locator('[data-action="pay"]').click(); await page.waitForTimeout(500);
@@ -131,9 +131,9 @@ try {
   // 3. Gurgaon: place the car at the FNP counter (disclosed), enter it,
   // and confirm the handover. The receipt needs the car at the dropoff
   // (driving, within 4 m, ≤2 km/h) — the same rule as the Nimbu job.
-  await page.evaluate(() => { const g = window.__game; g.car.position = { x: -1945, z: 1785 }; g.car.yaw = 0; g.car.speed = 0; g.car.acceleration = 0; g.car.steering = 0; g.refreshUI(); });
+  await page.evaluate(() => { const g = window.__game; g.car.position = { x: -1600, z: 2015 }; g.car.yaw = 0; g.car.speed = 0; g.car.acceleration = 0; g.car.steering = 0; g.refreshUI(); });
   // Stand at the driver-door point (local -width/2-0.8, 0.35; Parvaaz width 1.72).
-  await teleportPlayer(-1946.6, 1785.4);
+  await teleportPlayer(-1601.7, 2015.4);
   await pressF(() => page.evaluate(() => window.__game.car.driving));
   // The receipt polls on the game's 1 s timer; the game loop is slow under
   // SwiftShader, so allow generous wall time and log the inputs.
@@ -154,10 +154,10 @@ try {
 
   // 4. Places card routes to a cluster arrival.
   await pressTabUntil(() => page.evaluate(() => window.__game.phone === true));
-  await page.locator('[data-action="place"][data-x="3200"]').click();
+  await page.locator('[data-action="place"][data-x="2050"]').click();
   await page.waitForFunction(() => !!window.__game.waypoint);
   const wp = await page.evaluate(() => window.__game.waypoint);
-  assert.ok(Math.hypot(wp.x - 3200, wp.z - 250) < 5, `Places card routes to the Noida arrival, got ${JSON.stringify(wp)}`);
+  assert.ok(Math.hypot(wp.x - 2050, wp.z - 1125) < 5, `Places card routes to the Noida arrival, got ${JSON.stringify(wp)}`);
   await pressTabUntil(() => page.evaluate(() => window.__game.phone === false));
   log('Places card routes to Noida arrival.');
 
@@ -165,27 +165,23 @@ try {
   // Move the car to the boulevard parking lot first (disclosed): the plaza
   // walkers roam bench <-> shop queue, and a pedestrian standing by the
   // driver door cancels the exit transition (door must be clear).
-  await page.evaluate(() => { const g = window.__game; g.car.position = { x: -2155.5, z: 1800 }; g.car.yaw = 0; g.car.speed = 0; g.refreshUI(); });
+  await page.evaluate(() => { const g = window.__game; g.car.position = { x: -1830, z: 2030 }; g.car.yaw = 0; g.car.speed = 0; g.refreshUI(); });
   await pressF(() => page.evaluate(() => !window.__game.car.driving));
-  await teleportPlayer(3110, 338);
-  await walkTo({ x: 3110, z: 335 }, 'park board', 1.8);
+  await teleportPlayer(1960, 1210);
+  await walkTo({ x: 1960, z: 1210 }, 'park board', 1.8);
   await pressF(() => page.evaluate(() => !!window.__game.circuit));
-  for (const cp of [{ x: 3125, z: 355 }, { x: 3235, z: 342 }, { x: 3300, z: 355 }]) await walkTo(cp, `circuit ${cp.x},${cp.z}`, 2.5);
-  // The 4th stop (3235,368) sits behind the fountain from the east approach;
-  // route via (3200,368) on the north path, which clears the fountain.
-  await walkTo({ x: 3200, z: 368 }, 'circuit via north path', 2.5);
-  await walkTo({ x: 3235, z: 368 }, 'circuit 3235,368', 2.5);
-  await walkTo({ x: 3110, z: 335 }, 'park board return', 2.0);
+  for (const cp of [{ x: 1975, z: 1230 }, { x: 2085, z: 1217 }, { x: 2150, z: 1230 }, { x: 2085, z: 1243 }]) await walkTo(cp, `circuit ${cp.x},${cp.z}`, 2.5);
+  await walkTo({ x: 1960, z: 1210 }, 'park board return', 2.0);
   await page.waitForFunction(() => window.__game.neighborhood.data.parkCircuit === true, { timeout: 30000 });
   assert.equal((await data()).parkCircuit, true, 'park circuit recorded');
   await shot('test-results/parks-noida-park.png');
   log('Noida: park circuit completed.');
 
-  // 6. Yamuna: photo stop. Teleport beside the frame (1206.5,-280): the
-  // frame's north post stands at (1208,-278.6), blocking a straight
-  // approach from the north, and the marker needs only 2.2 m.
-  await teleportPlayer(1206.5, -280);
-  await walkTo({ x: 1208, z: -280 }, 'photo marker', 2.0);
+  // 6. Yamuna: photo stop. Teleport beside the frame (1356.5,-550): the
+  // frame's posts stand at (1358,-548.6) and (1358,-551.4), and the marker
+  // sits between them, so approach from the west along z=-550.
+  await teleportPlayer(1356.5, -550);
+  await walkTo({ x: 1358, z: -550 }, 'photo marker', 2.0);
   await pressF(() => page.evaluate(() => window.__game.photoMode === true));
   assert.equal(await page.evaluate(() => !document.querySelector('.photo-overlay').hidden), true, 'photo overlay shows');
   await page.locator('[data-action="exitPhoto"]').click(); await page.waitForFunction(() => window.__game.photoMode === false);

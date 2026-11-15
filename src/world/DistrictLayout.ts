@@ -1,10 +1,11 @@
 import { marketSolids } from './MarketLayout';
 import { centralSolids } from './CentralDelhiLayout';
 import { clusterSolids } from './ClusterLayout';
-import { worldBarriers, regionalBuildings, riverBanks, medianTrees } from './WorldRoads';
+import { worldBarriers, regionalBuildings, riverBanks, medianTrees, roads, ends, CP_EXIT_ROAD_IDS } from './WorldRoads';
 import type { Point } from '../core/math';
 import { localToWorld } from '../core/math';
 import type { Solid } from '../core/CollisionWorld';
+import { projection } from './WorldRoads';
 
 export const ROAD_RADIUS = 44;
 export const ROAD_WIDTH = 12;
@@ -14,14 +15,21 @@ export interface DistrictLayout { buildings: Building[]; columns: Solid[]; trees
 
 export function createDistrictLayout(): DistrictLayout {
   const buildings: Building[] = [], columns: Solid[] = [], trees: Point[] = [], lamps: Point[] = [];
+  // The three real-road legs entering CP (NH-44 north/south, NH-48) leave
+  // the Inner Circle through gaps in the building ring. Buildings — and
+  // their arcade columns — standing on those legs are omitted, so the
+  // highways run clear and the ring reads as a real interchange.
+  const exitLegs = CP_EXIT_ROAD_IDS.map((id) => ends(roads.find((r) => r.id === id)!));
+  const onExitLeg = (p: Point, clearance: number) => exitLegs.some(([a, b]) => projection(p, a, b).distance < clearance);
   for (let sector = 0; sector < 6; sector++) for (let module = 0; module < 5; module++) {
     const angle = (sector * 60 + 12 + module * 9) * Math.PI / 180;
     const position = { x: Math.cos(angle) * 67, z: Math.sin(angle) * 67 };
+    if (onExitLeg(position, 17)) continue;
     const yaw = Math.atan2(-Math.cos(angle), -Math.sin(angle));
     buildings.push({ ...position, yaw, width: 8.7, depth: 12, height: 9.8, angle });
     for (const offset of [-3.8, -0.2, 0.2, 3.8]) {
       const point = localToWorld({ x: offset, z: 10.7 }, position, yaw);
-      columns.push({ ...point, width: 0.38, depth: 0.55, height: 3, yaw });
+      if (!onExitLeg(point, 15.5)) columns.push({ ...point, width: 0.38, depth: 0.55, height: 3, yaw });
     }
   }
   for (let i = 0; i < 10; i++) {

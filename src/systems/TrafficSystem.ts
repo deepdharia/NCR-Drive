@@ -63,7 +63,8 @@ export class TrafficSystem {
    }
    if(this.entering[i] && distance(car.position,lane.start)<=0.2)this.entering[i]=false;
    const towards=this.entering[i]?lane.start:lane.end;
-   const cruise=lane.road.region==='delhi'?6:lane.road.region.endsWith('corridor')?12:8;
+   // Highways run at highway speed; CP streets stay slow, city mains sit between.
+   const cruise=lane.road.region==='delhi'?6:lane.road.kind==='highway'?12:lane.road.region.endsWith('corridor')?12:8;
    const len=distance(car.position,towards);if(len<0.001)return;
    const yaw=Math.atan2(towards.x-car.position.x,towards.z-car.position.z),travel=Math.min(cruise*dt,len),dx=(towards.x-car.position.x)/len,dz=(towards.z-car.position.z)/len;
    // Never project a probe past the turn endpoint into a roadside rail.

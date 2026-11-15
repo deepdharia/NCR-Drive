@@ -29,31 +29,34 @@ const bed = (cluster: string, x: number, z: number, yaw = 0, w = 4, d = 2): Plac
 const bin = (cluster: string, x: number, z: number): PlacedProp => ({ kind: 'bin', cluster, x, z, yaw: 0, w: 0.55, d: 0.55, h: 0.75 });
 
 function extras(c: Cluster): PlacedProp[] {
+  // Props sit beside the real roads at each cluster's new anchor; every
+  // coordinate was checked clear of the nearest road corridor (see the
+  // Phase-1 verification script in the report).
   if (c.id === 'garden-stop') return [
-    bed('garden-stop', -935, 758, 0.4), bed('garden-stop', -918, 774, -0.3),
-    bin('garden-stop', -936, 756), bin('garden-stop', -916, 776),
-    { kind: 'water', cluster: 'garden-stop', x: -938, z: 772, yaw: 0, w: 0.5, d: 0.5, h: 1.1 },
-    tree('garden-stop', -945, 752, 1.1), tree('garden-stop', -920, 748, 0.9), tree('garden-stop', -938, 782, 1), tree('garden-stop', -918, 784, 1.15), tree('garden-stop', -927, 746, 0.85),
-    planter('garden-stop', -934, 770, 0.6),
+    bed('garden-stop', -1423, 1196, 0.4), bed('garden-stop', -1406, 1212, -0.3),
+    bin('garden-stop', -1424, 1194), bin('garden-stop', -1404, 1214),
+    { kind: 'water', cluster: 'garden-stop', x: -1426, z: 1210, yaw: 0, w: 0.5, d: 0.5, h: 1.1 },
+    tree('garden-stop', -1433, 1190, 1.1), tree('garden-stop', -1408, 1186, 0.9), tree('garden-stop', -1426, 1220, 1), tree('garden-stop', -1406, 1222, 1.15), tree('garden-stop', -1415, 1184, 0.85),
+    planter('garden-stop', -1422, 1208, 0.6),
   ];
   if (c.id === 'gurgaon-boulevard') return [
-    planter('gurgaon-boulevard', -2080, 1810, 0), planter('gurgaon-boulevard', -2020, 1810, 0), planter('gurgaon-boulevard', -1960, 1810, 0), planter('gurgaon-boulevard', -1925, 1795, Math.PI / 2),
-    tree('gurgaon-boulevard', -2085, 1788, 1.1), tree('gurgaon-boulevard', -1990, 1788, 1), tree('gurgaon-boulevard', -1930, 1788, 1.2), tree('gurgaon-boulevard', -2085, 1812, 0.9), tree('gurgaon-boulevard', -1970, 1812, 1),
-    bin('gurgaon-boulevard', -2050, 1810), bin('gurgaon-boulevard', -1980, 1810),
+    planter('gurgaon-boulevard', -1755, 2040, 0), planter('gurgaon-boulevard', -1695, 2040, 0), planter('gurgaon-boulevard', -1635, 2040, 0), planter('gurgaon-boulevard', -1600, 2025, Math.PI / 2),
+    tree('gurgaon-boulevard', -1720, 2018, 1.1), tree('gurgaon-boulevard', -1665, 2018, 1), tree('gurgaon-boulevard', -1605, 2018, 1.2), tree('gurgaon-boulevard', -1720, 2045, 0.9), tree('gurgaon-boulevard', -1645, 2042, 1),
+    bin('gurgaon-boulevard', -1725, 2040), bin('gurgaon-boulevard', -1655, 2040),
   ];
   if (c.id === 'noida-park') return [
-    { kind: 'fountain', cluster: 'noida-park', x: 3235, z: 355, yaw: 0, w: 4.4, d: 4.4, h: 1 },
-    { kind: 'exercise', cluster: 'noida-park', x: 3150, z: 352, yaw: 0, w: 3, d: 1.2, h: 2.2 },
-    { kind: 'board', cluster: 'noida-park', x: 3110, z: 335, yaw: Math.PI / 4, w: 0.25, d: 0.25, h: 2.2, label: 'PARK CIRCUIT' },
-    bed('noida-park', 3180, 338, 0, 6, 1.4), bed('noida-park', 3280, 372, 0, 6, 1.4), bed('noida-park', 3300, 348, Math.PI / 2, 5, 1.4),
-    tree('noida-park', 3125, 342, 1.1), tree('noida-park', 3130, 368, 1), tree('noida-park', 3200, 338, 0.9), tree('noida-park', 3300, 340, 1.2), tree('noida-park', 3352, 368, 1), tree('noida-park', 3250, 372, 0.95), tree('noida-park', 3170, 370, 1.05), tree('noida-park', 3310, 338, 0.9),
-    bin('noida-park', 3120, 348), bin('noida-park', 3335, 360),
+    { kind: 'fountain', cluster: 'noida-park', x: 2085, z: 1230, yaw: 0, w: 4.4, d: 4.4, h: 1 },
+    { kind: 'exercise', cluster: 'noida-park', x: 2020, z: 1260, yaw: 0, w: 3, d: 1.2, h: 2.2 },
+    { kind: 'board', cluster: 'noida-park', x: 1960, z: 1210, yaw: Math.PI / 4, w: 0.25, d: 0.25, h: 2.2, label: 'PARK CIRCUIT' },
+    bed('noida-park', 2035, 1206, 0, 6, 1.4), bed('noida-park', 2130, 1247, 0, 6, 1.4), bed('noida-park', 2150, 1223, Math.PI / 2, 5, 1.4),
+    tree('noida-park', 1975, 1217, 1.1), tree('noida-park', 1980, 1243, 1), tree('noida-park', 2050, 1213, 0.9), tree('noida-park', 2150, 1215, 1.2), tree('noida-park', 2202, 1243, 1), tree('noida-park', 2100, 1247, 0.95), tree('noida-park', 2010, 1265, 1.05), tree('noida-park', 2160, 1213, 0.9),
+    bin('noida-park', 1970, 1223), bin('noida-park', 2185, 1235),
   ];
   if (c.id === 'yamuna-view') return [
-    { kind: 'railing', cluster: 'yamuna-view', x: 1212, z: -280, yaw: 0, w: 0.15, d: 20, h: 1.05 },
-    { kind: 'frame', cluster: 'yamuna-view', x: 1208, z: -280, yaw: Math.PI / 2, w: 0.2, d: 3, h: 2.4 },
-    tree('yamuna-view', 1192, -262, 1), tree('yamuna-view', 1210, -258, 0.9),
-    bin('yamuna-view', 1196, -272),
+    { kind: 'railing', cluster: 'yamuna-view', x: 1360, z: -550, yaw: 0, w: 0.15, d: 20, h: 1.05 },
+    { kind: 'frame', cluster: 'yamuna-view', x: 1358, z: -550, yaw: Math.PI / 2, w: 0.2, d: 3, h: 2.4 },
+    tree('yamuna-view', 1330, -500, 1), tree('yamuna-view', 1350, -600, 0.9),
+    bin('yamuna-view', 1345, -520),
   ];
   return [];
 }

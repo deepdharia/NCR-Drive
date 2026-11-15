@@ -83,8 +83,12 @@ export class CentralDelhiView {
       if (Math.abs(Math.sin(toSpoke)) * 44 < 8) continue;
       markings.push({ x: Math.cos(a) * 44, y: 0.035, z: Math.sin(a) * 44, yaw: -a, w: 0.12, h: 0.008, d: 0.85 });
     }
-    islands.push({ x: 280, y: 0.08, z: 0, yaw: Math.PI / 2, w: 0.8, h: 0.16, d: 26 });
-    for (const x of [270, 274, 278, 282, 286, 290]) shrubs.push({ x, y: 0.42, z: 0, yaw: Math.PI / 2, w: 0.65, h: 0.7, d: 3.8 });
+    // Planted strip on the NH-9 approach to the ITO flyover: 22 m north of
+    // the centreline (road yaw 1.19), clear of the piers and the driving line.
+    const strip = { x: 438.2, z: -218.4, yaw: 1.19 };
+    const sdx = Math.sin(strip.yaw), sdz = Math.cos(strip.yaw);
+    islands.push({ x: strip.x, y: 0.08, z: strip.z, yaw: strip.yaw, w: 0.8, h: 0.16, d: 26 });
+    for (const along of [-10, -6, -2, 2, 6, 10]) shrubs.push({ x: strip.x + sdx * along, y: 0.42, z: strip.z + sdz * along, yaw: strip.yaw, w: 0.65, h: 0.7, d: 3.8 });
     this.group.add(instances(box, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.94 }), curbs, false), instances(box, paint, markings, false), instances(box, concrete, islands));
     this.detail.add(instances(box, metal, drains, false));
     this.group.add(instances(new THREE.IcosahedronGeometry(0.5, 1), new THREE.MeshStandardMaterial({ color: 0x65714a, roughness: 1 }), shrubs));
@@ -96,17 +100,17 @@ export class CentralDelhiView {
   }
   private addLandmarks(box: THREE.BufferGeometry, concrete: THREE.Material, stone: THREE.Material, metal: THREE.Material): void {
     const f = FLYOVER;
-    const parts: Instance[] = [{ x: f.x, y: f.underside + f.thickness / 2, z: 0, w: f.width, h: f.thickness, d: f.length }];
-    for (const z of [-88, -55, -26, 26, 55, 88]) {
-      parts.push({ x: f.x, y: f.underside / 2, z, w: Math.abs(z) === 88 ? 12 : 2, h: f.underside, d: 2.4 });
-      parts.push({ x: f.x, y: f.underside - 0.3, z, w: 10, h: 0.6, d: 2.8 });
-      parts.push({ x: f.x, y: 0.15, z, w: 5, h: 0.3, d: 5 });
+    const parts: Instance[] = [{ x: f.x, y: f.underside + f.thickness / 2, z: f.z, w: f.width, h: f.thickness, d: f.length }];
+    for (const off of [-88, -55, -26, 26, 55, 88]) {
+      parts.push({ x: f.x, y: f.underside / 2, z: f.z + off, w: Math.abs(off) === 88 ? 12 : 2, h: f.underside, d: 2.4 });
+      parts.push({ x: f.x, y: f.underside - 0.3, z: f.z + off, w: 10, h: 0.6, d: 2.8 });
+      parts.push({ x: f.x, y: 0.15, z: f.z + off, w: 5, h: 0.3, d: 5 });
     }
-    for (const side of [-1, 1]) parts.push({ x: f.x + side * 5.3, y: 7.5, z: 0, w: 0.4, h: 0.8, d: f.length });
-    const bridge = instances(box, concrete, parts); bridge.name = 'Supported scenic flyover · 6.4m clear underpass · no elevated driving'; this.group.add(bridge);
-    const deck = new THREE.Mesh(new THREE.PlaneGeometry(10, f.length), worldSurfaceMaterial('asphalt')); deck.rotation.x = -Math.PI / 2; deck.position.set(f.x, 7.105, 0); this.group.add(deck);
+    for (const side of [-1, 1]) parts.push({ x: f.x + side * 5.3, y: 7.5, z: f.z, w: 0.4, h: 0.8, d: f.length });
+    const bridge = instances(box, concrete, parts); bridge.name = 'ITO scenic flyover · 6.4m clear underpass over NH-9 · no elevated driving'; this.group.add(bridge);
+    const deck = new THREE.Mesh(new THREE.PlaneGeometry(10, f.length), worldSurfaceMaterial('asphalt')); deck.rotation.x = -Math.PI / 2; deck.position.set(f.x, 7.105, f.z); this.group.add(deck);
     for (const z of [-88, 88]) {
-      const closure = new THREE.Mesh(box, metal); closure.position.set(f.x, 8, z); closure.scale.set(10, 1.6, 0.25); this.group.add(closure);
+      const closure = new THREE.Mesh(box, metal); closure.position.set(f.x, 8, f.z + z); closure.scale.set(10, 1.6, 0.25); this.group.add(closure);
     }
     const arch = new THREE.Shape(); arch.moveTo(-7, 0); arch.lineTo(7, 0); arch.lineTo(7, 16); arch.lineTo(-7, 16); arch.closePath();
     const aperture = new THREE.Path(); aperture.moveTo(-3, 0); aperture.lineTo(-3, 8); aperture.absarc(0, 8, 3, Math.PI, 0, true); aperture.lineTo(3, 0); aperture.closePath(); arch.holes.push(aperture);

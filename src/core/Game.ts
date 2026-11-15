@@ -25,6 +25,7 @@ import { createDistrictLayout } from '../world/DistrictLayout';
 import { motorPoolBays, roadsideRetreat, nearestRoad, projection, ends } from '../world/WorldRoads';
 import { RegionalView } from '../world/RegionalView';
 import { DistrictView } from '../world/DistrictView';
+import { NcrLandmarks } from '../world/NcrLandmarks';
 import { CentralDelhiView } from '../world/CentralDelhiView';
 import { nextQuality, QUALITY, resolvedQuality } from '../rendering/QualityProfile';
 import { GameUI } from '../ui/GameUI';
@@ -53,6 +54,7 @@ export class Game {
   private district: DistrictView;
   private central: CentralDelhiView;
   private regional: RegionalView;
+  private landmarks: NcrLandmarks;
   private camera: CameraRig;
   private input: InputController;
   private interaction: InteractionSystem;
@@ -106,6 +108,7 @@ export class Game {
     this.district = new DistrictView(this.scene, layout, this.renderer);
     this.central = new CentralDelhiView(this.scene);
     this.regional = new RegionalView(this.scene);
+    this.landmarks = new NcrLandmarks(this.scene);
     this.market=new MarketView(this.scene);this.people=new StreetPeople(this.scene);
     this.clusters=new ClusterView(this.scene);this.populations=CLUSTERS.map(c=>new LocalPopulation(this.scene,c.population,c.id));
     motorPoolBays.forEach((bay,i)=>{this.fleet[i+1].position={x:bay.x,z:bay.z};this.fleet[i+1].yaw=bay.yaw;});
@@ -183,7 +186,7 @@ export class Game {
     const quality = resolvedQuality(this.settings), profile = QUALITY[quality];
     this.renderer.shadowMap.enabled = profile.shadowSize > 0;
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, mobile ? Math.min(1.25, profile.pixelRatio) : profile.pixelRatio));
-    this.district.setQuality(quality); this.central.setQuality(quality); this.regional.setQuality(quality);
+    this.district.setQuality(quality); this.central.setQuality(quality); this.regional.setQuality(quality); this.landmarks.setQuality(quality);
     this.ui.setSettings(this.settings);this.audio.settings(this.settings,!this.started||this.paused||this.phone);
   }
   private recover(): void {
@@ -262,6 +265,7 @@ export class Game {
     const audible=this.car.driving?this.car:this.cars.filter(c=>c.owner==='ai'&&Math.abs(c.speed)>0.1&&distance(c.position,focus)<90).sort((a,b)=>distance(a.position,focus)-distance(b.position,focus))[0];
     this.audio.update(focus,this.camera.yaw,audible?.position??this.car.position,audible?.speed??0,!!audible,audible?.braking??false,audible?.steering??0);
     this.regional.update(this.car.driving ? this.car.position : this.player.position);
+    this.landmarks.update(this.car.driving ? this.car.position : this.player.position);
     this.district.update(this.car.driving ? this.car.position : this.player.position); this.camera.update(dt, this.player, this.car, this.world);
   }
   private frame = (time: number): void => {

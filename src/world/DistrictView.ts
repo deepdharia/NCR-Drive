@@ -6,7 +6,10 @@ import { localToWorld } from '../core/math';
 import { COURIER_TARGET } from '../systems/CourierMission';
 import { DaylightRig } from '../rendering/DaylightRig';
 import type { QualityPreset } from '../rendering/QualityProfile';
+import { QUALITY } from '../rendering/QualityProfile';
 import type { DistrictLayout } from './DistrictLayout';
+import { CITY_ANCHORS, YAMUNA_RIVER, ARAVALLI_RIDGE } from './RealNcrRoads';
+import { aravalliMoundPlacements, aravalliScrubPlacements, mulberry32 } from './NcrLandmarks';
 
 interface Placement { color?: number; x: number; y: number; z: number; yaw?: number; sx?: number; sy?: number; sz?: number }
 
@@ -26,12 +29,106 @@ function sign(text: string, width: number, height: number, hindi?: string): THRE
   return new THREE.Mesh(new THREE.PlaneGeometry(width, height), new THREE.MeshStandardMaterial({ map, roughness: 0.8 }));
 }
 
+/**
+ * Ground texture world→canvas transform. The ground plane is 7200 × 6400 m
+ * centred at (100, 0), so world x ∈ [-3500, 3700], z ∈ [-3200, 3200].
+ * CanvasTexture flips Y, so canvas row 0 (top) is v = 1 — which the
+ * -90° X-rotated plane maps to the north edge (z = -3200).
+ */
+export const GROUND_TEXTURE_BOUNDS = { minX: -3500, maxX: 3700, minZ: -3200, maxZ: 3200 };
+export const GROUND_TEXTURE_SIZE = 1024;
+
+export function worldToGroundCanvas(x: number, z: number): { px: number; py: number } {
+  const { minX, maxX, minZ, maxZ } = GROUND_TEXTURE_BOUNDS;
+  return {
+    px: (x - minX) / (maxX - minX) * GROUND_TEXTURE_SIZE,
+    py: (z - minZ) / (maxZ - minZ) * GROUND_TEXTURE_SIZE,
+  };
+}
+
+/**
+ * Painted ground canvas, drawn once at load (deterministic seeded pattern):
+ * green rural fields as the base, sandy Yamuna floodplain along the river
+ * polyline, rocky brown-grey Aravalli zone from ARAVALLI_RIDGE.polygon, and
+ * urban grey around the 8 city anchors. The plane stays FLAT at y = -0.04 —
+ * no displacement, so the roads sitting at y ≈ 0 are never broken.
+ */
+function groundTexture(renderer: THREE.WebGLRenderer): THREE.CanvasTexture {
+  const size = GROUND_TEXTURE_SIZE;
+  const canvas = document.createElement('canvas');
+  canvas.width = size; canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('DistrictView: ground texture requires Canvas 2D.');
+  const rand = mulberry32(20261116);
+  const pxPerM = size / (GROUND_TEXTURE_BOUNDS.maxX - GROUND_TEXTURE_BOUNDS.minX);
+  const pzPerM = size / (GROUND_TEXTURE_BOUNDS.maxZ - GROUND_TEXTURE_BOUNDS.minZ);
+  const at = (x: number, z: number) => worldToGroundCanvas(x, z);
+
+  // Base: rural green fields.
+  ctx.fillStyle = '#7f8f66'; ctx.fillRect(0, 0, size, size);
+  // Field variation: soft seeded ellipses in lighter/darker greens.
+  for (let i = 0; i < 260; i++) {
+    const x = rand() * size, y = rand() * size, rx = (40 + rand() * 160) * pxPerM, ry = (30 + rand() * 120) * pzPerM;
+    ctx.fillStyle = rand() < 0.5 ? 'rgba(122, 143, 96, 0.35)' : 'rgba(104, 126, 82, 0.35)';
+    ctx.beginPath(); ctx.ellipse(x, y, rx, ry, rand() * Math.PI, 0, Math.PI * 2); ctx.fill();
+  }
+  // Sandy Yamuna floodplain: soft strokes along the river polyline, widest
+  // and faintest first, narrower and stronger on top.
+  for (const [halfWidth, alpha] of [[520, 0.22], [380, 0.3], [260, 0.45]] as const) {
+    ctx.strokeStyle = `rgba(196, 178, 138, ${alpha})`;
+    ctx.lineWidth = halfWidth * 2 * pxPerM;
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.beginPath();
+    YAMUNA_RIVER.forEach((p, i) => {
+      const { px, py } = at(p.x, p.z);
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    });
+    ctx.stroke();
+  }
+  // Rocky brown-grey Aravalli zone from the ridge polygon.
+  ctx.fillStyle = '#8a7d6d';
+  ctx.beginPath();
+  ARAVALLI_RIDGE.polygon.forEach((p, i) => {
+    const { px, py } = at(p.x, p.z);
+    if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+  });
+  ctx.closePath(); ctx.fill();
+  for (let i = 0; i < 500; i++) {
+    const a = rand() * Math.PI * 2, d = Math.sqrt(rand()) * 700;
+    const { px, py } = at(ARAVALLI_RIDGE.centre.x + Math.cos(a) * d, ARAVALLI_RIDGE.centre.z + Math.sin(a) * d);
+    ctx.fillStyle = rand() < 0.5 ? 'rgba(110, 98, 84, 0.5)' : 'rgba(154, 140, 122, 0.5)';
+    ctx.beginPath(); ctx.arc(px, py, (2 + rand() * 6) * pxPerM, 0, Math.PI * 2); ctx.fill();
+  }
+  // Urban grey around the 8 city anchors, soft-edged radial gradients.
+  for (const city of CITY_ANCHORS) {
+    const { px, py } = at(city.x, city.z);
+    const r = 540 * pxPerM;
+    const grad = ctx.createRadialGradient(px, py, r * 0.15, px, py, r);
+    grad.addColorStop(0, 'rgba(154, 154, 148, 0.95)');
+    grad.addColorStop(0.6, 'rgba(148, 148, 140, 0.6)');
+    grad.addColorStop(1, 'rgba(148, 148, 140, 0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath(); ctx.arc(px, py, r, 0, Math.PI * 2); ctx.fill();
+  }
+  // Fine speckle so the flat plane never reads as a solid colour.
+  for (let i = 0; i < 4000; i++) {
+    ctx.fillStyle = rand() < 0.5 ? 'rgba(0, 0, 0, 0.05)' : 'rgba(255, 255, 255, 0.05)';
+    ctx.fillRect(rand() * size, rand() * size, 2, 2);
+  }
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy());
+  return texture;
+}
+
 export class DistrictView {
   readonly group = new THREE.Group();
   readonly delivery = new THREE.Group();
   readonly sun: THREE.DirectionalLight;
   readonly lighting: DaylightRig;
   private localObjects: THREE.Object3D[] = [];
+  private quality: QualityPreset = 'balanced';
+  private aravalliHills!: THREE.Group;
 
   constructor(scene: THREE.Scene, layout: DistrictLayout, renderer: THREE.WebGLRenderer) {
     this.group.name = 'Connaught Place'; scene.add(this.group);
@@ -39,9 +136,12 @@ export class DistrictView {
     const stone = surfaceMaterial('paving');
     const white = surfaceMaterial('plaster');
     const grass = worldSurfaceMaterial('grass');
-    const earth = new THREE.Mesh(new THREE.PlaneGeometry(6000, 7000), new THREE.MeshStandardMaterial({ color: 0x8d9076, roughness: 1 }));
-    earth.rotation.x = -Math.PI / 2; earth.position.set(-1775, -0.04, 1000); earth.receiveShadow = true; this.group.add(earth);
-    const eastBank=earth.clone();eastBank.position.x=4525;this.group.add(eastBank);
+    // One flat ground plane covering the whole real-NCR network
+    // (x −3150…3350, z −2850…2900) with margin. Phase 2 paints it with a
+    // world-space canvas texture; it stays FLAT at y = -0.04 (no
+    // displacement — the roads sit at y ≈ 0).
+    const earth = new THREE.Mesh(new THREE.PlaneGeometry(7200, 6400), new THREE.MeshStandardMaterial({ map: groundTexture(renderer), roughness: 1 }));
+    earth.rotation.x = -Math.PI / 2; earth.position.set(100, -0.04, 0); earth.receiveShadow = true; this.group.add(earth);
     this.flat(new THREE.CircleGeometry(30, 96), grass, 0.015);
     this.flat(planarUV(new THREE.RingGeometry(17, 19, 96)), stone, 0.025);
     for (let i = 0; i < 6; i++) {
@@ -163,16 +263,33 @@ export class DistrictView {
     const ring = new THREE.Mesh(new THREE.TorusGeometry(1.8, 0.08, 6, 32), new THREE.MeshBasicMaterial({ color: 0xf1c369 })); ring.rotation.x = Math.PI / 2; ring.position.y = 0.08; this.delivery.add(ring);
 
     this.delivery.position.set(COURIER_TARGET.x, 0, COURIER_TARGET.z); this.delivery.visible = false; this.group.add(this.delivery);
-    this.localObjects=this.group.children.filter(child=>child!==earth && child!==eastBank && child!==this.delivery);
+    this.localObjects=this.group.children.filter(child=>child!==earth && child!==this.delivery);
+
+    // Phase 2 — Aravalli hills: instanced rocky mounds + scrub blobs inside
+    // the ridge polygon, visual-only, one chunk centred on the ridge.
+    // Placements are verified clear of every road (see NcrLandmarks and
+    // tests/phase2-landmarks.test.ts); the hills group is culled on its own
+    // in update(), not with the CP-local objects above.
+    const hills = new THREE.Group(); hills.name = 'Aravalli Hills'; this.group.add(hills);
+    const rock = new THREE.MeshStandardMaterial({ color: 0x8a7d6d, roughness: 1 });
+    const moundGeometry = new THREE.ConeGeometry(1, 1, 7); moundGeometry.translate(0, 0.5, 0);
+    const mounds = aravalliMoundPlacements();
+    hills.add(batch(moundGeometry, rock, mounds.map((m, i) => ({ x: m.x, y: 0, z: m.z, sx: m.radius, sy: m.height, sz: m.radius, color: [0x8a7d6d, 0x7d7268, 0x94867a][i % 3] }))));
+    const scrubGeometry = new THREE.IcosahedronGeometry(1, 0);
+    const scrubMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1 });
+    hills.add(batch(scrubGeometry, scrubMaterial, aravalliScrubPlacements().map((s, i) => ({ x: s.x, y: s.scale * 0.35, z: s.z, sx: s.scale, sy: s.scale * 0.45, sz: s.scale, color: [0x5e6b45, 0x6b6b4a, 0x4d5c3e][i % 3] }))));
+    this.aravalliHills = hills;
   }
 
 
 
-  setQuality(quality: QualityPreset): void { this.lighting.setQuality(quality); }
+  setQuality(quality: QualityPreset): void { this.quality = quality; this.lighting.setQuality(quality); }
 
   update(focus: Point): void {
     this.lighting.update(focus);
     for (const object of this.localObjects) object.visible = Math.hypot(focus.x, focus.z) < 850;
+    // Aravalli hills: one chunk, culled by distance to the ridge centre.
+    this.aravalliHills.visible = Math.hypot(focus.x - ARAVALLI_RIDGE.centre.x, focus.z - ARAVALLI_RIDGE.centre.z) < 800 + QUALITY[this.quality].sceneryDistance;
   }
 
   private flat(geometry: THREE.BufferGeometry, material: THREE.Material, y: number): void {
