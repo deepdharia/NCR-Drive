@@ -4,6 +4,7 @@ import { YAMUNA_RIVER, ARAVALLI_RIDGE } from './RealNcrRoads';
 import { CLUSTERS } from './ClusterData';
 import type { Point } from '../core/math';
 import { signTexture } from '../rendering/ProceduralTextures';
+import { DaylightRig } from '../rendering/DaylightRig';
 import { QUALITY } from '../rendering/QualityProfile';
 import type { QualityPreset } from '../rendering/QualityProfile';
 
@@ -416,11 +417,13 @@ export class NcrLandmarks {
   private quality: QualityPreset = 'balanced';
   private chunks: Chunk[] = [];
 
-  constructor(scene: THREE.Scene) {
+  constructor(scene: THREE.Scene, lighting?: DaylightRig) {
     scene.add(this.group);
     this.group.name = 'NCR Landmarks';
     const box = new THREE.BoxGeometry(1, 1, 1);
     const glass = new THREE.MeshStandardMaterial({ color: 0x587e8b, metalness: 0.35, roughness: 0.3, emissive: 0x284558, emissiveIntensity: 0.15 });
+    // Phase 1 — landmark glass follows the time-of-day preset, not noon.
+    lighting?.registerGlowMaterial(glass, 'window');
     const concrete = new THREE.MeshStandardMaterial({ color: 0xb9b3a4, roughness: 0.9 });
     const sandstone = new THREE.MeshStandardMaterial({ color: 0xc9a06a, roughness: 0.85 });
     const sandstoneLight = new THREE.MeshStandardMaterial({ color: 0xd9b47c, roughness: 0.85 });
@@ -444,15 +447,23 @@ export class NcrLandmarks {
       // at dusk, dark windows stay dark. No new assets.
       const officeWindows = windowGridTexture(20261117, 0.38);
       const litGlass = new THREE.MeshStandardMaterial({ map: officeWindows, emissiveMap: officeWindows, color: 0x9fb4bd, emissive: 0xffc37d, emissiveIntensity: 0.55, metalness: 0.35, roughness: 0.3 });
+      // Phase 1 — Cyber City lit windows: dark by day, strong at dusk/night.
+      lighting?.registerGlowMaterial(litGlass, 'window');
       g.add(batch(box, litGlass, towers.map((t) => ({ x: t.x, y: t.height / 2, z: t.z, sx: 26, sy: t.height, sz: 26 }))));
       // Stepped tops: a smaller crown box on each tower.
       g.add(batch(box, glass, towers.map((t) => ({ x: t.x, y: t.height + 4, z: t.z, sx: 16, sy: 8, sz: 16 }))));
       // Two-storey glass podiums at each tower base + an amber crown strip
       // on top of each stepped crown, so the skyline reads at dusk.
       g.add(batch(box, litGlass, towers.map((t) => ({ x: t.x, y: 4, z: t.z, sx: 34, sy: 8, sz: 34 }))));
-      g.add(batch(box, new THREE.MeshStandardMaterial({ color: 0x2a2118, emissive: 0xffb84d, emissiveIntensity: 1.2, roughness: 0.6 }), towers.map((t) => ({ x: t.x, y: t.height + 8.2, z: t.z, sx: 16.5, sy: 0.5, sz: 16.5 }))));
+      // Amber crown strip: a lit sign, dimmed by day instead of glowing at noon.
+      const crownStrip = new THREE.MeshStandardMaterial({ color: 0x2a2118, emissive: 0xffb84d, emissiveIntensity: 1.2, roughness: 0.6 });
+      lighting?.registerGlowMaterial(crownStrip, 'sign');
+      g.add(batch(box, crownStrip, towers.map((t) => ({ x: t.x, y: t.height + 8.2, z: t.z, sx: 16.5, sy: 0.5, sz: 16.5 }))));
       // Bilingual totem on the south face of the SW tower, toward NH-48.
-      const cyberSign = new THREE.Mesh(new THREE.PlaneGeometry(20, 1.6), new THREE.MeshStandardMaterial({ map: signTexture('CYBER CITY', 'साइबर सिटी'), roughness: 0.8 }));
+      const cyberSignMaterial = new THREE.MeshStandardMaterial({ map: signTexture('CYBER CITY', 'साइबर सिटी'), roughness: 0.8 });
+      cyberSignMaterial.emissiveMap = cyberSignMaterial.map; cyberSignMaterial.emissive = new THREE.Color(0xffffff); cyberSignMaterial.emissiveIntensity = 0;
+      lighting?.registerGlowMaterial(cyberSignMaterial, 'sign');
+      const cyberSign = new THREE.Mesh(new THREE.PlaneGeometry(20, 1.6), cyberSignMaterial);
       cyberSign.position.set(-2130, 6, 1966.4); cyberSign.rotation.y = Math.PI; g.add(cyberSign);
     }
 
@@ -463,6 +474,8 @@ export class NcrLandmarks {
         const g = chunk({ x: 1780, z: 980 }, 220);
         const homeWindows = windowGridTexture(20261118, 0.55, '#a89a86');
         const residential = new THREE.MeshStandardMaterial({ map: homeWindows, emissiveMap: homeWindows, color: 0xffffff, emissive: 0xffc37d, emissiveIntensity: 0.4, roughness: 0.85 });
+        // Phase 1 — Noida home windows: dark by day, warm at dusk/night.
+        lighting?.registerGlowMaterial(residential, 'window');
         g.add(batch(box, residential, blocks.map((b) => ({ x: b.x, y: b.height / 2, z: b.z, yaw: b.yaw, sx: 20, sy: b.height, sz: 14, color: b.color }))));
         // Balcony slab bands at 1/3 and 2/3 height, slightly proud of the face.
         const bands: { x: number; y: number; z: number; yaw: number; sx: number; sy: number; sz: number }[] = [];

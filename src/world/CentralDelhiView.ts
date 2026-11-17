@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { CENTRAL_ROAD as ROAD, centralRoadPolygons, ceremonialArch, delhiBlocks, FLYOVER } from './CentralDelhiLayout';
 import { planarUV, shopWindowTexture, signTexture, surfaceMaterial, worldSurfaceMaterial } from '../rendering/ProceduralTextures';
+import { DaylightRig } from '../rendering/DaylightRig';
 import { QUALITY } from '../rendering/QualityProfile';
 import type { QualityPreset } from '../rendering/QualityProfile';
 import type { Point } from '../core/math';
@@ -35,7 +36,9 @@ export class CentralDelhiView {
   readonly group = new THREE.Group();
   private detail = new THREE.Group();
   private quality: QualityPreset = 'balanced';
-  constructor(scene: THREE.Scene) {
+  private lighting?: DaylightRig;
+  constructor(scene: THREE.Scene, lighting?: DaylightRig) {
+    this.lighting = lighting;
     this.group.name = 'Central Delhi · daylight vertical slice'; scene.add(this.group); this.group.add(this.detail);
     const asphalt = worldSurfaceMaterial('asphalt'), paving = worldSurfaceMaterial('paving'), concrete = surfaceMaterial('concrete');
     const stone = new THREE.MeshStandardMaterial({ color: 0xc3ae8b, roughness: 0.88 });
@@ -207,10 +210,17 @@ export class CentralDelhiView {
     this.group.add(instances(box, plaster, capitals));
     this.group.add(instances(box, new THREE.MeshStandardMaterial({ color: 0x2e4a3c, roughness: 0.85 }), canopies));
     const windowMap = shopWindowTexture();
-    this.group.add(instances(box, new THREE.MeshStandardMaterial({ map: windowMap, emissiveMap: windowMap, color: 0xe7c38f, emissive: 0xffc37d, emissiveIntensity: 0.12, roughness: 0.3, metalness: 0.1 }), fronts, false));
+    const warmWindow = new THREE.MeshStandardMaterial({ map: windowMap, emissiveMap: windowMap, color: 0xe7c38f, emissive: 0xffc37d, emissiveIntensity: 0.12, roughness: 0.3, metalness: 0.1 });
+    // Phase 1 — lit shopfronts follow the time-of-day preset, not noon.
+    this.lighting?.registerGlowMaterial(warmWindow, 'window');
+    this.group.add(instances(box, warmWindow, fronts, false));
     this.group.add(instances(box, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 }), awnings, false));
     for (const sg of signs) {
-      const sign = new THREE.Mesh(new THREE.PlaneGeometry(sg.w, 1.0), new THREE.MeshStandardMaterial({ map: signTexture(sg.name, sg.hindi), roughness: 0.8 }));
+      const signMaterial = new THREE.MeshStandardMaterial({ map: signTexture(sg.name, sg.hindi), roughness: 0.8 });
+      // Phase 1 — lit shop sign: dark painted board by day, glowing at night.
+      signMaterial.emissiveMap = signMaterial.map; signMaterial.emissive = new THREE.Color(0xffffff); signMaterial.emissiveIntensity = 0;
+      this.lighting?.registerGlowMaterial(signMaterial, 'sign');
+      const sign = new THREE.Mesh(new THREE.PlaneGeometry(sg.w, 1.0), signMaterial);
       sign.position.set(sg.x, sg.y, sg.z); sign.rotation.y = sg.yaw; this.group.add(sign);
     }
   }
@@ -225,7 +235,11 @@ export class CentralDelhiView {
       const a = i * Math.PI / 3, x = Math.cos(a) * 118 - Math.sin(a) * 10.2, z = Math.sin(a) * 118 + Math.cos(a) * 10.2;
       poles.push({ x, y: 3.8, z, w: 0.12, h: 7.6, d: 0.12 });
       fixtures.push({ x: x + Math.sin(a) * 1.1, y: 7.6, z: z - Math.cos(a) * 1.1, yaw: -a, w: 2.5, h: 0.1, d: 0.28 });
-      const sign = new THREE.Mesh(new THREE.PlaneGeometry(5, 1.15), new THREE.MeshStandardMaterial({ map: signTexture(i === 0 ? 'NOIDA →  |  RAJIV CHOWK' : i === 2 ? 'GURUGRAM →  |  DELHI' : 'CONNAUGHT PLACE  |  INNER CIRCLE', 'नई दिल्ली'), roughness: 0.75, side: THREE.DoubleSide }));
+      const roadSignMaterial = new THREE.MeshStandardMaterial({ map: signTexture(i === 0 ? 'NOIDA →  |  RAJIV CHOWK' : i === 2 ? 'GURUGRAM →  |  DELHI' : 'CONNAUGHT PLACE  |  INNER CIRCLE', 'नई दिल्ली'), roughness: 0.75, side: THREE.DoubleSide });
+      // Phase 1 — direction signs glow at night like the shop signs.
+      roadSignMaterial.emissiveMap = roadSignMaterial.map; roadSignMaterial.emissive = new THREE.Color(0xffffff); roadSignMaterial.emissiveIntensity = 0;
+      this.lighting?.registerGlowMaterial(roadSignMaterial, 'sign');
+      const sign = new THREE.Mesh(new THREE.PlaneGeometry(5, 1.15), roadSignMaterial);
       sign.position.set(x, 3.1, z); sign.rotation.y = Math.PI / 2 - a; this.group.add(sign);
     }
     this.detail.add(instances(box, stone, benches), instances(box, metal, frames));

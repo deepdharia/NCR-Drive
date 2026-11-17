@@ -227,6 +227,10 @@ export class DistrictView {
     const windowMap = shopWindowTexture();
     const warmWindow = new THREE.MeshStandardMaterial({ map: windowMap, emissiveMap: windowMap, color: 0xe7c38f, emissive: 0xffc37d, emissiveIntensity: 0.12, roughness: 0.3, metalness: 0.1 });
     warmWindow.name = 'Illuminated shop interiors';
+    // Phase 1 — lit windows/glass follow the time-of-day preset (~0 by day,
+    // strong at dusk/night) instead of glowing faintly at noon.
+    this.lighting.registerGlowMaterial(glass, 'window');
+    this.lighting.registerGlowMaterial(warmWindow, 'window');
     const windowFrames = new THREE.MeshStandardMaterial({ color: 0x264439, roughness: 0.75 });
     this.group.add(batch(new THREE.BoxGeometry(8.7, 9.8, 12), white, walls));
     this.group.add(batch(new THREE.BoxGeometry(8.9, 0.3, 0.6), stone, trims));
@@ -260,6 +264,9 @@ export class DistrictView {
         const p = localToWorld({ x: 0, z: 6.25 }, b, b.yaw); placements.push({ ...p, y: 3.7, yaw: b.yaw });
       });
       const material = new THREE.MeshStandardMaterial({ map: signTexture(english, hindi), roughness: 0.8 });
+      // Phase 1 — lit shop sign: dark painted board by day, glowing at night.
+      material.emissiveMap = material.map; material.emissive = new THREE.Color(0xffffff); material.emissiveIntensity = 0;
+      this.lighting.registerGlowMaterial(material, 'sign');
       const signs = batch(shopSignGeometry, material, placements, false); signs.name = `${english} / ${hindi}`; this.group.add(signs);
       // Phase 4 — hanging signs: the same bilingual board turned 90° so it
       // reads from along the street, one per building, at the façade edge.
@@ -268,7 +275,10 @@ export class DistrictView {
         if (i % shopNames.length !== label) return;
         const p = localToWorld({ x: 4.35, z: 7.1 }, b, b.yaw); hanging.push({ ...p, y: 2.7, yaw: b.yaw + Math.PI / 2 });
       });
-      const hangingSigns = batch(new THREE.PlaneGeometry(1.05, 0.7), new THREE.MeshStandardMaterial({ map: signTexture(english, hindi), roughness: 0.8, side: THREE.DoubleSide }), hanging, false);
+      const hangingMaterial = new THREE.MeshStandardMaterial({ map: signTexture(english, hindi), roughness: 0.8, side: THREE.DoubleSide });
+      hangingMaterial.emissiveMap = hangingMaterial.map; hangingMaterial.emissive = new THREE.Color(0xffffff); hangingMaterial.emissiveIntensity = 0;
+      this.lighting.registerGlowMaterial(hangingMaterial, 'sign');
+      const hangingSigns = batch(new THREE.PlaneGeometry(1.05, 0.7), hangingMaterial, hanging, false);
       hangingSigns.name = `Hanging: ${english} / ${hindi}`; this.group.add(hangingSigns);
     });
     // Phase 4 — CP shopfront dressing: deep-green fascia bands behind the
@@ -319,6 +329,12 @@ export class DistrictView {
     water.rotation.x = -Math.PI / 2; water.position.y = 0.66; this.group.add(water);
     const station = new THREE.Mesh(new THREE.BoxGeometry(12, 7, 22), white); station.position.set(-112, 3.5, 26); station.castShadow = true; this.group.add(station);
     const stationSign = sign('SHIVAJI STADIUM · DELHINAV', 17, 1.2); stationSign.position.set(-105.9, 5.2, 26); stationSign.rotation.y = Math.PI / 2; this.group.add(stationSign);
+    {
+      // Phase 1 — station sign glows at night like the shop signs.
+      const stationSignMat = stationSign.material as THREE.MeshStandardMaterial;
+      stationSignMat.emissiveMap = stationSignMat.map; stationSignMat.emissive = new THREE.Color(0xffffff); stationSignMat.emissiveIntensity = 0;
+      this.lighting.registerGlowMaterial(stationSignMat, 'sign');
+    }
     const plaza = new THREE.Mesh(planarUV(new THREE.PlaneGeometry(20, 30)), stone); plaza.rotation.x = -Math.PI / 2; plaza.position.set(-98, 0.02, 24); this.group.add(plaza);
     const beacon = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.6, 6, 20, 1, true), new THREE.MeshBasicMaterial({ color: 0xe7b963, transparent: true, opacity: 0.35, side: THREE.DoubleSide, depthWrite: false }));
     beacon.position.y = 3; this.delivery.add(beacon);

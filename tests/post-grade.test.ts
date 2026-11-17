@@ -41,6 +41,15 @@ test('readDaylightPreset reads a preset field when a later rig adds one', () => 
   assert.ok(isTimeOfDayPreset('dusk') && !isTimeOfDayPreset('noon'));
 });
 
+test('readDaylightPreset maps DaylightRig preset names to grade presets', () => {
+  // DaylightRig.currentTimeOfDay is 'morning' | 'evening' | 'dusk' | 'night'.
+  assert.equal(readDaylightPreset({ timeOfDay: 'morning' }), 'late-morning');
+  assert.equal(readDaylightPreset({ timeOfDay: 'evening' }), 'golden-hour');
+  assert.equal(readDaylightPreset({ timeOfDay: 'dusk' }), 'dusk');
+  assert.equal(readDaylightPreset({ preset: 'night' }), 'night');
+  assert.equal(readDaylightPreset({ preset: 'morning' }), 'late-morning');
+});
+
 test('applyGrade sets ACES filmic tone mapping and the preset exposure', () => {
   const renderer = fakeRenderer();
   applyGrade(renderer, 'dusk');

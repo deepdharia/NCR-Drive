@@ -4,6 +4,7 @@ import type { Road } from './WorldRoads';
 import { YAMUNA_RIVER, JUNCTIONS, CITY_ANCHORS, ARAVALLI_RIDGE, roadById } from './RealNcrRoads';
 import { pointInPolygon, distanceToPolyline } from './NcrLandmarks';
 import { Vegetation } from './Vegetation';
+import { DaylightRig } from '../rendering/DaylightRig';
 import type { Point } from '../core/math';
 import { QUALITY } from '../rendering/QualityProfile';
 import type { QualityPreset } from '../rendering/QualityProfile';
@@ -150,7 +151,7 @@ export class RegionalView {
  readonly roadMaterials: THREE.MeshStandardMaterial[] = [];
  private vegetation!: Vegetation;
  private chunks: {group:THREE.Group;point:Point;radius:number}[]=[];
- constructor(scene:THREE.Scene){
+ constructor(scene:THREE.Scene, lighting?: DaylightRig){
   scene.add(this.group);
   const box=new THREE.BoxGeometry(1,1,1),plane=new THREE.PlaneGeometry(1,1);
   const asphalt=worldSurfaceMaterial('asphalt');
@@ -175,6 +176,8 @@ export class RegionalView {
   const paint=new THREE.MeshBasicMaterial({color:0xe9dbad});
   const rail=new THREE.MeshStandardMaterial({color:0xc5bda0,roughness:0.85});
   const glass=new THREE.MeshStandardMaterial({color:0x587e8b,metalness:0.35,roughness:0.3,emissive:0x284558,emissiveIntensity:0.15});
+  // Phase 1 — highway-city glass follows the time-of-day preset, not noon.
+  lighting?.registerGlowMaterial(glass, 'window');
   const residential=new THREE.MeshStandardMaterial({color:0xffffff,roughness:0.9});
   const foliage=new THREE.IcosahedronGeometry(1.5,0);
   // Yamuna as a flat ribbon following the real polyline, just above the

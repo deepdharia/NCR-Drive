@@ -2,6 +2,10 @@ import * as THREE from 'three';
 import { FrameMetrics, AutoQuality, TIER_ORDER } from './FrameMetrics';
 import { Effects } from '../effects/Effects';
 import { Headlights } from '../rendering/Headlights';
+import { TIME_OF_DAY, nextTimeOfDayPreset } from '../rendering/DaylightRig';
+import type { TimeOfDayPreset } from '../rendering/DaylightRig';
+import { collectVehicleLampMaterials, applyVehicleLamps } from '../rendering/NightLamps';
+import type { VehicleLampMaterials } from '../rendering/NightLamps';
 import { PostGrade } from '../rendering/PostGrade';
 import { vibrateTap } from '../systems/Haptics';
 import type { QualityPreset } from '../rendering/QualityProfile';
@@ -71,6 +75,7 @@ export class Game {
   private neighborhood!:Neighborhood;
   private market!:MarketView;private people!:StreetPeople;private audio=new StreetAudio();
   private headlights = new Headlights();
+  private vehicleLamps: VehicleLampMaterials = { headlamps: [], tails: [] };
   private effects!: Effects;
   private postGrade!: PostGrade;
   private autoQuality = new AutoQuality();
@@ -115,15 +120,19 @@ export class Game {
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, mobile ? 1.25 : 1.5));
     this.renderer.setSize(root.clientWidth, root.clientHeight);
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping; this.renderer.toneMappingExposure = 1.0;
+    // Explicit, not assumed: three r152+ defaults to sRGB output, but the
+    // grade depends on it — pin it here so a default change can't silently
+    // wash the scene out. (Verified: ACES + sRGB were both already set.)
+    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.shadowMap.enabled = true; this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this.renderer.domElement.className = 'game-canvas'; this.renderer.domElement.setAttribute('aria-label', 'NCR Drive 3D district');
     const overlay = document.createElement('div'); overlay.className = 'overlay';
     root.replaceChildren(this.renderer.domElement, overlay);
     const layout = createDistrictLayout(); this.world = new CollisionWorld(layout.solids);
     this.district = new DistrictView(this.scene, layout, this.renderer);
-    this.central = new CentralDelhiView(this.scene);
-    this.regional = new RegionalView(this.scene);
-    this.landmarks = new NcrLandmarks(this.scene);
+    this.central = new CentralDelhiView(this.scene, this.district.lighting);
+    this.regional = new RegionalView(this.scene, this.district.lighting);
+    this.landmarks = new NcrLandmarks(this.scene, this.district.lighting);
     this.effects = new Effects(this.scene);
     this.regional.roadMaterials.forEach(material => this.effects.registerRoadMaterial(material));
     this.postGrade = new PostGrade(this.renderer, root, GRADE_PRESET[this.district.lighting.currentTimeOfDay]);
@@ -133,13 +142,17 @@ export class Game {
     motorPoolBays.forEach((bay,i)=>{this.fleet[i+1].position={x:bay.x,z:bay.z};this.fleet[i+1].yaw=bay.yaw;});
     const civilian=new VehicleController(VEHICLE_SPECS[0]);civilian.position={x:-182,z:12.5};civilian.yaw=Math.PI/2;civilian.occupant=`driver-${civilian.id}`;this.fleet.push(civilian);this.fleetViews.push(new VehicleView(civilian.spec,'DL 4C LM 5831'));
     this.scene.add(this.playerView.group, ...this.fleetViews.map(v => v.group), ...this.trafficViews.map(v => v.group));
+    // Phase 1 — collect the vehicle lamp materials once (named materials on
+    // the merged car bodies); night running lights are applied from
+    // applySettings / updateViews without touching VehicleView.
+    this.vehicleLamps = collectVehicleLampMaterials([...this.fleetViews.map(v => v.group), ...this.trafficViews.map(v => v.group)]);
     this.camera = new CameraRig(root.clientWidth / root.clientHeight);
     this.interaction = new InteractionSystem(this.player, this.car, this.world, () => [...this.otherCars(),...this.people.colliders,...this.populations.flatMap(p=>p.colliders)]);
     this.interaction.onDisplaced=(id,point)=>{const target=roadsideRetreat(point);this.people.displace(id,point,this.world.isClear(target,0.35,0,1.8,this.otherCars())?target:point);this.ui.toast('Driver retreats. Nearby neighbors are startled.');};
     this.interaction.onTransferred=()=>{this.input.reset();this.input.reverse=false;if(this.car.driving)this.camera.enterVehicle();this.refreshUI();};
     this.player.teleport({ x: this.interaction.door.x - 0.45, z: this.interaction.door.z });
     this.input = new InputController(this.renderer.domElement, {
-      interact: () => this.interact(), phone: () => this.togglePhone(), pause: () => this.togglePause(), horn: () => this.audio.horn(),
+      interact: () => this.interact(), phone: () => this.togglePhone(), pause: () => this.togglePause(), horn: () => this.audio.horn(), timeOfDay: () => this.cycleTimeOfDay(),
       rotate: (dx, dy) => this.camera.rotate(dx * this.settings.cameraSensitivity, dy * this.settings.cameraSensitivity, this.car.driving), tap: (x, y) => this.tapCar(x, y),
     });
     this.ui = new GameUI(overlay, this.input, {
@@ -152,6 +165,7 @@ export class Game {
         this.applySettings(); this.saveProgress(); this.refreshUI();
         this.renderer.render(this.scene, this.camera.camera);
       },
+      timeOfDay: () => this.cycleTimeOfDay(),
       sensitivity: (kind, value) => {
         if (!Number.isFinite(value) || value < 0.5 || value > 1.5) return;
         this.settings[kind] = value; this.applySettings(); this.saveProgress(); this.refreshUI();
@@ -209,6 +223,7 @@ export class Game {
     this.district.setQuality(quality); this.central.setQuality(quality); this.regional.setQuality(quality); this.landmarks.setQuality(quality);
     this.district.lighting.setTimeOfDay(this.settings.timeOfDay ?? 'morning');
     this.headlights.setActive(this.district.lighting.headlightsOn);
+    applyVehicleLamps(this.vehicleLamps, this.district.lighting.headlightsOn);
     this.postGrade.setPreset(GRADE_PRESET[this.district.lighting.currentTimeOfDay]);
     this.postGrade.setQuality(quality);
     this.ui.setSettings(this.settings);this.audio.settings(this.settings,!this.started||this.paused||this.phone);
@@ -223,6 +238,14 @@ export class Game {
     this.camera.reset(); this.saveProgress(); this.paused = false;
     this.syncScreen(); this.updateViews(1); this.renderer.render(this.scene, this.camera.camera);
     this.ui.toast('Back on a clear road. Recovery is free; active jobs cancelled with no payout.');
+  }
+  /** Phase 1 — in-game time-of-day toggle: morning → evening → dusk → night. Applies live via applySettings and persists in the save. */
+  private cycleTimeOfDay(): void {
+    const next: TimeOfDayPreset = nextTimeOfDayPreset(this.settings.timeOfDay ?? 'morning');
+    this.settings.timeOfDay = next;
+    this.applySettings(); this.saveProgress(); this.refreshUI();
+    this.ui.toast(`Time of day: ${TIME_OF_DAY[next].label}.`);
+    this.renderer.render(this.scene, this.camera.camera);
   }
   private togglePhone(): void {
     if (!this.started || this.paused || this.modal || this.interaction.busy || this.handover>0) return;
@@ -297,6 +320,10 @@ export class Game {
     }
     this.landmarks.update(this.car.driving ? this.car.position : this.player.position);
     this.district.update(this.car.driving ? this.car.position : this.player.position); this.camera.update(dt, this.player, this.car, this.world);
+    // Phase 1 — VehicleView.update rewrites the tail-lamp material every
+    // frame, so the night running-light floor is re-raised here, after it.
+    // Scalar writes only; no-op by day (applyVehicleLamps only raises tails at night).
+    applyVehicleLamps(this.vehicleLamps, this.district.lighting.headlightsOn);
   }
   private frame = (time: number): void => {
     const frameMs=time-this.lastTime;

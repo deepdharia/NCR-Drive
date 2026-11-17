@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import {
   TIME_OF_DAY, isTimeOfDayPreset, streetlightEmissiveIntensity,
+  windowEmissiveIntensity, signEmissiveIntensity, nextTimeOfDayPreset,
   SKY_FRAGMENT_SHADER, SKY_VERTEX_SHADER,
 } from '../src/rendering/DaylightRig';
 import { Headlights } from '../src/rendering/Headlights';
@@ -36,6 +37,45 @@ test('evening and dusk lower the sun and warm the sky; night goes cool and dim',
   assert.ok(TIME_OF_DAY.night.sunIntensity < TIME_OF_DAY.dusk.sunIntensity);
   assert.ok(TIME_OF_DAY.night.skyZenith[2] > TIME_OF_DAY.night.skyZenith[0]);
   assert.ok(TIME_OF_DAY.night.environmentIntensity < TIME_OF_DAY.dusk.environmentIntensity);
+});
+
+test('window and sign glow ramp from day to night with the streetlights', () => {
+  assert.equal(TIME_OF_DAY.morning.windowGlow, 0);
+  assert.equal(TIME_OF_DAY.morning.signGlow, 0);
+  assert.ok(TIME_OF_DAY.evening.windowGlow > 0 && TIME_OF_DAY.evening.windowGlow < TIME_OF_DAY.dusk.windowGlow);
+  assert.ok(TIME_OF_DAY.dusk.windowGlow < TIME_OF_DAY.night.windowGlow);
+  assert.equal(TIME_OF_DAY.night.windowGlow, 1);
+  assert.ok(TIME_OF_DAY.evening.signGlow > 0 && TIME_OF_DAY.evening.signGlow < TIME_OF_DAY.dusk.signGlow);
+  assert.equal(TIME_OF_DAY.night.signGlow, 1);
+});
+
+test('window emissive is ~0 by day and strong at night; signs dim by day, glow at night', () => {
+  assert.ok(Math.abs(windowEmissiveIntensity(0) - 0.02) < 1e-9);
+  assert.ok(Math.abs(windowEmissiveIntensity(1) - 1.52) < 1e-9);
+  assert.ok(windowEmissiveIntensity(0.75) > windowEmissiveIntensity(0.35));
+  // Painted sign (base 0): dark by day, lit at night.
+  assert.equal(signEmissiveIntensity(0, 0), 0);
+  assert.ok(Math.abs(signEmissiveIntensity(0, 1) - 0.6) < 1e-9);
+  // Already-lit sign (base 1.2): dimmed by day instead of glowing at noon.
+  assert.ok(signEmissiveIntensity(1.2, 0) < 0.25);
+  assert.ok(Math.abs(signEmissiveIntensity(1.2, 1) - 1.8) < 1e-9);
+});
+
+test('time-of-day toggle cycles morning → evening → dusk → night → morning', () => {
+  assert.equal(nextTimeOfDayPreset('morning'), 'evening');
+  assert.equal(nextTimeOfDayPreset('evening'), 'dusk');
+  assert.equal(nextTimeOfDayPreset('dusk'), 'night');
+  assert.equal(nextTimeOfDayPreset('night'), 'morning');
+});
+
+test('warm Delhi haze: golden-hour fog stays warm, dusk fog is warm, night fog is cool and thinner', () => {
+  assert.equal(TIME_OF_DAY.evening.fogColor, 0xe8c9a0);
+  assert.equal(TIME_OF_DAY.dusk.fogColor, 0x8a5f52);
+  assert.equal(TIME_OF_DAY.night.fogColor, 0x0d1420);
+  // Night stays the densest-feeling preset via darkness, but the density
+  // itself is eased so the headlight beams read further down the road.
+  assert.equal(TIME_OF_DAY.night.fogDensity, 0.0035);
+  assert.ok(TIME_OF_DAY.night.fogDensity > TIME_OF_DAY.evening.fogDensity);
 });
 
 test('streetlight glow and headlights ramp from day to night', () => {

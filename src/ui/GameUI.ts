@@ -15,9 +15,14 @@ import { Minimap, MAP_SIZE, overviewClickToWorld } from './Minimap';
 import type { Point } from '../core/math';
 import type { Settings } from '../systems/ProgressStore';
 import { nextQuality, QUALITY, resolvedQuality } from '../rendering/QualityProfile';
+import { TIME_OF_DAY } from '../rendering/DaylightRig';
+import type { TimeOfDayPreset } from '../rendering/DaylightRig';
 import { CLUSTER_PLACES } from '../world/ClusterData';
 
-interface UIActions { journey:()=>void; start:()=>void; phone:()=>void; pause:()=>void; interact:()=>void; accept:()=>void; story:()=>void; cancelStory:()=>void; quality:()=>void; recover:()=>void; sensitivity:(kind:'steeringSensitivity'|'cameraSensitivity',value:number)=>void; buy:()=>void; pay:()=>void; closeShop:()=>void; supply:()=>void; cancelSupply:()=>void; receive:()=>void; receiveGoods:()=>void; cancelGoods:()=>void; exitPhoto:()=>void; audio:()=>void; volume:(value:number)=>void; waypoint:(point:Point)=>void; clearWaypoint:()=>void }
+/** HUD glyph per time-of-day preset. */
+export const TIME_OF_DAY_GLYPHS: Record<TimeOfDayPreset, string> = { morning: '☀', evening: '◐', dusk: '◐', night: '☾' };
+
+interface UIActions { journey:()=>void; start:()=>void; phone:()=>void; pause:()=>void; interact:()=>void; accept:()=>void; story:()=>void; cancelStory:()=>void; quality:()=>void; timeOfDay:()=>void; recover:()=>void; sensitivity:(kind:'steeringSensitivity'|'cameraSensitivity',value:number)=>void; buy:()=>void; pay:()=>void; closeShop:()=>void; supply:()=>void; cancelSupply:()=>void; receive:()=>void; receiveGoods:()=>void; cancelGoods:()=>void; exitPhoto:()=>void; audio:()=>void; volume:(value:number)=>void; waypoint:(point:Point)=>void; clearWaypoint:()=>void }
 
 const phoneIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10 18h4"/></svg>';
 
@@ -38,12 +43,12 @@ export class GameUI {
       </section>
       <section class="game-ui" hidden aria-label="Game controls">
         <header class="location"><span class="eyebrow">NCR DRIVE / FREE ROAM</span><h1 data-region-title>Connaught Place · नई दिल्ली</h1><p data-region-detail>Inner Circle · A Delhi evening</p></header>
-        <div class="top-actions"><div class="wallet"><strong data-cash>₹15,000</strong><span>DELHI WALLET</span></div><button class="icon-button" data-action="phone" aria-label="Open DelhiOS phone">${phoneIcon}</button><button class="icon-button" data-action="pause" aria-label="Pause game">Ⅱ</button></div>
+        <div class="top-actions"><div class="wallet"><strong data-cash>₹15,000</strong><span>DELHI WALLET</span></div><button class="icon-button" data-action="timeOfDay" data-time-glyph aria-label="Change time of day">☀</button><button class="icon-button" data-action="phone" aria-label="Open DelhiOS phone">${phoneIcon}</button><button class="icon-button" data-action="pause" aria-label="Pause game">Ⅱ</button></div>
         <div class="radar"><canvas class="radar-map" aria-label="DelhiNav local minimap" role="img"></canvas><span>DELHINAV / LIVE</span></div>
         <button class="gig-tracker" data-action="phone" aria-label="Open current job in DelhiOS"><span>◈</span><div><strong data-job-title>Shivaji Stadium Courier Run</strong><small data-distance>Parcel collected · Follow the gold marker</small></div></button>
         <div class="mode-card"><span data-mode>ON FOOT / EXPLORER</span><strong data-speed>Take the long way.</strong><small data-mode-detail>The city moves at your pace.</small></div>
         <button class="interaction" data-action="interact"><kbd>F</kbd><span data-prompt>Press [F] or Tap to Drive</span><span>↗</span></button>
-        <div class="desktop-help"><span><kbd>W A S D</kbd> Move</span><span><kbd>SHIFT</kbd> Sprint</span><span><kbd>SPACE</kbd> Jump / brake</span><span><kbd>DRAG</kbd> Camera</span><span><kbd>TAB</kbd> DelhiOS</span></div>
+        <div class="desktop-help"><span><kbd>W A S D</kbd> Move</span><span><kbd>SHIFT</kbd> Sprint</span><span><kbd>SPACE</kbd> Jump / brake</span><span><kbd>T</kbd> Time of day</span><span><kbd>DRAG</kbd> Camera</span><span><kbd>TAB</kbd> DelhiOS</span></div>
         <div class="touch-controls"><div class="joystick" role="group" aria-label="Movement joystick"><div class="joystick-cross"></div><div class="joystick-knob"></div></div><div class="touch-actions">
           <button data-hold="gas" data-driving aria-label="Accelerate">↑<small>ACCELERATE</small></button><button data-hold="brake" data-driving aria-label="Brake">↓<small>BRAKE</small></button>
           <button data-action="reverse" data-driving aria-label="Toggle reverse gear">R<small data-reverse>REVERSE</small></button>
@@ -65,6 +70,7 @@ export class GameUI {
         </div><div class="phone-home"></div>
       </aside>
       <section class="pause-screen" hidden aria-label="Paused"><div><span class="eyebrow">TAKE A BREATHER</span><h2>Delhi can wait.</h2><p>Your drive will be right here.</p><button class="graphics-button" data-action="quality">Graphics: Detailed · Tap for performance</button>
+        <button class="graphics-button" data-action="timeOfDay" data-time-label>Time of day: Late morning · Tap to change</button>
         <button class="graphics-button" data-action="audio">Sound: On</button><label>Sound volume <input aria-label="Sound volume" data-volume type="range" min="0" max="1" step="0.05" value="0.35"></label><small data-render-stats aria-label="Rolling render statistics">Drive to collect frame statistics.</small><div class="control-settings"><label for="steering-sensitivity">Steering sensitivity <output data-steering-value>1.0×</output></label><input id="steering-sensitivity" type="range" min="0.5" max="1.5" step="0.1" value="1" data-setting="steeringSensitivity"><label for="camera-sensitivity">Camera sensitivity <output data-camera-value>1.0×</output></label><input id="camera-sensitivity" type="range" min="0.5" max="1.5" step="0.1" value="1" data-setting="cameraSensitivity"></div>
         <p class="recovery-note" id="recovery-policy">Stuck? Recovery is free. Your nearby car returns to a clear road.<br>Active jobs are cancelled without payout. Earned money is kept.</p><button class="graphics-button" data-action="recover" aria-describedby="recovery-policy">Recover to a clear road · Free</button><p data-recovery-status role="status"></p>
         <button class="primary" data-action="pause">Back to the city →</button></div></section>
@@ -79,6 +85,7 @@ export class GameUI {
         case 'phone': actions.phone(); break;
         case 'pause': actions.pause(); break;
         case 'quality': actions.quality(); break;
+        case 'timeOfDay': actions.timeOfDay(); break;
         case 'recover': actions.recover(); break;
         case 'interact': actions.interact(); break;
         case 'accept': actions.accept(); break;
@@ -228,6 +235,10 @@ export class GameUI {
     this.element<HTMLInputElement>('[data-volume]').value=String(settings.volume??0.35);
     const quality = resolvedQuality(settings);
     this.text('[data-action="quality"]', `Graphics: ${QUALITY[quality].label} · Tap for ${QUALITY[nextQuality(quality)].label}`);
+    const timeOfDay = settings.timeOfDay ?? 'morning';
+    this.text('[data-time-label]', `Time of day: ${TIME_OF_DAY[timeOfDay].label} · Tap to change`);
+    this.text('[data-time-glyph]', TIME_OF_DAY_GLYPHS[timeOfDay]);
+    this.element('[data-time-glyph]').setAttribute('aria-label', `Change time of day (now ${TIME_OF_DAY[timeOfDay].label})`);
     this.element<HTMLInputElement>('[data-setting="steeringSensitivity"]').value = String(settings.steeringSensitivity);
     this.element<HTMLInputElement>('[data-setting="cameraSensitivity"]').value = String(settings.cameraSensitivity);
     this.text('[data-steering-value]', `${settings.steeringSensitivity.toFixed(1)}×`);

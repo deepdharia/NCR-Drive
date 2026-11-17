@@ -35,7 +35,7 @@ export interface GradePreset {
   grainOpacity: number;
 }
 
-/** The current in-game look. DaylightRig is a fixed late-morning rig. */
+/** The current in-game look. DaylightRig drives these names via Game's GRADE_PRESET map. */
 export const DEFAULT_PRESET: TimeOfDayPreset = 'late-morning';
 
 export const TIME_OF_DAY_GRADES: Record<TimeOfDayPreset, GradePreset> = {
@@ -53,18 +53,22 @@ export function isTimeOfDayPreset(value: unknown): value is TimeOfDayPreset {
 /**
  * Read the time-of-day preset from a DaylightRig, if one exists.
  *
- * DaylightRig (as of d503436) carries NO preset field — its sun is named
- * 'Late morning sun' and the scene is fixed late-morning — so today this
- * always returns 'late-morning'. When a later phase gives DaylightRig a
- * `preset` or `timeOfDay` field, this reads it with no other change here.
+ * DaylightRig names its presets 'morning' | 'evening' | 'dusk' | 'night'
+ * (its `currentTimeOfDay` getter); PostGrade names them 'late-morning' |
+ * 'golden-hour' | 'dusk' | 'night'. Both spellings are accepted here, so
+ * a rig preset and a grade preset both resolve. Anything unrecognised
+ * falls back to 'late-morning'.
  */
 export function readDaylightPreset(
   daylight: { preset?: unknown; timeOfDay?: unknown } | null | undefined,
 ): TimeOfDayPreset {
   if (!daylight) return DEFAULT_PRESET;
-  if (isTimeOfDayPreset(daylight.preset)) return daylight.preset;
-  if (isTimeOfDayPreset(daylight.timeOfDay)) return daylight.timeOfDay;
-  return DEFAULT_PRESET;
+  const fromRig = (value: unknown): TimeOfDayPreset | null => {
+    if (value === 'morning') return 'late-morning';
+    if (value === 'evening') return 'golden-hour';
+    return isTimeOfDayPreset(value) ? value : null;
+  };
+  return fromRig(daylight.preset) ?? fromRig(daylight.timeOfDay) ?? DEFAULT_PRESET;
 }
 
 /** Minimal renderer surface the grade needs — a real WebGLRenderer satisfies it. */
