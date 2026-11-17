@@ -1,15 +1,29 @@
 import { VehicleController } from '../vehicle/VehicleController';
-import { TRAFFIC_SPECS } from '../vehicle/VehicleSpec';
 import { CollisionWorld } from '../core/CollisionWorld';
 import type { Solid } from '../core/CollisionWorld';
 import type { Point } from '../core/math';
 import { distance, angleDelta } from '../core/math';
 import { lanes, successors, destinations, junctionById } from '../world/WorldRoads';
 import type { Lane } from '../world/WorldRoads';
+import { planTrafficMix, cruiseSpeed, honkCooldown, activeRadiusForQuality, turnIndicator, indicatorLit } from './TrafficBehaviour';
+import type { TrafficKind, IndicatorSide } from './TrafficBehaviour';
+import type { VehicleBodyKind } from './TrafficBehaviour';
+import type { QualityPreset } from '../rendering/QualityProfile';
 
 /** Fixed-size local population. Closest-arrival reservations at outer junctions; never recycle near focus. */
 export class TrafficSystem {
  readonly cars:VehicleController[]=[];
+ /** Phase 4: what each car is (car / auto / bike / bus / truck) and which
+  * Phase 3 body silhouette it takes. Parallel arrays, indexed like `cars`. */
+ readonly trafficKinds:TrafficKind[]=[];
+ readonly bodyKinds:VehicleBodyKind[]=[];
+ /** Phase 4: indicator side per car, set when the car approaches a turn.
+  * Read via indicatorFor(); the meshes are owned by VehicleView /
+  * VehicleBodies — see TrafficBehaviour.driveIndicatorBlinker for the
+  * hook the coordinator wires up. */
+ private indicators:IndicatorSide[]=[];
+ private quality:QualityPreset='balanced';
+ private activeRadius=450;
  private paths:Lane[]=[];
  private entering:boolean[]=[];
  private progress:number[]=[];
@@ -27,16 +41,36 @@ export class TrafficSystem {
  /** Phase 5: denser traffic — 12 by default, capped at 14 — with trucks and
   * buses in the mix (TRAFFIC_SPECS round-robin: 2 trucks + 2 buses per 12).
   * Cruise speed, creep/honk and the reservation/deadlock logic are owned by
-  * Phase 1 and are left exactly as-is here. */
- constructor(count=12){
+  * Phase 1 and are left exactly as-is here.
+  * Phase 4: `opts.mixed` switches the roster to the mixed plan
+  * (cars + autos + bikes + buses + trucks, TrafficBehaviour.planTrafficMix);
+  * the default stays the legacy roster so existing behaviour and tests do
+  * not change. `opts.quality` sets the constructor-time density tier; call
+  * applyQuality() afterwards to change tier live (it only moves the
+  * hold radius — the roster size is fixed at construction). */
+ constructor(count=12, opts:{quality?:QualityPreset;mixed?:boolean}={}){
   count=Math.max(0,Math.min(14,Math.floor(count)));
+  this.quality=opts.quality??'balanced';this.activeRadius=activeRadiusForQuality(this.quality);
+  const plan=planTrafficMix(count,opts.mixed?'mixed':'legacy');
   for(let i=0;i<count;i++){
    // The two cars sharing a ring segment must oppose: the old i%2 direction
    // put same-direction duplicates on one lane once count passed 6.
    const lane=lanes.find(l=>l.id===`cp-ring-${(Math.floor((i+0.5)/Math.ceil(count/2)*72)+6)%72}:${Math.floor(i/Math.ceil(count/2))%2?'back':'out'}`)!;
-   const car=new VehicleController(TRAFFIC_SPECS[i%TRAFFIC_SPECS.length]);car.position={...lane.start};car.yaw=Math.atan2(lane.end.x-lane.start.x,lane.end.z-lane.start.z);
-   car.owner='ai';car.occupant=`driver-${car.id}`;this.cars.push(car);this.paths.push(lane);this.entering.push(false);this.progress.push(0);this.stuck.push(0);this.blocked.push(0);this.waiting.push(0);this.lastHonk.push(-99);this.honkUntil.push(-1);
+   const entry=plan[i];
+   const car=new VehicleController(entry.spec);car.position={...lane.start};car.yaw=Math.atan2(lane.end.x-lane.start.x,lane.end.z-lane.start.z);
+   car.owner='ai';car.occupant=`driver-${car.id}`;this.cars.push(car);this.trafficKinds.push(entry.kind);this.bodyKinds.push(entry.bodyKind);this.indicators.push('none');this.paths.push(lane);this.entering.push(false);this.progress.push(0);this.stuck.push(0);this.blocked.push(0);this.waiting.push(0);this.lastHonk.push(-99);this.honkUntil.push(-1);
   }
+ }
+ /** Phase 4: live quality tier. Only the hold radius moves (low 350 /
+  * balanced 450 / high 550 m) — roster size is fixed at construction and
+  * the hard cap of 14 is never raised. */
+ applyQuality(quality:QualityPreset):void{this.quality=quality;this.activeRadius=activeRadiusForQuality(quality);}
+ get currentQuality():QualityPreset{return this.quality;}
+ /** Phase 4: indicator state for car `i` — the side it is signalling and
+  * whether the lamp is in the lit half of its 1 Hz blink right now. */
+ indicatorFor(i:number):{side:IndicatorSide;lit:boolean}{
+  const side=this.indicators[i]??'none';
+  return {side,lit:indicatorLit(side,this.tick)};
  }
  update(dt:number,world:CollisionWorld,obstacles:readonly Solid[],focus?:Point):void{
   this.tick+=dt;
@@ -58,9 +92,20 @@ export class TrafficSystem {
      lane=next;this.paths[i]=next;this.entering[i]=false;this.progress[i]=0;car.position={...next.start};this.stuck[i]=0;
     }
    }
-   if(focus&&distance(car.position,focus)>650){car.speed=0;return;}
+   if(focus&&distance(car.position,focus)>this.activeRadius){car.speed=0;return;}
    const others=[...obstacles,...this.cars.filter(c=>c!==car).map(c=>c.collider)];
    const target=lane.end,remaining=distance(car.position,target);
+   // Phase 4: signal the turn before taking it. The next lane is the same
+   // deterministic pick the lane-change block below will take, so the
+   // indicator and the turn can never disagree. Only computed while the
+   // car is close to the lane end; straight-on shows nothing.
+   if(remaining<25&&!this.entering[i]){
+    const legal=successors(lane),onward=legal.filter(l=>l.road.id!==lane.road.id),options=onward.length?onward:legal;
+    const next=options[(i+Math.floor(this.progress[i]))%options.length];
+    const currentYaw=Math.atan2(lane.end.x-lane.start.x,lane.end.z-lane.start.z);
+    const nextYaw=Math.atan2(next.end.x-next.start.x,next.end.z-next.start.z);
+    this.indicators[i]=turnIndicator(currentYaw,nextYaw);
+   } else if(remaining>=25) this.indicators[i]='none';
    // Reserve before entry, rather than yielding after occupying the junction.
    // Short CP curve samples use collision following; outer junctions have room
    // to stage 22m back. The closest arrival wins, with stable index tie-breaking.
@@ -89,8 +134,10 @@ export class TrafficSystem {
    const towards=this.entering[i]?lane.start:lane.end;
    // Highways run at highway speed; CP streets stay slow, city mains sit between.
    // Per-car spread (20–24 m/s ≈ 72–86 km/h) keeps highway platoons from
-   // moving in lockstep.
-   const cruise=lane.road.region==='delhi'?6:lane.road.kind==='highway'?20+(i%5):lane.road.region.endsWith('corridor')?14:8;
+   // moving in lockstep. Phase 4: kind-varied cruise (autos / bikes slower
+   // than cars, heavies slower still) via TrafficBehaviour.cruiseSpeed,
+   // always capped by the spec's maxSpeed.
+   const cruise=cruiseSpeed(this.trafficKinds[i],lane,i,car.spec.maxSpeed);
    const len=distance(car.position,towards);if(len<0.001)return;
    const yaw=Math.atan2(towards.x-car.position.x,towards.z-car.position.z),travel=Math.min(cruise*dt,len),dx=(towards.x-car.position.x)/len,dz=(towards.z-car.position.z)/len;
    // Never project a probe past the turn endpoint into a roadside rail.
@@ -108,7 +155,7 @@ export class TrafficSystem {
     const creep=world.moveBox({...car.position,yaw:car.yaw},{x:dx*1.4*dt,z:dz*1.4*dt},angleDelta(car.yaw,yaw)*0.5,car.width,car.length,others);
     if(!creep.hit){car.position={x:creep.pose.x,z:creep.pose.z};car.yaw=creep.pose.yaw;car.speed=1.4;car.wheelTravel+=1.4*dt;this.stuck[i]=0;}
     else {car.speed=0;this.stuck[i]=Math.min(30,this.stuck[i]+dt);}
-    if(this.blocked[i]>2&&this.tick-this.lastHonk[i]>4&&focus&&distance(car.position,focus)<120){
+    if(this.blocked[i]>2&&this.tick-this.lastHonk[i]>honkCooldown(this.trafficKinds[i])&&focus&&distance(car.position,focus)<120){
      this.lastHonk[i]=this.tick;this.honkUntil[i]=this.tick+0.6;car.honking=true;this.onHonk?.();
     }
    }
