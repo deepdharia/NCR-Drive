@@ -13,6 +13,12 @@ export class PlayerController {
   grounded = true;
   active = true;
   stride = 0;
+  /** Step-loop scratch: the old code built `[car, ...extra]` twice per
+   * 120 Hz step (once per moveCircle/landingHeight call). Both calls only
+   * read the array inside the call, so one reused array + motion point
+   * is enough. */
+  private solidsScratch: Solid[] = [];
+  private motionScratch: Point = { x: 0, z: 0 };
 
   update(dt: number, input: FootInput, cameraYaw: number, world: CollisionWorld, car: Solid, extra: readonly Solid[] = []): void {
     if (!this.active) return;
@@ -29,8 +35,10 @@ export class PlayerController {
     const previousY = this.y;
     this.verticalSpeed -= 9.81 * dt;
     this.y = Math.max(0, this.y + this.verticalSpeed * dt);
-    this.position = world.moveCircle(this.position, { x: x * pace * dt, z: z * pace * dt }, 0.32, Math.max(previousY, this.y), [car, ...extra]);
-    const floor = world.landingHeight(this.position, 0.32, previousY, this.y, [car, ...extra]);
+    const solids = this.solidsScratch; solids.length = 0; solids.push(car); for (const s of extra) solids.push(s);
+    this.motionScratch.x = x * pace * dt; this.motionScratch.z = z * pace * dt;
+    this.position = world.moveCircle(this.position, this.motionScratch, 0.32, Math.max(previousY, this.y), solids);
+    const floor = world.landingHeight(this.position, 0.32, previousY, this.y, solids);
     this.grounded = this.y <= floor;
     if (this.grounded) { this.y = floor; this.verticalSpeed = 0; }
   }

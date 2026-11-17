@@ -10,6 +10,7 @@ import { PostGrade } from '../rendering/PostGrade';
 import { vibrateTap } from '../systems/Haptics';
 import type { QualityPreset } from '../rendering/QualityProfile';
 import { CollisionWorld } from './CollisionWorld';
+import type { Solid } from './CollisionWorld';
 import { PlayerController } from '../player/PlayerController';
 import { PlayerView } from '../player/PlayerView';
 import { VehicleController } from '../vehicle/VehicleController';
@@ -60,7 +61,11 @@ export class Game {
   private player = new PlayerController();
   private fleet = VEHICLE_SPECS.map(spec => new VehicleController(spec));
   private selected = 0;
-  private get cars():VehicleController[] {return [...this.fleet,...this.traffic.cars];}
+  /** All cars, built once: the fleet + traffic rosters are fixed at
+   * construction (the one civilian push happens in the constructor), so
+   * the old getter re-spread them into a fresh array on EVERY `car`
+   * access — dozens of allocations per 120 Hz step. */
+  private cars: VehicleController[] = [];
   private get car(): VehicleController { return this.cars[this.selected]; }
   private traffic = new TrafficSystem(12, { mixed: true });
   private story = new StoryMission();
@@ -152,6 +157,7 @@ export class Game {
     this.clusters=new ClusterView(this.scene);this.populations=CLUSTERS.map(c=>new LocalPopulation(this.scene,c.population,c.id));
     motorPoolBays.forEach((bay,i)=>{this.fleet[i+1].position={x:bay.x,z:bay.z};this.fleet[i+1].yaw=bay.yaw;});
     const civilian=new VehicleController(VEHICLE_SPECS[0]);civilian.position={x:-182,z:12.5};civilian.yaw=Math.PI/2;civilian.occupant=`driver-${civilian.id}`;this.fleet.push(civilian);this.fleetViews.push(new VehicleView(civilian.spec,'DL 4C LM 5831'));
+    this.cars = [...this.fleet, ...this.traffic.cars];
     this.scene.add(this.playerView.group, ...this.fleetViews.map(v => v.group), ...this.trafficViews.map(v => v.group));
     // Phase 1 — collect the vehicle lamp materials once (named materials on
     // the merged car bodies); night running lights are applied from
@@ -333,10 +339,20 @@ export class Game {
     // as applySettings(); AutoQuality never persists, so nothing is saved.
     const quality = this.autoQualityTier ?? resolvedQuality(this.settings);
     this.fleetViews.forEach((view,i)=>{view.group.visible=distance(this.fleet[i].position,focus)<450;if(view.group.visible){view.update(this.fleet[i],dt);view.setDetail(distance(this.fleet[i].position,focus),quality);}});
-    this.trafficViews.forEach((view,i)=>{view.group.visible=distance(this.traffic.cars[i].position,focus)<450;if(view.group.visible){view.update(this.traffic.cars[i],dt);view.setDetail(distance(this.traffic.cars[i].position,focus),quality);const ind=this.traffic.indicatorFor(i);view.setIndicator(ind.side==='none'?'off':ind.side);}});
+    this.trafficViews.forEach((view,i)=>{view.group.visible=distance(this.traffic.cars[i].position,focus)<450;if(view.group.visible){view.update(this.traffic.cars[i],dt);view.setDetail(distance(this.traffic.cars[i].position,focus),quality);const side=this.traffic.indicatorSide(i);view.setIndicator(side==='none'?'off':side);}});
     this.central.update(focus);this.market.update(dt,focus);
     this.clusters.update(focus);
-    const audible=this.car.driving?this.car:this.cars.filter(c=>c.owner==='ai'&&Math.abs(c.speed)>0.1&&distance(c.position,focus)<90).sort((a,b)=>distance(a.position,focus)-distance(b.position,focus))[0];
+    // Nearest audible AI car, without the per-frame filter+sort allocation.
+    let audible: VehicleController | undefined;
+    if (this.car.driving) audible = this.car;
+    else {
+      let nearest = 90;
+      for (const c of this.cars) {
+        if (c.owner !== 'ai' || Math.abs(c.speed) <= 0.1) continue;
+        const d = distance(c.position, focus);
+        if (d < nearest) { nearest = d; audible = c; }
+      }
+    }
     this.audio.update(focus,this.camera.yaw,audible?.position??this.car.position,audible?.speed??0,!!audible,audible?.braking??false,audible?.steering??0);
     this.regional.update(this.car.driving ? this.car.position : this.player.position);
     this.effects.update(dt, this.car);
@@ -368,10 +384,9 @@ export class Game {
     this.accumulator = Math.min(0.1, this.accumulator + dt);
     while (this.accumulator >= step) {
       this.handover=Math.max(0,this.handover-step);this.interaction.update(step);
-      if (!this.car.driving && !this.seated && !this.interaction.busy && this.handover<=0) this.player.update(step, this.input.foot(), this.camera.yaw, this.world, this.car.collider, [...this.otherCars(),...this.people.colliders]);
-      if(!this.interaction.busy)this.car.update(step, this.input.drive(), this.world, [...this.otherCars(),...this.people.colliders]);
-      const pedestrian = { ...this.player.position, width: 0.8, depth: 0.8, height: 1.8, yaw: 0 };
-      this.traffic.update(step, this.world, [...this.fleet.map(c => c.collider), ...this.people.colliders,...(!this.car.driving ? [pedestrian] : [])], this.car.driving ? this.car.position : this.player.position);
+      if (!this.car.driving && !this.seated && !this.interaction.busy && this.handover<=0) this.player.update(step, this.input.foot(), this.camera.yaw, this.world, this.car.collider, this.stepSolidsWithPeople());
+      if(!this.interaction.busy)this.car.update(step, this.input.drive(), this.world, this.stepSolidsWithPeople());
+      this.traffic.update(step, this.world, this.trafficObstacles(), this.car.driving ? this.car.position : this.player.position);
       const focus=this.car.driving?this.car.position:this.player.position;
 
       if(this.seated&&this.standing>0){this.standing-=step;if(this.standing<=0){const exits=[{x:this.player.position.x,z:this.player.position.z+0.85},{x:this.player.position.x-1,z:this.player.position.z+0.6}];const clear=exits.find(p=>this.world.isClear(p,0.32,0,1.8,[...this.cars.map(c=>c.collider),...this.people.colliders]));if(clear){this.stand(true);this.player.teleport(clear);}else{this.standing=0;this.playerView.overrideAnimation='sit';this.ui.toast('Someone is in front of the seat. Wait, then press F to stand.');}}}
@@ -401,7 +416,35 @@ export class Game {
       const action = this.autoQuality.evaluate(frames.p95, current, ceiling, time);
       if (action === 'step-down' || action === 'step-up') { const index = TIER_ORDER.indexOf(current); this.autoQualityTier = TIER_ORDER[index + (action === 'step-down' ? -1 : 1)]; this.applySettings(); } }
   };
-  private otherCars() { return this.cars.filter(c=>c!==this.car).map(c=>c.collider); }
+  /** Step-loop scratch: the 120 Hz loop rebuilds these arrays in place
+   * every step and never retains them past the call that asked for them.
+   * The old code spread fresh arrays (plus filter/map and a fresh Solid
+   * per car per read) two to three times per step. */
+  private stepSolids: Solid[] = [];
+  private stepObstacles: Solid[] = [];
+  private pedestrianSolid: Solid = { x: 0, z: 0, width: 0.8, depth: 0.8, height: 1.8, yaw: 0 };
+  private otherCars(): Solid[] {
+    // Shared scratch: every caller spreads or consumes it immediately
+    // (interact / recover / the step loop); nothing holds it across a step.
+    const out = this.stepSolids; out.length = 0;
+    for (const c of this.cars) if (c !== this.car) out.push(c.collider);
+    return out;
+  }
+  /** Other cars + Market Lane pedestrians, for player/car collision. */
+  private stepSolidsWithPeople(): Solid[] {
+    const out = this.otherCars();
+    this.people.fillColliders(out);
+    return out;
+  }
+  /** Fleet (including the driven car) + pedestrians + the on-foot player
+   * solid when not driving, for traffic's obstacle set. */
+  private trafficObstacles(): Solid[] {
+    const out = this.stepObstacles; out.length = 0;
+    for (const c of this.fleet) out.push(c.collider);
+    this.people.fillColliders(out);
+    if (!this.car.driving) { this.pedestrianSolid.x = this.player.position.x; this.pedestrianSolid.z = this.player.position.z; out.push(this.pedestrianSolid); }
+    return out;
+  }
   private selectNearbyCar(): void {
     if (this.car.driving || this.interaction.busy || this.seated) return;
     let best = this.selected, nearest = Infinity;

@@ -64,18 +64,30 @@ export class InputController {
   setBrake(value: boolean): void { this.brake = value; }
   requestJump(): void { if (this.enabled) this.jump = true; }
   reset(): void { this.keys.clear(); this.stick = { x: 0, z: 0 }; this.gas = this.brake = this.jump = this.sprint = false; }
+  /** Foot/drive inputs are rebuilt in place: foot()/drive() run once per
+   * 120 Hz step, and the old code returned a fresh object literal each
+   * time. Callers (PlayerController/VehicleController.update) only read
+   * the fields inside the call, so sharing one object each is safe. */
+  private footInput: FootInput = { x: 0, z: 0, sprint: false, jump: false };
+  private driveInput: DriveInput = { throttle: 0, steer: 0, brake: false, handbrake: false };
   foot(): FootInput {
     const x = Number(this.keys.has('KeyD') || this.keys.has('ArrowRight')) - Number(this.keys.has('KeyA') || this.keys.has('ArrowLeft'));
     const z = Number(this.keys.has('KeyS') || this.keys.has('ArrowDown')) - Number(this.keys.has('KeyW') || this.keys.has('ArrowUp'));
     const jump = this.jump; this.jump = false;
-    return this.enabled ? { x: x || this.stick.x, z: z || this.stick.z, sprint: this.sprint || this.keys.has('ShiftLeft') || this.keys.has('ShiftRight'), jump } : { x: 0, z: 0, sprint: false, jump: false };
+    const f = this.footInput;
+    if (this.enabled) { f.x = x || this.stick.x; f.z = z || this.stick.z; f.sprint = this.sprint || this.keys.has('ShiftLeft') || this.keys.has('ShiftRight'); f.jump = jump; }
+    else { f.x = 0; f.z = 0; f.sprint = false; f.jump = false; }
+    return f;
   }
   drive(): DriveInput {
     const forward = Number(this.keys.has('KeyW') || this.keys.has('ArrowUp')) - Number(this.keys.has('KeyS') || this.keys.has('ArrowDown'));
     const steer = Number(this.keys.has('KeyD') || this.keys.has('ArrowRight')) - Number(this.keys.has('KeyA') || this.keys.has('ArrowLeft'));
-    return this.enabled ? { throttle: this.gas ? (this.reverse ? -1 : 1) : forward,
-      steer: clamp((steer || this.stick.x) * this.steeringSensitivity, -1, 1), brake: this.brake, handbrake: this.brake || this.keys.has('Space') }
-      : { throttle: 0, steer: 0, brake: false, handbrake: false };
+    const d = this.driveInput;
+    if (this.enabled) {
+      d.throttle = this.gas ? (this.reverse ? -1 : 1) : forward;
+      d.steer = clamp((steer || this.stick.x) * this.steeringSensitivity, -1, 1); d.brake = this.brake; d.handbrake = this.brake || this.keys.has('Space');
+    } else { d.throttle = 0; d.steer = 0; d.brake = false; d.handbrake = false; }
+    return d;
   }
   dispose(): void { this.abort.abort(); this.reset(); }
 }

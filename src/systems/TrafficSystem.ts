@@ -34,6 +34,10 @@ export class TrafficSystem {
  private honkUntil:number[]=[];
  private tick=0;
  private nextRecycle=0;
+ /** Per-step scratch for the `others` obstacle set below: the old code
+  * spread a fresh array (plus filter + map) per car per 120 Hz step.
+  * Rebuilt per car, consumed synchronously inside the same iteration. */
+ private othersScratch: Solid[] = [];
  private reservations=new Map<string,number>();
  private reservationSince=new Map<string,number>();
  /** Called when a nearby blocked car sounds its horn; the coordinator wires it to StreetAudio.horn(). */
@@ -72,6 +76,9 @@ export class TrafficSystem {
   const side=this.indicators[i]??'none';
   return {side,lit:indicatorLit(side,this.tick)};
  }
+ /** Side only, no allocation: the per-frame view loop only ever reads
+  * `.side` off indicatorFor(), so it uses this instead. */
+ indicatorSide(i:number):IndicatorSide{return this.indicators[i]??'none';}
  update(dt:number,world:CollisionWorld,obstacles:readonly Solid[],focus?:Point):void{
   this.tick+=dt;
   const recycle=this.tick>=this.nextRecycle;
@@ -93,7 +100,7 @@ export class TrafficSystem {
     }
    }
    if(focus&&distance(car.position,focus)>this.activeRadius){car.speed=0;return;}
-   const others=[...obstacles,...this.cars.filter(c=>c!==car).map(c=>c.collider)];
+   const others=this.othersScratch;others.length=0;for(const o of obstacles)others.push(o);for(const c of this.cars)if(c!==car)others.push(c.collider);
    const target=lane.end,remaining=distance(car.position,target);
    // Phase 4: signal the turn before taking it. The next lane is the same
    // deterministic pick the lane-change block below will take, so the

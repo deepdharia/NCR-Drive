@@ -12,23 +12,35 @@ import * as THREE from 'three';
  * reactions, bounded reservations) but every position comes from the
  * cluster's PopulationSpec — no hardcoded market coordinates. */
 type State = 'walk' | 'wait' | 'order' | 'seat' | 'drink' | 'leave' | 'react' | 'flee' | 'vendor';
-interface Person { id: string; position: Point; view: HumanoidView; state: State; time: number; shop: number; target: Point; speed: number; yaw: number; seat?: string; waypoints: Point[]; action?: string; actionTime?: number; }
+/** Candidate-avoidance angles for the movement block below (same set as
+ * StreetPeople): the old code rebuilt this 7-element array per moving
+ * person per frame. Offsets are multiplied by `side` (±1) at use. */
+const AVOID_OFFSETS = [0, 0.7, -0.7, 1.3, -1.3, 1.7, -1.7];
+interface Person { id: string; position: Point; view: HumanoidView; state: State; time: number; shop: number; target: Point; speed: number; yaw: number; seat?: string; waypoints: Point[]; action?: string; actionTime?: number;
+/** Cached numeric id suffix: the old code ran `p.id.match(/\d+$/)` per
+ * moving person per frame. Computed once at creation. */
+num: number; }
 
 export class LocalPopulation {
   readonly group = new THREE.Group(); readonly reservations = new Reservations(); readonly people: Person[] = [];
+  /** Per-update scratch: car colliders are the same for every person this
+   * frame, so they are built once at the top of update() instead of once
+   * per avoidance angle (7× per moving person before). */
+  private carSolids: Solid[] = [];
+  private motionScratch: Point = { x: 0, z: 0 };
   constructor(scene: THREE.Scene, private spec: PopulationSpec, private prefix: string) {
     scene.add(this.group);
     spec.vendors.forEach((v, i) => {
       const view = new HumanoidView(spec.variants[i % spec.variants.length]); this.group.add(view.group);
       view.group.position.set(v.position.x, PEDESTRIAN_FLOOR_OFFSET, v.position.z); view.update(0.2, 'talk');
-      this.people.push({ id: `${prefix}-vendor-${i}`, position: { ...v.position }, view, state: 'vendor', time: 0, shop: v.shop, target: { ...v.position }, speed: 0, yaw: 0, waypoints: [] });
+      this.people.push({ id: `${prefix}-vendor-${i}`, position: { ...v.position }, view, state: 'vendor', time: 0, shop: v.shop, target: { ...v.position }, speed: 0, yaw: 0, waypoints: [], num: i });
     });
     const walkerCount = Math.max(0, spec.variants.length - spec.vendors.length);
     for (let i = 0; i < walkerCount; i++) {
       const spawn = spec.walkerSpawns[i % spec.walkerSpawns.length], shop = i % spec.shopTargets.length;
       const view = new HumanoidView(spec.variants[(spec.vendors.length + i) % spec.variants.length]); this.group.add(view.group);
       view.group.position.set(spawn.x, PEDESTRIAN_FLOOR_OFFSET, spawn.z); view.update(0.2, 'idle');
-      this.people.push({ id: `${prefix}-walker-${i}`, position: { ...spawn }, view, state: 'walk', time: 0, shop, target: { ...spec.shopTargets[shop] }, speed: 0, yaw: 0, waypoints: [] });
+      this.people.push({ id: `${prefix}-walker-${i}`, position: { ...spawn }, view, state: 'walk', time: 0, shop, target: { ...spec.shopTargets[shop] }, speed: 0, yaw: 0, waypoints: [], num: i });
     }
   }
   serve(shop: number): void { const vendor = this.people.find(p => p.state === 'vendor' && p.shop === shop); if (vendor) { vendor.action = 'handover'; vendor.actionTime = 1.2; } }
@@ -44,6 +56,8 @@ export class LocalPopulation {
     if (!exit) return false; p.position = exit; return true;
   }
   update(dt: number, world: CollisionWorld, cars: readonly VehicleController[], focus: Point, player?: Point): void {
+    // Car colliders are the same for every person this frame: build once.
+    const carSolids = this.carSolids; carSolids.length = 0; for (const c of cars) carSolids.push(c.collider);
     for (const p of this.people) {
       p.time += dt; p.view.group.visible = distance(p.position, focus) < 100;
       if (!p.view.group.visible) { if (p.state !== 'vendor' && this.leaveSeat(p, world, cars, player)) { this.release(p); p.state = 'leave'; p.time = 0; p.target = this.spec.leaveTarget(p.shop); } continue; }
@@ -82,9 +96,18 @@ export class LocalPopulation {
         if (p.waypoints.length && distance(p.position, p.waypoints[0]) < 0.25) p.waypoints.shift();
         const goal = p.waypoints[0] ?? p.target, dx = goal.x - p.position.x, dz = goal.z - p.position.z, len = Math.hypot(dx, dz);
         if (len > 0.15) {
-          const pace = p.state === 'flee' ? 3.4 : 1.35, step = Math.min(len, pace * dt), heading = Math.atan2(dx, dz), side = Number(p.id.match(/\d+$/)?.[0] ?? 0) % 2 ? 1 : -1;
-          const angles = [0, 0.7 * side, -0.7 * side, 1.3 * side, -1.3 * side, 1.7 * side, -1.7 * side];
-          const candidate = angles.map(angle => { const motion = { x: Math.sin(heading + angle) * step, z: Math.cos(heading + angle) * step }; return world.moveCircle(p.position, motion, 0.3, 0, cars.map(c => c.collider)); }).find(next => distance(next, p.position) > step * 0.2 && !this.people.some(o => o !== p && distance(o.position, next) < 0.63) && (!player || distance(player, next) >= 0.7));
+          const pace = p.state === 'flee' ? 3.4 : 1.35, step = Math.min(len, pace * dt), heading = Math.atan2(dx, dz), side = p.num % 2 ? 1 : -1;
+          // First clear angle wins, in the same order as before. The old code
+          // built the 7-angle array + 7 motion objects + 7 car-collider arrays
+          // per moving person per frame; this loop allocates nothing itself
+          // (the moveCircle result is CollisionWorld-owned — see DECISIONS.md).
+          let candidate: Point | undefined;
+          for (let a = 0; a < AVOID_OFFSETS.length; a++) {
+            const angle = heading + AVOID_OFFSETS[a] * side;
+            this.motionScratch.x = Math.sin(angle) * step; this.motionScratch.z = Math.cos(angle) * step;
+            const next = world.moveCircle(p.position, this.motionScratch, 0.3, 0, carSolids);
+            if (distance(next, p.position) > step * 0.2 && !this.people.some(o => o !== p && distance(o.position, next) < 0.63) && (!player || distance(player, next) >= 0.7)) { candidate = next; break; }
+          }
           if (candidate) { p.speed = distance(p.position, candidate) / dt; p.yaw = Math.atan2(candidate.x - p.position.x, candidate.z - p.position.z); p.position = candidate; }
         }
       }

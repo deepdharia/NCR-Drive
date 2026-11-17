@@ -10,6 +10,7 @@ import type { VehicleBodyKind } from '../src/world/VehicleBodies';
 import { applyDamage, consumeDamageSmoke, resetDamage } from '../src/world/VehicleDamage';
 import { collectVehicleLampMaterials } from '../src/rendering/NightLamps';
 import { TRAFFIC_SPECS, VEHICLE_SPECS } from '../src/vehicle/VehicleSpec';
+import { VehicleController } from '../src/vehicle/VehicleController';
 import { brakeGlow } from '../src/vehicle/VehicleView';
 
 /** Phase 3 (hero vehicles): distinct procedural bodies, lamp contract,
@@ -176,4 +177,22 @@ test('brakeGlow export still behaves (AI flare only)', () => {
   assert.equal(brakeGlow('ai', true), 2.5);
   assert.equal(brakeGlow('ai', false), 0.3);
   assert.equal(brakeGlow('player', true), 0.3);
+});
+
+/** Next-10 #3: the collider is a cached Solid refreshed in place, so the
+ * 120 Hz loop no longer allocates one per car per read. Guards the one
+ * semantic change in the fix: identity is stable, values track the car,
+ * and each car keeps its own object. */
+test('collider is a cached Solid refreshed in place (no per-read allocation)', () => {
+  const a = new VehicleController(VEHICLE_SPECS[0]);
+  const b = new VehicleController(VEHICLE_SPECS[1]);
+  const first = a.collider;
+  assert.equal(a.collider, first, 'same object across reads');
+  assert.notEqual(a.collider, b.collider, 'one cached Solid per car');
+  a.position = { x: 12, z: -7 }; a.yaw = 1.25;
+  // Values refresh on the next read (the cache is read-through, not live).
+  const again = a.collider;
+  assert.equal(again, first, 'still the same object after the car moves');
+  assert.equal(again.x, 12); assert.equal(again.z, -7); assert.equal(again.yaw, 1.25);
+  assert.equal(again.width, a.width); assert.equal(again.depth, a.length); assert.equal(again.height, a.spec.height);
 });

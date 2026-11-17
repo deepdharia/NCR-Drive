@@ -5,7 +5,7 @@ import { distance } from '../core/math';
 import type { Point } from '../core/math';
 import type { CollisionWorld, Solid } from '../core/CollisionWorld';
 import type { VehicleController } from '../vehicle/VehicleController';
-import { roads, ends, projection } from '../world/WorldRoads';
+import { roads, ends } from '../world/WorldRoads';
 import { PEDESTRIAN_COUNTS, pickVariant, stepAsideAlongLine, stepAsideOnRing, idleSway } from '../world/PedestrianVariants';
 import type { QualityPreset } from '../rendering/QualityProfile';
 import * as THREE from 'three';
@@ -24,6 +24,12 @@ const MARKET_VARIANTS:HumanVariant[]=[
 ];
 type State='walk'|'wait'|'order'|'seat'|'drink'|'leave'|'react'|'flee'|'vendor'|'retreated'|'stroll'|'waitCross'|'cross'|'pause';
 interface Person {id:string;position:Point;view:HumanoidView;state:State;time:number;shop:number;target:Point;speed:number;yaw:number;seat?:string;waypoints:Point[];blocked:number;action?:string;actionTime?:number;civilianDriver?:boolean;stroller:boolean;side:'north'|'south';trips:number;
+/** Cached numeric id suffix: the old code ran `p.id.match(/\d+$/)` twice
+ * per person per frame (side + idle-sway phase). Computed once at creation. */
+num:number;
+/** Cached collider Solid for fillColliders(): refreshed in place, so the
+ * 120 Hz loop never allocates a Solid per person per read. */
+colliderSolid:Solid;
 /** Phase 4: which footpath network this stroller belongs to. 'market' is
  * the original Market Lane pair of pavements; 'cp-ring' loops the Inner
  * Circle footpath; 'mg-road' walks the two MG Road pavements. */
@@ -40,6 +46,17 @@ const CROSSING={x:-244,mid:{x:-244,z:0}};
 const NORTH_PAVEMENT={minX:-238,maxX:-150,z:-10.5};
 const SOUTH_PAVEMENT={minX:-240,maxX:-182,z:14.4};
 const CROSSING_HALF_WIDTH=3;
+/** Candidate-avoidance angles for the movement block below: the old code
+ * rebuilt this 7-element array (times the per-person side) on every
+ * moving person every frame. Offsets are multiplied by `side` (±1) at use. */
+const AVOID_OFFSETS=[0,0.7,-0.7,1.3,-1.3,1.7,-1.7];
+/** Point-to-segment distance, same formula as WorldRoads.projection().distance
+ * but without allocating the {point, t, distance} result. Used per candidate
+ * by strollerClear, so it runs up to 7× per moving stroller per frame. */
+function segmentDistance(p:Point,a:Point,b:Point):number{
+ const dx=b.x-a.x,dz=b.z-a.z,t=Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.z-a.z)*dz)/(dx*dx+dz*dz||1)));
+ const cx=a.x+dx*t,cz=a.z+dz*t;return Math.hypot(p.x-cx,p.z-cz);
+}
 /** Ten permanent adults, no camera-facing spawn/recycle. Bounded reservations and timers.
  * Phase 4: `quality` scales only the two NEW stroller areas (CP ring +
  * Gurugram MG Road); the Market Lane population is identical on every tier. */
@@ -50,7 +67,7 @@ export class StreetPeople {
  constructor(scene:THREE.Scene, quality:QualityPreset='balanced'){scene.add(this.group);for(let i=0;i<10;i++){
   const vendor=i<3,shop=i%3,position=vendor?{x:shops[shop].x,z:-17.6}:{x:-146-(i-3)*13,z:-10.5};
   const view=new HumanoidView(MARKET_VARIANTS[i]);this.group.add(view.group);view.group.position.set(position.x,PEDESTRIAN_FLOOR_OFFSET,position.z);view.update(0.2,vendor?'talk':'idle');
-  this.people.push({id:`market-adult-${i}`,position,view,state:vendor?'vendor':'walk',time:0,shop,target:vendor?position:{x:shops[shop].x,z:-12.7},speed:0,yaw:0,waypoints:[],blocked:0,stroller:false,side:'north',trips:0,area:'market'});
+  this.people.push({id:`market-adult-${i}`,position,view,state:vendor?'vendor':'walk',time:0,shop,target:vendor?position:{x:shops[shop].x,z:-12.7},speed:0,yaw:0,waypoints:[],blocked:0,stroller:false,side:'north',trips:0,area:'market',num:i,colliderSolid:{x:position.x,z:position.z,width:0.6,depth:0.6,height:1.75,yaw:0}});
  }
  // Six footpath strollers on Market Lane: three on the north pavement, three
  // on the south. They cross only at the marked zebra (x=-244), only on a
@@ -60,7 +77,7 @@ export class StreetPeople {
   const south=i>=3,n=i%3,band=south?SOUTH_PAVEMENT:NORTH_PAVEMENT;
   const position=south?{x:-196-n*18,z:band.z}:{x:-166-n*22,z:band.z};
   const view=new HumanoidView({...MARKET_VARIANTS[(i*2)%MARKET_VARIANTS.length],phase:i*0.7});this.group.add(view.group);view.group.position.set(position.x,PEDESTRIAN_FLOOR_OFFSET,position.z);view.update(0.2,'idle');
-  this.people.push({id:`market-stroller-${i}`,position,view,state:'stroll',time:0,shop:0,target:{x:band.minX,z:band.z},speed:0,yaw:0,waypoints:[],blocked:0,stroller:true,side:south?'south':'north',trips:0,area:'market'});
+  this.people.push({id:`market-stroller-${i}`,position,view,state:'stroll',time:0,shop:0,target:{x:band.minX,z:band.z},speed:0,yaw:0,waypoints:[],blocked:0,stroller:true,side:south?'south':'north',trips:0,area:'market',num:i,colliderSolid:{x:position.x,z:position.z,width:0.6,depth:0.6,height:1.75,yaw:0}});
  }
  // Phase 4 — CP ring footpath strollers: they loop the Inner Circle at
  // radius 52, just outside the carriageway, and never cross (no zebra on
@@ -72,7 +89,7 @@ export class StreetPeople {
   const position={x:Math.cos(angle)*StreetPeople.CP_RING_RADIUS,z:Math.sin(angle)*StreetPeople.CP_RING_RADIUS};
   const targetAngle=angle+ringDir*0.06;
   const view=new HumanoidView({...pickVariant(i,'cp-ring'),phase:i*0.9});this.group.add(view.group);view.group.position.set(position.x,PEDESTRIAN_FLOOR_OFFSET,position.z);view.update(0.2,'idle');
-  this.people.push({id:`cp-stroller-${i}`,position,view,state:'stroll',time:0,shop:0,target:{x:Math.cos(targetAngle)*StreetPeople.CP_RING_RADIUS,z:Math.sin(targetAngle)*StreetPeople.CP_RING_RADIUS},speed:0,yaw:0,waypoints:[],blocked:0,stroller:true,side:'north',trips:0,area:'cp-ring',angle,ringDir});
+  this.people.push({id:`cp-stroller-${i}`,position,view,state:'stroll',time:0,shop:0,target:{x:Math.cos(targetAngle)*StreetPeople.CP_RING_RADIUS,z:Math.sin(targetAngle)*StreetPeople.CP_RING_RADIUS},speed:0,yaw:0,waypoints:[],blocked:0,stroller:true,side:'north',trips:0,area:'cp-ring',angle,ringDir,num:i,colliderSolid:{x:position.x,z:position.z,width:0.6,depth:0.6,height:1.75,yaw:0}});
  }
  // Phase 4 — Gurugram boulevard strollers: the two footpaths alongside
  // MG Road segment golf-jn → mg-mid (road 'mg-road:1', 20 m wide, so the
@@ -91,15 +108,24 @@ export class StreetPeople {
    const t=0.2+0.6*(mgCount>1?i/(mgCount-1):0.5);
    const position={x:a.x+(b.x-a.x)*t,z:a.z+(b.z-a.z)*t};
    const view=new HumanoidView({...pickVariant(i,'mg-road'),phase:i*0.7});this.group.add(view.group);view.group.position.set(position.x,PEDESTRIAN_FLOOR_OFFSET,position.z);view.update(0.2,'idle');
-   this.people.push({id:`mg-stroller-${i}`,position,view,state:'stroll',time:0,shop:0,target:t<0.5?{...b}:{...a},speed:0,yaw:0,waypoints:[],blocked:0,stroller:true,side:south?'south':'north',trips:0,area:'mg-road',route:{a,b},routeOther:{a:otherA,b:otherB},cross:{...mgCross},mouth,mouthOther});
+   this.people.push({id:`mg-stroller-${i}`,position,view,state:'stroll',time:0,shop:0,target:t<0.5?{...b}:{...a},speed:0,yaw:0,waypoints:[],blocked:0,stroller:true,side:south?'south':'north',trips:0,area:'mg-road',route:{a,b},routeOther:{a:otherA,b:otherB},cross:{...mgCross},mouth,mouthOther,num:i,colliderSolid:{x:position.x,z:position.z,width:0.6,depth:0.6,height:1.75,yaw:0}});
   }
  }
 }
  serve(shop:number):void {const vendor=this.people[shop];vendor.action='handover';vendor.actionTime=1.2;}
  get colliders():Solid[]{return this.people.filter(p=>p.state!=='vendor').map(p=>({...p.position,width:0.6,depth:0.6,height:1.75,yaw:0}));}
+ /** Fill `out` with one cached Solid per non-vendor person (x/z refreshed).
+  * Same set as the `colliders` getter, without allocating per call — the
+  * 120 Hz loop reads this twice per step. */
+ fillColliders(out:Solid[]):void{for(const p of this.people){if(p.state==='vendor')continue;const s=p.colliderSolid;s.x=p.position.x;s.z=p.position.z;out.push(s);}}
+ /** Per-update scratch: car colliders are the same for every person this
+  * frame, so they are built once at the top of update() instead of once
+  * per avoidance angle (7× per moving person before). */
+ private carSolids:Solid[]=[];
+ private motionScratch:Point={x:0,z:0};
  displace(id:string,point:Point,target:Point={x:point.x-3,z:point.z}):void {
   if(this.people.some(p=>p.id===id))return;
-  const view=new HumanoidView(DRIVER_VARIANT);this.group.add(view.group);this.people.push({id,position:{...point},view,state:'flee',time:0,shop:0,target:{...target},civilianDriver:true,speed:0,yaw:0,waypoints:[],blocked:0,stroller:false,side:'north',trips:0,area:'market'});this.alert=8;
+  const view=new HumanoidView(DRIVER_VARIANT);this.group.add(view.group);this.people.push({id,position:{...point},view,state:'flee',time:0,shop:0,target:{...target},civilianDriver:true,speed:0,yaw:0,waypoints:[],blocked:0,stroller:false,side:'north',trips:0,area:'market',num:Number(id.match(/\d+$/)?.[0]??0),colliderSolid:{x:point.x,z:point.z,width:0.6,depth:0.6,height:1.75,yaw:0}});this.alert=8;
  }
  private release(p:Person):void {p.waypoints=[];this.reservations.release(p.id);p.seat=undefined;}
  private leaveSeat(p:Person,world:CollisionWorld,cars:readonly VehicleController[],player?:Point):boolean {
@@ -110,6 +136,8 @@ export class StreetPeople {
  }
  update(dt:number,world:CollisionWorld,cars:readonly VehicleController[],focus:Point,player?:Point):void {
   this.alert=Math.max(0,this.alert-dt);
+  // Car colliders are the same for every person this frame: build once.
+  const carSolids=this.carSolids;carSolids.length=0;for(const c of cars)carSolids.push(c.collider);
   for(const p of this.people){
    p.time+=dt;p.view.group.visible=distance(p.position,focus)<100;if(!p.view.group.visible){if(p.stroller)continue;if(p.civilianDriver){this.release(p);p.state='retreated';p.time=0;p.target={...p.position};}else if(p.state!=='vendor'&&this.leaveSeat(p,world,cars,player)){this.release(p);p.state='leave';p.time=0;p.target={x:-238+p.shop*8,z:-10.5};}continue;}
    const danger=cars.find(c=>c.kmh>15&&distance(c.position,p.position)<6);
@@ -143,15 +171,24 @@ export class StreetPeople {
      // Crossing pedestrians hurry if a vehicle closes in; they never stop
      // or turn back on the carriageway.
      const hurrying=p.state==='cross'&&cars.some(c=>distance(c.position,p.position)<15);
-     const pace=p.state==='flee'?3.4:p.state==='cross'?(hurrying?3.2:2.2):1.35,step=Math.min(len,pace*dt),heading=Math.atan2(dx,dz),side=Number(p.id.match(/\d+$/)?.[0]??0)%2?1:-1;
-     const angles=[0,0.7*side,-0.7*side,1.3*side,-1.3*side,1.7*side,-1.7*side];
-     const candidate=angles.map(angle=>{const motion={x:Math.sin(heading+angle)*step,z:Math.cos(heading+angle)*step};return world.moveCircle(p.position,motion,0.3,0,cars.map(c=>c.collider));}).find(next=>distance(next,p.position)>step*0.2&&(!p.stroller||this.strollerClear(next,p))&&!this.people.some(o=>o!==p&&distance(o.position,next)<0.63)&&(!player||distance(player,next)>=0.7));
+     const pace=p.state==='flee'?3.4:p.state==='cross'?(hurrying?3.2:2.2):1.35,step=Math.min(len,pace*dt),heading=Math.atan2(dx,dz),side=p.num%2?1:-1;
+     // First clear angle wins, in the same order as before. The old code
+     // built the 7-angle array + 7 motion objects + 7 car-collider arrays
+     // per moving person per frame; this loop allocates nothing itself
+     // (the moveCircle result is CollisionWorld-owned — see DECISIONS.md).
+     let candidate:Point|undefined;
+     for(let a=0;a<AVOID_OFFSETS.length;a++){
+      const angle=heading+AVOID_OFFSETS[a]*side;
+      this.motionScratch.x=Math.sin(angle)*step;this.motionScratch.z=Math.cos(angle)*step;
+      const next=world.moveCircle(p.position,this.motionScratch,0.3,0,carSolids);
+      if(distance(next,p.position)>step*0.2&&(!p.stroller||this.strollerClear(next,p))&&!this.people.some(o=>o!==p&&distance(o.position,next)<0.63)&&(!player||distance(player,next)>=0.7)){candidate=next;break;}
+     }
      if(candidate){p.speed=distance(p.position,candidate)/dt;p.yaw=Math.atan2(candidate.x-p.position.x,candidate.z-p.position.z);p.position=candidate;p.blocked=0;}else p.blocked+=dt;
     }
    }
    // Timeout clears every reservation; a blocked customer never owns a queue forever.
    if(!p.stroller&&p.state!=='vendor'&&p.state!=='retreated'&&p.time>24&&this.leaveSeat(p,world,cars,player)){this.release(p);p.state='leave';p.target={x:-240+p.shop*8,z:-10.4};p.time=0;}
-   const sway=(p.state==='pause'||p.state==='waitCross'||p.state==='wait')?idleSway(p.time,Number(p.id.match(/\d+$/)?.[0]??0)*1.3):0;
+   const sway=(p.state==='pause'||p.state==='waitCross'||p.state==='wait')?idleSway(p.time,p.num*1.3):0;
    p.view.group.position.set(p.position.x,PEDESTRIAN_FLOOR_OFFSET+sway,p.position.z);p.view.group.rotation.y=p.yaw;
    const anim=p.state==='vendor'?(p.shop===2?'prepare':'talk'):p.state==='drink'?(p.time<0.8?'sit_down':p.time>8?'stand':p.shop===1?'sit_smoke':'sit_drink'):p.state==='react'?'react':p.speed>0.1?(p.state==='flee'?'flee':'walk'):p.state==='order'?'talk':'wait';
    if(p.actionTime){p.actionTime=Math.max(0,p.actionTime-dt);if(!p.actionTime)p.action=undefined;}
@@ -175,8 +212,8 @@ export class StreetPeople {
  private strollerClear(next:Point,p:Person):boolean{
   if(p.area==='cp-ring'){const r=Math.hypot(next.x,next.z);return r>=49&&r<=56;}
   if(p.area==='mg-road'&&p.route&&p.mouth&&p.mouthOther){
-   if(p.state==='cross')return projection(next,p.mouth,p.mouthOther).distance<=3.5;
-   return projection(next,p.route.a,p.route.b).distance<=2.5;
+   if(p.state==='cross')return segmentDistance(next,p.mouth,p.mouthOther)<=3.5;
+   return segmentDistance(next,p.route.a,p.route.b)<=2.5;
   }
   if(p.state==='cross')return Math.abs(next.x-CROSSING.x)<=CROSSING_HALF_WIDTH;
   return (next.z>=-15.7&&next.z<=-9.5)||(next.z>=9.5&&next.z<=15.7);

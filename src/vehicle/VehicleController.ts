@@ -45,7 +45,18 @@ export class VehicleController {
   get width(): number { return this.spec.width; }
   get length(): number { return this.spec.length; }
   get kmh(): number { return Math.abs(this.speed) * 3.6; }
-  get collider(): Solid { return { ...this.position, yaw: this.yaw, width: this.width, depth: this.length, height: this.spec.height }; }
+  /** Cached collider, refreshed in place on every read: the 120 Hz loop,
+   * traffic and pedestrians all read `collider` every step, and the old
+   * getter spread a fresh Solid per read. Callers only ever read the
+   * result inside the call that asked for it (checked: no caller mutates
+   * or retains a collider), so sharing one object per car is safe. */
+  private colliderSolid: Solid = { x: 0, z: 0, yaw: 0, width: 0, depth: 0, height: 0 };
+  get collider(): Solid {
+    const c = this.colliderSolid;
+    c.x = this.position.x; c.z = this.position.z; c.yaw = this.yaw;
+    c.width = this.width; c.depth = this.length; c.height = this.spec.height;
+    return c;
+  }
 
   setDriving(driving: boolean): void {
     this.driving = driving; this.speed = 0; this.acceleration = 0; this.steering = 0;
