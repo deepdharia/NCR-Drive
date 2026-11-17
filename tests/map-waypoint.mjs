@@ -24,26 +24,26 @@ try {
   await page.waitForFunction(() => window.__game.phone === true);
   const canvas = page.locator('.phone-map canvas');
   await canvas.scrollIntoViewIfNeeded();
-  // Overview projection: px = 240 + (x-550)*0.072, pz = 240 + (z-1000)*0.072.
+  // Overview projection: px = 240 + (x-100)*0.072, pz = 240 + (z-25)*0.072.
   const clickWorld = async (wx, wz) => {
     // Hiding Clear can move the scroll position after its focused button vanishes.
     // Re-establish the actual visible canvas before converting world to pixels.
     await canvas.scrollIntoViewIfNeeded();
     const box = await canvas.boundingBox();
     assert.ok(box, 'overview canvas has a bounding box');
-    const px = 240 + (wx - 550) * 0.072, pz = 240 + (wz - 1000) * 0.072;
+    const px = 240 + (wx - 100) * 0.072, pz = 240 + (wz - 25) * 0.072;
     await page.mouse.click(box.x + px / 480 * box.width, box.y + pz / 480 * box.height);
   };
-  await clickWorld(-2100, 1900); // Gurgaon north avenue (on a road, not the plaza centre)
+  await clickWorld(-1950, 2010); // Gurugram IFFCO Chowk bay, on NH-48
   await page.waitForFunction(() => !!window.__game.waypoint);
   const gurgaon = await page.evaluate(() => window.__game.waypoint);
-  assert.ok(Math.hypot(gurgaon.x + 2100, gurgaon.z - 1900) < 30, `waypoint snapped onto Gurgaon north avenue, got ${JSON.stringify(gurgaon)}`);
+  assert.ok(Math.hypot(gurgaon.x + 1950, gurgaon.z - 2010) < 30, `waypoint snapped onto NH-48 at IFFCO Chowk, got ${JSON.stringify(gurgaon)}`);
   const distanceText = await page.evaluate(() => document.querySelector('[data-distance]')?.textContent ?? '');
   assert.ok(distanceText.includes('Waypoint'), `distance line shows the waypoint: ${distanceText}`);
-  await clickWorld(3200, 250); // Noida — moves the pin.
-  await page.waitForFunction(() => window.__game.waypoint && window.__game.waypoint.x > 3000);
+  await clickWorld(1700, 960); // Noida Sector 18 bay, on the DND — moves the pin.
+  await page.waitForFunction(() => window.__game.waypoint && window.__game.waypoint.x > 1500);
   const noida = await page.evaluate(() => window.__game.waypoint);
-  assert.ok(Math.hypot(noida.x - 3200, noida.z - 250) < 30, `waypoint moved onto Noida middle avenue, got ${JSON.stringify(noida)}`);
+  assert.ok(Math.hypot(noida.x - 1700, noida.z - 960) < 30, `waypoint moved onto the DND at Sector 18, got ${JSON.stringify(noida)}`);
   await page.locator('[data-action="clearWaypoint"]').click();
   await page.waitForFunction(() => window.__game.waypoint === undefined);
   // Arrival clears the pin: teleporting within 15 m of a fresh pin drops it.

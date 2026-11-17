@@ -2,7 +2,7 @@ import { clamp } from '../core/math';
 import type { FootInput } from '../player/PlayerController';
 import type { DriveInput } from '../vehicle/VehicleController';
 
-export interface InputActions { interact: () => void; phone: () => void; pause: () => void; rotate: (x: number, y: number) => void; tap: (x: number, y: number) => void }
+export interface InputActions { interact: () => void; phone: () => void; pause: () => void; rotate: (x: number, y: number) => void; tap: (x: number, y: number) => void; horn?: () => void }
 
 export class InputController {
   enabled = false;
@@ -52,6 +52,7 @@ export class InputController {
     if (!this.enabled) return;
     this.keys.add(event.code);
     if (event.code === 'KeyF') this.actions.interact();
+    if (event.code === 'KeyH') this.actions.horn?.();
     if (event.code === 'Space') this.jump = true;
   };
   setJoystick(x: number, z: number): void {

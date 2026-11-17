@@ -4,7 +4,7 @@ import { Neighborhood, freshNeighborhood } from '../src/systems/Neighborhood';
 import { loadProgress, writeProgress } from '../src/systems/ProgressStore';
 import { CLUSTERS, CLUSTER_SHOPS, CLUSTER_SEATS, CLUSTER_PLACES, GOODS_JOBS, shopById, shopLabel } from '../src/world/ClusterData';
 import { clusterSolids } from '../src/world/ClusterLayout';
-import { roads, junctionById, barrierGaps, ends, nearestRoad, projection } from '../src/world/WorldRoads';
+import { roads, barrierGaps, ends, nearestRoad, projection } from '../src/world/WorldRoads';
 import { roadRoute, routeLength } from '../src/systems/Navigation';
 import { CollisionWorld } from '../src/core/CollisionWorld';
 import { createDistrictLayout } from '../src/world/DistrictLayout';
@@ -36,9 +36,14 @@ test('cluster data: unique ids, counters clear, arrivals on roads, parking clear
   }
 });
 
-test('spur roads exist, join the graph, and route both ways', () => {
-  for (const id of ['garden-spur', 'g-forecourt', 'yamuna-view-spur']) assert.ok(roads.some(r => r.id === id), id);
-  for (const id of ['southwest-3', 'garden-terminus', 'g-mid', 'g-forecourt-end', 'yamuna-view']) assert.ok(junctionById.has(id), id);
+test('cluster arrivals sit on real roads and route both ways', () => {
+  // No spur roads on the real network: each cluster's arrival is on a real
+  // road's carriageway (not CP fabric), and CP routes to it and back.
+  for (const c of CLUSTERS) {
+    const road = nearestRoad(c.arrival);
+    assert.ok(projection(c.arrival, ...ends(road)).distance < road.width / 2, `${c.id} arrival off the ${road.id} carriageway`);
+    assert.ok(!road.id.startsWith('cp-'), `${c.id} arrival must be on a real road, not CP fabric`);
+  }
   const delhi = { x: -44, z: 0 };
   for (const c of CLUSTERS) {
     const to = roadRoute(delhi, c.arrival); assert.ok(to.length > 0, `no route to ${c.id}`); assert.ok(routeLength(to) > 0);
@@ -47,17 +52,24 @@ test('spur roads exist, join the graph, and route both ways', () => {
 });
 
 test('authored barrier gaps open real passages and leave the rest guarded', () => {
-  assert.ok(barrierGaps.length >= 6);
-  // Noida park gate: a pedestrian passes at the gap, not 30 m along the rail.
-  assert.ok(world.isClear({ x: 3200, z: 262.8 }, 0.35, 0, 1.8), 'park gate blocked');
-  assert.ok(!world.isClear({ x: 3170, z: 262.8 }, 0.35, 0, 1.8), 'barrier missing beside the park gate');
-  // Noida parking entrance fits a car.
-  assert.ok(world.boxIsClear({ x: 3080, z: 262.8, yaw: 0 }, 2.5, 5), 'Noida parking entrance too narrow');
-  // Garden parking gap.
-  assert.ok(world.isClear({ x: -924, z: 799 }, 0.35, 0, 1.8), 'garden parking gap blocked');
-  // Spur centrelines stay drivable.
-  for (const [a, b] of [[{ x: -900, z: 825 }, { x: -960, z: 760 }], [{ x: -2100, z: 1900 }, { x: -2100, z: 1780 }], [{ x: 1200, z: -170 }, { x: 1200, z: -280 }]] as const) {
-    for (let t = 0.1; t <= 0.9; t += 0.2) assert.ok(world.boxIsClear({ x: a.x + (b.x - a.x) * t, z: a.z + (b.z - a.z) * t, yaw: Math.atan2(b.x - a.x, b.z - a.z) }, 2.2, 4.8), `spur blocked at t=${t}`);
+  assert.equal(barrierGaps.length, 4); // one per cluster access, on the nearest real road
+  const gapPoint = (gap: (typeof barrierGaps)[number]) => {
+    const r = roads.find((x) => x.id === gap.road)!;
+    const [a, b] = ends(r), len = distance(a, b), yaw = Math.atan2(b.x - a.x, b.z - a.z);
+    const dx = (b.x - a.x) / len, dz = (b.z - a.z) / len, off = r.width / 2 + 0.8;
+    const centre = { x: a.x + dx * gap.along * len, z: a.z + dz * gap.along * len };
+    return { point: { x: centre.x + Math.cos(yaw) * off * gap.side, z: centre.z - Math.sin(yaw) * off * gap.side }, before: { x: centre.x - dx * 30 + Math.cos(yaw) * off * gap.side, z: centre.z - dz * 30 - Math.sin(yaw) * off * gap.side } };
+  };
+  for (const gap of barrierGaps) {
+    const { point, before } = gapPoint(gap);
+    assert.ok(world.isClear(point, 0.35, 0, 1.8), `gap blocked on ${gap.road}`);
+    assert.ok(!world.isClear(before, 0.35, 0, 1.8), `barrier missing 30 m before gap on ${gap.road}`);
+  }
+  // A car fits from each gap to its cluster parking in a straight line.
+  for (const c of CLUSTERS) {
+    const gap = barrierGaps.map((g) => ({ g, p: gapPoint(g).point })).sort((a, b) => distance(a.p, c.parking) - distance(b.p, c.parking))[0];
+    const yaw = Math.atan2(c.parking.x - gap.p.x, c.parking.z - gap.p.z);
+    for (let t = 0; t <= 1; t += 0.05) assert.ok(world.boxIsClear({ x: gap.p.x + (c.parking.x - gap.p.x) * t, z: gap.p.z + (c.parking.z - gap.p.z) * t, yaw }, 2.2, 4.8), `${c.id} gap-to-parking blocked at t=${t}`);
   }
 });
 

@@ -62,29 +62,33 @@ export class ClusterView {
         line.position.set(cx + Math.cos(yaw) * t, 0.05, cz - Math.sin(yaw) * t); line.scale.set(0.15, 0.02, d * 0.8); line.rotation.y = yaw; g.add(line);
       }
     };
+    // Ground pads follow the clusters' real-NCR anchors (ClusterData). Pads
+    // are placed from the cluster parking/arrival, kept clear of the road
+    // corridors — the Noida grass and paths are pulled south of the Yamuna
+    // Expressway diagonal, the Gurugram plaza sits east of MG Road.
     if (c.id === 'garden-stop') {
-      flat(m.grass, -927, 766, 64, 44);
-      const ring = new THREE.Mesh(new THREE.RingGeometry(14.5, 16.5, 48), m.paving); ring.rotation.x = -Math.PI / 2; ring.position.set(-927, 0.04, 766); g.add(ring);
-      flat(m.asphalt, -914.4, 790.2, 22, 12, -2.398); bays(-914.4, 790.2, 22, 12, -2.398, 4);
-      flat(m.paving, -912, 769, 34, 30, 0, 0.03);
+      flat(m.grass, -1415, 1204, 64, 44);
+      const ring = new THREE.Mesh(new THREE.RingGeometry(14.5, 16.5, 48), m.paving); ring.rotation.x = -Math.PI / 2; ring.position.set(-1415, 0.04, 1204); g.add(ring);
+      flat(m.asphalt, c.parking.x, c.parking.z, 22, 12, c.parking.yaw); bays(c.parking.x, c.parking.z, 22, 12, c.parking.yaw, 4);
+      flat(m.paving, -1400, 1207, 34, 30, 0, 0.03);
     }
     if (c.id === 'gurgaon-boulevard') {
-      flat(m.paving, -2005, 1800, 170, 32);
-      flat(m.asphalt, -2153.5, 1800, 93, 30); bays(-2153.5, 1800, 93, 30, 0, 9);
-      flat(m.paving, -2095, 1782, 8, 34, 0, 0.03);
+      flat(m.paving, -1660, 2030, 170, 32);
+      flat(m.asphalt, c.parking.x, c.parking.z, 93, 30); bays(c.parking.x, c.parking.z, 93, 30, 0, 9);
+      flat(m.paving, -1695, 2030, 8, 34, 0, 0.03);
     }
     if (c.id === 'noida-park') {
-      flat(m.grass, 3205, 355, 210, 42);
-      flat(m.paving, 3225, 342, 170, 2.2, 0, 0.03); flat(m.paving, 3225, 368, 170, 2.2, 0, 0.03);
-      flat(m.paving, 3125, 355, 2.2, 26, 0, 0.03); flat(m.paving, 3300, 355, 2.2, 26, 0, 0.03);
-      flat(m.paving, 3200, 268, 122, 8);
-      flat(m.paving, 3110, 315, 4, 42); flat(m.paving, 3131, 301, 4, 68);
-      flat(m.asphalt, 3080, 270, 80, 12); bays(3080, 270, 80, 12, 0, 8);
+      flat(m.grass, 2000, 1220, 120, 24);
+      flat(m.paving, 2100, 1217, 120, 2.2, 0, 0.03); flat(m.paving, 2075, 1243, 170, 2.2, 0, 0.03);
+      flat(m.paving, 1975, 1230, 2.2, 26, 0, 0.03); flat(m.paving, 2150, 1230, 2.2, 26, 0, 0.03);
+      flat(m.paving, 2050, 1170, 122, 8);
+      flat(m.paving, 2060, 1215, 4, 30); flat(m.paving, 2075, 1186, 4, 62);
+      flat(m.asphalt, c.parking.x, c.parking.z, 80, 12); bays(c.parking.x, c.parking.z, 80, 12, 0, 8);
     }
     if (c.id === 'yamuna-view') {
-      flat(m.paving, 1200, -280, 18, 14);
-      flat(m.asphalt, 1180, -245, 25, 30); bays(1180, -245, 25, 30, 0, 3);
-      flat(m.paving, 1198, -262, 3, 36, 0, 0.03);
+      flat(m.paving, 1290, -550, 18, 14);
+      flat(m.asphalt, c.parking.x, c.parking.z, 25, 30); bays(c.parking.x, c.parking.z, 25, 30, 0, 3);
+      flat(m.paving, 1335, -550, 50, 3, 0, 0.03);
     }
   }
 

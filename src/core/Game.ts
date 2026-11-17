@@ -1,5 +1,10 @@
 import * as THREE from 'three';
-import { FrameMetrics } from './FrameMetrics';
+import { FrameMetrics, AutoQuality, TIER_ORDER } from './FrameMetrics';
+import { Effects } from '../effects/Effects';
+import { Headlights } from '../rendering/Headlights';
+import { PostGrade } from '../rendering/PostGrade';
+import { vibrateTap } from '../systems/Haptics';
+import type { QualityPreset } from '../rendering/QualityProfile';
 import { CollisionWorld } from './CollisionWorld';
 import { PlayerController } from '../player/PlayerController';
 import { PlayerView } from '../player/PlayerView';
@@ -22,9 +27,11 @@ import type { WalletSnapshot } from '../systems/Neighborhood';
 import { defaultSettings, loadProgress, writeProgress } from '../systems/ProgressStore';
 import { recoverToRoad } from '../systems/RecoverySystem';
 import { createDistrictLayout } from '../world/DistrictLayout';
+import { roadRoute } from '../systems/Navigation';
 import { motorPoolBays, roadsideRetreat, nearestRoad, projection, ends } from '../world/WorldRoads';
 import { RegionalView } from '../world/RegionalView';
 import { DistrictView } from '../world/DistrictView';
+import { NcrLandmarks } from '../world/NcrLandmarks';
 import { CentralDelhiView } from '../world/CentralDelhiView';
 import { nextQuality, QUALITY, resolvedQuality } from '../rendering/QualityProfile';
 import { GameUI } from '../ui/GameUI';
@@ -33,6 +40,9 @@ import { LocalPopulation } from '../people/LocalPopulation';
 import { CLUSTERS, CLUSTER_SHOPS, goodsJobById, shopLabel } from '../world/ClusterData';
 import type { Cluster, ClusterShop } from '../world/ClusterData';
 import { Reservations } from '../systems/Neighborhood';
+
+/** DaylightRig preset → PostGrade preset (names differ: evening = golden hour). */
+const GRADE_PRESET = { morning: 'late-morning', evening: 'golden-hour', dusk: 'dusk', night: 'night' } as const;
 
 /** One owner for simulation, rendering, DOM controls and their lifecycle. */
 export class Game {
@@ -53,12 +63,19 @@ export class Game {
   private district: DistrictView;
   private central: CentralDelhiView;
   private regional: RegionalView;
+  private landmarks: NcrLandmarks;
   private camera: CameraRig;
   private input: InputController;
   private interaction: InteractionSystem;
   private mission = new CourierMission();
   private neighborhood!:Neighborhood;
   private market!:MarketView;private people!:StreetPeople;private audio=new StreetAudio();
+  private headlights = new Headlights();
+  private effects!: Effects;
+  private postGrade!: PostGrade;
+  private autoQuality = new AutoQuality();
+  private autoQualityTier: QualityPreset | undefined;
+  private headlightCar = -1;
   private clusters!:ClusterView;private populations:LocalPopulation[]=[];
   private clusterShop?:ClusterShop;private seatReservations?:Reservations;
   private photoMode=false;private circuit?:{cluster:Cluster;next:number;saveFailed?:boolean};
@@ -106,6 +123,11 @@ export class Game {
     this.district = new DistrictView(this.scene, layout, this.renderer);
     this.central = new CentralDelhiView(this.scene);
     this.regional = new RegionalView(this.scene);
+    this.landmarks = new NcrLandmarks(this.scene);
+    this.effects = new Effects(this.scene);
+    this.regional.roadMaterials.forEach(material => this.effects.registerRoadMaterial(material));
+    this.postGrade = new PostGrade(this.renderer, root, GRADE_PRESET[this.district.lighting.currentTimeOfDay]);
+    this.traffic.onHonk = () => this.audio.horn();
     this.market=new MarketView(this.scene);this.people=new StreetPeople(this.scene);
     this.clusters=new ClusterView(this.scene);this.populations=CLUSTERS.map(c=>new LocalPopulation(this.scene,c.population,c.id));
     motorPoolBays.forEach((bay,i)=>{this.fleet[i+1].position={x:bay.x,z:bay.z};this.fleet[i+1].yaw=bay.yaw;});
@@ -117,7 +139,7 @@ export class Game {
     this.interaction.onTransferred=()=>{this.input.reset();this.input.reverse=false;if(this.car.driving)this.camera.enterVehicle();this.refreshUI();};
     this.player.teleport({ x: this.interaction.door.x - 0.45, z: this.interaction.door.z });
     this.input = new InputController(this.renderer.domElement, {
-      interact: () => this.interact(), phone: () => this.togglePhone(), pause: () => this.togglePause(),
+      interact: () => this.interact(), phone: () => this.togglePhone(), pause: () => this.togglePause(), horn: () => this.audio.horn(),
       rotate: (dx, dy) => this.camera.rotate(dx * this.settings.cameraSensitivity, dy * this.settings.cameraSensitivity, this.car.driving), tap: (x, y) => this.tapCar(x, y),
     });
     this.ui = new GameUI(overlay, this.input, {
@@ -126,6 +148,7 @@ export class Game {
       quality: () => {
         this.settings.graphicsQuality = nextQuality(resolvedQuality(this.settings));
         this.settings.performanceMode = this.settings.graphicsQuality === 'low';
+        this.autoQualityTier = undefined; this.autoQuality.reset();
         this.applySettings(); this.saveProgress(); this.refreshUI();
         this.renderer.render(this.scene, this.camera.camera);
       },
@@ -153,7 +176,7 @@ export class Game {
       receiveGoods:()=>{const position=this.car.driving?this.car.position:this.player.position;this.neighborhood.cash=this.mission.cash;if(this.neighborhood.confirmGoods(position,this.car.driving?this.car.kmh:this.player.speed*3.6)){this.mission.cash=this.neighborhood.cash;this.phone=false;this.syncScreen();}this.ui.toast(this.neighborhood.message);this.refreshUI();},
       cancelGoods:()=>{this.neighborhood.cancelGoods();this.refreshUI();},
       exitPhoto:()=>this.exitPhotoMode(),
-      waypoint:(point)=>{const road=nearestRoad(point);this.waypoint=projection(point,...ends(road)).point;this.ui.toast('Waypoint set — follow the gold marker.');this.refreshUI();},
+      waypoint:(point)=>{const road=nearestRoad(point);const snap=projection(point,...ends(road));if(snap.distance>60){this.ui.toast('Tap on a road to set a waypoint.');return;}const from=this.car.driving?this.car.position:this.player.position;if(!roadRoute(from,snap.point).length){this.ui.toast('No route from here — drive closer first.');return;}this.waypoint=snap.point;vibrateTap();this.ui.toast('Waypoint set — follow the gold marker.');this.refreshUI();},
       clearWaypoint:()=>{this.waypoint=undefined;this.ui.toast('Waypoint cleared.');this.refreshUI();},
       audio:()=>{this.settings.muted=!this.settings.muted;this.applySettings();this.saveProgress();},
       volume:value=>{if(Number.isFinite(value)&&value>=0&&value<=1){this.settings.volume=value;this.applySettings();this.saveProgress();}},
@@ -180,10 +203,14 @@ export class Game {
   private applySettings(): void {
     const mobile = matchMedia('(pointer: coarse)').matches;
     this.input.steeringSensitivity = this.settings.steeringSensitivity;
-    const quality = resolvedQuality(this.settings), profile = QUALITY[quality];
+    const quality = this.autoQualityTier ?? resolvedQuality(this.settings), profile = QUALITY[quality];
     this.renderer.shadowMap.enabled = profile.shadowSize > 0;
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, mobile ? Math.min(1.25, profile.pixelRatio) : profile.pixelRatio));
-    this.district.setQuality(quality); this.central.setQuality(quality); this.regional.setQuality(quality);
+    this.district.setQuality(quality); this.central.setQuality(quality); this.regional.setQuality(quality); this.landmarks.setQuality(quality);
+    this.district.lighting.setTimeOfDay(this.settings.timeOfDay ?? 'morning');
+    this.headlights.setActive(this.district.lighting.headlightsOn);
+    this.postGrade.setPreset(GRADE_PRESET[this.district.lighting.currentTimeOfDay]);
+    this.postGrade.setQuality(quality);
     this.ui.setSettings(this.settings);this.audio.settings(this.settings,!this.started||this.paused||this.phone);
   }
   private recover(): void {
@@ -242,7 +269,7 @@ export class Game {
   private refreshUI(): void {
     this.selectNearbyCar();
     const focus=this.car.driving?this.car.position:this.player.position;
-    if(this.waypoint&&distance(focus,this.waypoint)<15){this.waypoint=undefined;this.ui.toast('Waypoint reached.');}
+    if(this.waypoint&&distance(focus,this.waypoint)<15){this.waypoint=undefined;vibrateTap();this.ui.toast('Waypoint reached.');}
     const target = this.waypoint??(this.story.active ? this.story.step.target : this.mission.state==='active'?COURIER_TARGET:this.neighborhood.active?(this.neighborhood.activeTarget??MARKET):MARKET);
     this.district.delivery.visible = distance(target,this.car.driving?this.car.position:this.player.position)>20 || this.jobBusy;
     this.district.delivery.position.set(target.x, 0, target.z);
@@ -262,6 +289,13 @@ export class Game {
     const audible=this.car.driving?this.car:this.cars.filter(c=>c.owner==='ai'&&Math.abs(c.speed)>0.1&&distance(c.position,focus)<90).sort((a,b)=>distance(a.position,focus)-distance(b.position,focus))[0];
     this.audio.update(focus,this.camera.yaw,audible?.position??this.car.position,audible?.speed??0,!!audible,audible?.braking??false,audible?.steering??0);
     this.regional.update(this.car.driving ? this.car.position : this.player.position);
+    this.effects.update(dt, this.car);
+    if (this.selected !== this.headlightCar) {
+      this.headlightCar = this.selected;
+      const view = this.selected < this.fleetViews.length ? this.fleetViews[this.selected] : this.trafficViews[this.selected - this.fleetViews.length];
+      if (view) this.headlights.attachTo(view.group); else this.headlights.detach();
+    }
+    this.landmarks.update(this.car.driving ? this.car.position : this.player.position);
     this.district.update(this.car.driving ? this.car.position : this.player.position); this.camera.update(dt, this.player, this.car, this.world);
   }
   private frame = (time: number): void => {
@@ -305,7 +339,10 @@ export class Game {
     this.uiElapsed += dt;
     if (this.uiElapsed > 0.1) { this.uiElapsed = 0; this.refreshUI();
       const frames=this.metrics.percentiles,info=this.renderer.info;
-      this.ui.renderStats(`Frame ms p50 ${frames.p50.toFixed(1)} / p95 ${frames.p95.toFixed(1)} · ${info.render.calls} draws · ${info.render.triangles} triangles · ${info.memory.geometries} geometries / ${info.memory.textures} textures`); }
+      this.ui.renderStats(`Frame ms p50 ${frames.p50.toFixed(1)} / p95 ${frames.p95.toFixed(1)} · ${info.render.calls} draws · ${info.render.triangles} triangles · ${info.memory.geometries} geometries / ${info.memory.textures} textures`);
+      const ceiling = resolvedQuality(this.settings), current = this.autoQualityTier ?? ceiling;
+      const action = this.autoQuality.evaluate(frames.p95, current, ceiling, time);
+      if (action === 'step-down' || action === 'step-up') { const index = TIER_ORDER.indexOf(current); this.autoQualityTier = TIER_ORDER[index + (action === 'step-down' ? -1 : 1)]; this.applySettings(); } }
   };
   private otherCars() { return this.cars.filter(c=>c!==this.car).map(c=>c.collider); }
   private selectNearbyCar(): void {
@@ -362,7 +399,7 @@ export class Game {
     this.neighborhood.cash=this.mission.cash;this.payment=this.neighborhood.order(shop.item);if(this.payment===undefined)return;
     this.playerView.overrideAnimation='pay';this.ui.shop('Delhi Wallet · Fictional UPI',`${shop.item.toUpperCase()} · ₹${shop.price}. Confirm to pay and receive one cup. This uses game currency only. Cancel leaves your balance unchanged.`,false,true,false);this.updateViews(0.2);this.renderer.render(this.scene,this.camera.camera);
   }
-  private pay():void {if(this.payment===undefined)return;const id=this.payment;this.payment=undefined;const paid=this.neighborhood.pay(id);this.mission.cash=this.neighborhood.cash;const clusterShop=this.clusterShop;this.closeShop();if(paid){this.handover=1.2;if(clusterShop){const ci=CLUSTERS.findIndex(c=>c.id===clusterShop.cluster);const shopIndex=CLUSTERS[ci]?.shops.findIndex(s=>s.id===clusterShop.id)??-1;if(shopIndex>=0)this.populations[ci]?.serve(shopIndex);}else this.people.serve(this.shopIndex);}this.ui.toast(this.neighborhood.message);}
+  private pay():void {if(this.payment===undefined)return;const id=this.payment;this.payment=undefined;const paid=this.neighborhood.pay(id);this.mission.cash=this.neighborhood.cash;const clusterShop=this.clusterShop;this.closeShop();if(paid){this.handover=1.2;vibrateTap();if(clusterShop){const ci=CLUSTERS.findIndex(c=>c.id===clusterShop.cluster);const shopIndex=CLUSTERS[ci]?.shops.findIndex(s=>s.id===clusterShop.id)??-1;if(shopIndex>=0)this.populations[ci]?.serve(shopIndex);}else this.people.serve(this.shopIndex);}this.ui.toast(this.neighborhood.message);}
   private closeShop():void {this.neighborhood.cancel();this.payment=undefined;this.modal=false;this.clusterShop=undefined;this.playerView.overrideAnimation=undefined;this.ui.closeShop();this.syncScreen();this.updateViews(0.02);this.renderer.render(this.scene,this.camera.camera);}
   private openClusterShop(shop:ClusterShop):void {
     this.clusterShop=shop;
@@ -425,6 +462,7 @@ export class Game {
   };
   dispose(): void {
     if (this.disposed) return; this.disposed = true;
+    this.headlights.dispose(); this.effects.dispose(); this.postGrade.dispose();
     this.audio.dispose();this.people.dispose();this.populations.forEach(p=>p.dispose());this.playerView.dispose();this.fleetViews.forEach(v=>v.dispose());this.trafficViews.forEach(v=>v.dispose());this.interaction.cancel();cancelAnimationFrame(this.frameId); this.abort.abort(); this.input.dispose(); this.ui.dispose();
     const skeletons=new Set<THREE.Skeleton>();
     const geometries = new Set<THREE.BufferGeometry>(), materials = new Set<THREE.Material>(), textures = new Set<THREE.Texture>();

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { CENTRAL_ROAD as ROAD, centralRoadPolygons, ceremonialArch, delhiBlocks, FLYOVER } from './CentralDelhiLayout';
-import { planarUV, signTexture, surfaceMaterial, worldSurfaceMaterial } from '../rendering/ProceduralTextures';
+import { planarUV, shopWindowTexture, signTexture, surfaceMaterial, worldSurfaceMaterial } from '../rendering/ProceduralTextures';
 import { QUALITY } from '../rendering/QualityProfile';
 import type { QualityPreset } from '../rendering/QualityProfile';
 import type { Point } from '../core/math';
@@ -83,8 +83,12 @@ export class CentralDelhiView {
       if (Math.abs(Math.sin(toSpoke)) * 44 < 8) continue;
       markings.push({ x: Math.cos(a) * 44, y: 0.035, z: Math.sin(a) * 44, yaw: -a, w: 0.12, h: 0.008, d: 0.85 });
     }
-    islands.push({ x: 280, y: 0.08, z: 0, yaw: Math.PI / 2, w: 0.8, h: 0.16, d: 26 });
-    for (const x of [270, 274, 278, 282, 286, 290]) shrubs.push({ x, y: 0.42, z: 0, yaw: Math.PI / 2, w: 0.65, h: 0.7, d: 3.8 });
+    // Planted strip on the NH-9 approach to the ITO flyover: 22 m north of
+    // the centreline (road yaw 1.19), clear of the piers and the driving line.
+    const strip = { x: 438.2, z: -218.4, yaw: 1.19 };
+    const sdx = Math.sin(strip.yaw), sdz = Math.cos(strip.yaw);
+    islands.push({ x: strip.x, y: 0.08, z: strip.z, yaw: strip.yaw, w: 0.8, h: 0.16, d: 26 });
+    for (const along of [-10, -6, -2, 2, 6, 10]) shrubs.push({ x: strip.x + sdx * along, y: 0.42, z: strip.z + sdz * along, yaw: strip.yaw, w: 0.65, h: 0.7, d: 3.8 });
     this.group.add(instances(box, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.94 }), curbs, false), instances(box, paint, markings, false), instances(box, concrete, islands));
     this.detail.add(instances(box, metal, drains, false));
     this.group.add(instances(new THREE.IcosahedronGeometry(0.5, 1), new THREE.MeshStandardMaterial({ color: 0x65714a, roughness: 1 }), shrubs));
@@ -92,21 +96,22 @@ export class CentralDelhiView {
     const edge = new THREE.Mesh(new THREE.RingGeometry(29, 30, 96), new THREE.MeshStandardMaterial({ color: 0x7a8060, roughness: 1 })); edge.rotation.x = -Math.PI / 2; edge.position.y = 0.017; this.group.add(edge);
     this.addLandmarks(box, concrete, stone, metal);
     this.addBlocks(box, concrete, metal);
+    this.addColonnade(box);
     this.addStreetDetails(box, metal, stone);
   }
   private addLandmarks(box: THREE.BufferGeometry, concrete: THREE.Material, stone: THREE.Material, metal: THREE.Material): void {
     const f = FLYOVER;
-    const parts: Instance[] = [{ x: f.x, y: f.underside + f.thickness / 2, z: 0, w: f.width, h: f.thickness, d: f.length }];
-    for (const z of [-88, -55, -26, 26, 55, 88]) {
-      parts.push({ x: f.x, y: f.underside / 2, z, w: Math.abs(z) === 88 ? 12 : 2, h: f.underside, d: 2.4 });
-      parts.push({ x: f.x, y: f.underside - 0.3, z, w: 10, h: 0.6, d: 2.8 });
-      parts.push({ x: f.x, y: 0.15, z, w: 5, h: 0.3, d: 5 });
+    const parts: Instance[] = [{ x: f.x, y: f.underside + f.thickness / 2, z: f.z, w: f.width, h: f.thickness, d: f.length }];
+    for (const off of [-88, -55, -26, 26, 55, 88]) {
+      parts.push({ x: f.x, y: f.underside / 2, z: f.z + off, w: Math.abs(off) === 88 ? 12 : 2, h: f.underside, d: 2.4 });
+      parts.push({ x: f.x, y: f.underside - 0.3, z: f.z + off, w: 10, h: 0.6, d: 2.8 });
+      parts.push({ x: f.x, y: 0.15, z: f.z + off, w: 5, h: 0.3, d: 5 });
     }
-    for (const side of [-1, 1]) parts.push({ x: f.x + side * 5.3, y: 7.5, z: 0, w: 0.4, h: 0.8, d: f.length });
-    const bridge = instances(box, concrete, parts); bridge.name = 'Supported scenic flyover · 6.4m clear underpass · no elevated driving'; this.group.add(bridge);
-    const deck = new THREE.Mesh(new THREE.PlaneGeometry(10, f.length), worldSurfaceMaterial('asphalt')); deck.rotation.x = -Math.PI / 2; deck.position.set(f.x, 7.105, 0); this.group.add(deck);
+    for (const side of [-1, 1]) parts.push({ x: f.x + side * 5.3, y: 7.5, z: f.z, w: 0.4, h: 0.8, d: f.length });
+    const bridge = instances(box, concrete, parts); bridge.name = 'ITO scenic flyover · 6.4m clear underpass over NH-9 · no elevated driving'; this.group.add(bridge);
+    const deck = new THREE.Mesh(new THREE.PlaneGeometry(10, f.length), worldSurfaceMaterial('asphalt')); deck.rotation.x = -Math.PI / 2; deck.position.set(f.x, 7.105, f.z); this.group.add(deck);
     for (const z of [-88, 88]) {
-      const closure = new THREE.Mesh(box, metal); closure.position.set(f.x, 8, z); closure.scale.set(10, 1.6, 0.25); this.group.add(closure);
+      const closure = new THREE.Mesh(box, metal); closure.position.set(f.x, 8, f.z + z); closure.scale.set(10, 1.6, 0.25); this.group.add(closure);
     }
     const arch = new THREE.Shape(); arch.moveTo(-7, 0); arch.lineTo(7, 0); arch.lineTo(7, 16); arch.lineTo(-7, 16); arch.closePath();
     const aperture = new THREE.Path(); aperture.moveTo(-3, 0); aperture.lineTo(-3, 8); aperture.absarc(0, 8, 3, Math.PI, 0, true); aperture.lineTo(3, 0); aperture.closePath(); arch.holes.push(aperture);
@@ -140,6 +145,74 @@ export class CentralDelhiView {
     });
     this.group.add(instances(box, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.85 }), walls), instances(box, concrete, bands));
     this.detail.add(instances(box, new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.25, roughness: 0.25, envMapIntensity: 0.7 }), windows, false), instances(box, metal, shades));
+  }
+  /**
+   * Phase 4 — CP colonnade: on the face of each delhiBlock that looks most
+   * toward the Inner Circle, a row of plaster columns under a canopy band,
+   * lit shopfronts between the columns, striped awnings, and a bilingual
+   * fascia sign above. Faces are picked from the block's own yaw, so the
+   * colonnade never lands on a radial strip (every block sits beyond the
+   * strips' 130 m end). All batched; one mesh per fascia sign.
+   */
+  private addColonnade(box: THREE.BufferGeometry): void {
+    const columns: Instance[] = [], capitals: Instance[] = [], canopies: Instance[] = [];
+    const fronts: Instance[] = [], awnings: Instance[] = [];
+    const signs: { name: string; hindi: string; x: number; y: number; z: number; yaw: number; w: number }[] = [];
+    const names: [string, string][] = [
+      ['PALIKA BAZAAR', 'पालिका बाज़ार'],
+      ['JANPATH', 'जनपथ'],
+      ['KHARAK SINGH MARG', 'खड़क सिंह मार्ग'],
+      ['BARAKHAMBA ROAD', 'बाराखंबा रोड'],
+      ['TOLSTOY MARG', 'टॉलस्टॉय मार्ग'],
+    ];
+    delhiBlocks.forEach((b, i) => {
+      const inward = { x: -b.x, z: -b.z };
+      const il = Math.hypot(inward.x, inward.z); inward.x /= il; inward.z /= il;
+      const c = Math.cos(b.yaw), s = Math.sin(b.yaw);
+      // Four faces (local ±z depth, local ±x width) with world normals.
+      const faces = [
+        { n: { x: s, z: c }, half: b.depth / 2, tangent: { x: c, z: -s }, len: b.width },
+        { n: { x: -s, z: -c }, half: b.depth / 2, tangent: { x: c, z: -s }, len: b.width },
+        { n: { x: c, z: -s }, half: b.width / 2, tangent: { x: s, z: c }, len: b.depth },
+        { n: { x: -c, z: s }, half: b.width / 2, tangent: { x: s, z: c }, len: b.depth },
+      ];
+      let best = faces[0], bestDot = -Infinity;
+      for (const f of faces) {
+        const d = f.n.x * inward.x + f.n.z * inward.z;
+        if (d > bestDot) { bestDot = d; best = f; }
+      }
+      const fx = b.x + best.n.x * best.half, fz = b.z + best.n.z * best.half;
+      const faceYaw = Math.atan2(best.n.x, best.n.z);
+      const colCount = Math.max(2, Math.floor(best.len / 2.8));
+      for (let k = 0; k < colCount; k++) {
+        const along = -best.len / 2 + 1.4 + k * (best.len - 2.8) / Math.max(1, colCount - 1);
+        const px = fx + best.tangent.x * along + best.n.x * 1.5;
+        const pz = fz + best.tangent.z * along + best.n.z * 1.5;
+        columns.push({ x: px, y: 1.6, z: pz, w: 0.19, h: 3.2, d: 0.19 });
+        capitals.push({ x: px, y: 3.3, z: pz, w: 0.55, h: 0.18, d: 0.55 });
+      }
+      const cx = fx + best.n.x * 0.9, cz = fz + best.n.z * 0.9;
+      canopies.push({ x: cx, y: 3.55, z: cz, yaw: faceYaw, w: best.len, h: 0.24, d: 2.4 });
+      const shopCount = Math.max(2, Math.floor(best.len / 3.4));
+      for (let k = 0; k < shopCount; k++) {
+        const along = -best.len / 2 + 1.9 + k * (best.len - 3.8) / Math.max(1, shopCount - 1);
+        fronts.push({ x: fx + best.tangent.x * along + best.n.x * 0.12, y: 1.55, z: fz + best.tangent.z * along + best.n.z * 0.12, yaw: faceYaw, w: 1.9, h: 2.3, d: 0.1 });
+        awnings.push({ x: fx + best.tangent.x * along + best.n.x * 0.75, y: 2.95, z: fz + best.tangent.z * along + best.n.z * 0.75, yaw: faceYaw, w: 2.2, h: 0.09, d: 1.1, color: [0xa44a2e, 0x2e5d43][k % 2] });
+      }
+      const [name, hindi] = names[i % names.length];
+      signs.push({ name, hindi, x: fx + best.n.x * 0.15, y: 4.6, z: fz + best.n.z * 0.15, yaw: faceYaw, w: Math.min(best.len - 2, 13) });
+    });
+    const plaster = new THREE.MeshStandardMaterial({ color: 0xe9dfca, roughness: 0.9 });
+    this.group.add(instances(new THREE.CylinderGeometry(0.85, 1, 1, 10), plaster, columns));
+    this.group.add(instances(box, plaster, capitals));
+    this.group.add(instances(box, new THREE.MeshStandardMaterial({ color: 0x2e4a3c, roughness: 0.85 }), canopies));
+    const windowMap = shopWindowTexture();
+    this.group.add(instances(box, new THREE.MeshStandardMaterial({ map: windowMap, emissiveMap: windowMap, color: 0xe7c38f, emissive: 0xffc37d, emissiveIntensity: 0.12, roughness: 0.3, metalness: 0.1 }), fronts, false));
+    this.group.add(instances(box, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 }), awnings, false));
+    for (const sg of signs) {
+      const sign = new THREE.Mesh(new THREE.PlaneGeometry(sg.w, 1.0), new THREE.MeshStandardMaterial({ map: signTexture(sg.name, sg.hindi), roughness: 0.8 }));
+      sign.position.set(sg.x, sg.y, sg.z); sign.rotation.y = sg.yaw; this.group.add(sign);
+    }
   }
   private addStreetDetails(box: THREE.BufferGeometry, metal: THREE.Material, stone: THREE.Material): void {
     const benches: Instance[] = [], frames: Instance[] = [], poles: Instance[] = [], fixtures: Instance[] = [];

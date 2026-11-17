@@ -10,6 +10,17 @@ import type { VehicleSpec } from './VehicleSpec';
 import type { VehicleController } from './VehicleController';
 
 /** A compact five-door hatchback; static detail is batched per material. */
+
+/**
+ * Phase 6 — brake-light flare is AI traffic only: an AI car braking ahead
+ * flares its tail lamps so the player reads it from the chase camera.
+ * The driven car and parked cars stay at the dim running-light baseline;
+ * player-car lighting (headlights) is Phase 2's, in its own tree.
+ */
+export function brakeGlow(owner: VehicleController['owner'], braking: boolean): number {
+  return owner === 'ai' && braking ? 2.5 : 0.3;
+}
+
 export class VehicleView {
   readonly group = new THREE.Group();
   private detailed = new THREE.Group();
@@ -163,6 +174,6 @@ export class VehicleView {
     this.wheels.forEach(w => { w.pivot.rotation.y = w.front ? car.steering : 0; w.spin.rotation.x = car.wheelTravel / 0.32; });
     this.doors.forEach(d=>{d.pivot.rotation.y=d.side<0?-car.doorOpen*1.05:0;});
     this.driver.group.visible=(car.occupant!==null||car.driving)&&!(car.reserved&&car.occupant==='player');if(this.driver.group.visible&&this.detailed.visible)this.driver.update(dt,'drive');
-    this.brakeMaterial.emissiveIntensity = car.braking ? 2.5 : 0.3;
+    this.brakeMaterial.emissiveIntensity = brakeGlow(car.owner, car.braking);
   }
 }

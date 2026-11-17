@@ -34,20 +34,21 @@ test('rendered CP road union covers directed lanes without overlapping junction 
     assert.equal(pieces.filter(poly => inside(p, poly)).length, 1, `seam/overlap at ${lane.id} ${t}`);
   }
 });
-test('CP radial-to-corridor seams and flyover underpass remain clear for every vehicle', () => {
+test('CP radial-to-corridor seams and ITO flyover underpass remain clear for every vehicle', () => {
   const world = new CollisionWorld(createDistrictLayout().solids);
   for (const spec of VEHICLE_SPECS) {
-    for (const lane of lanes.filter(l => l.road.id === 'cp-radial-0' || l.road.id === 'cp-radial-2' || l.road.id === 'east-0')) {
+    for (const lane of lanes.filter(l => l.road.id === 'cp-radial-0' || l.road.id === 'cp-radial-2' || l.road.id === 'nh-48:0')) {
       const yaw = Math.atan2(lane.end.x - lane.start.x, lane.end.z - lane.start.z);
       for (let t = 0; t <= 1; t += 0.005) assert.ok(world.boxIsClear({ x: lane.start.x + (lane.end.x - lane.start.x) * t, z: lane.start.z + (lane.end.z - lane.start.z) * t, yaw }, spec.width, spec.length), `${spec.id} ${lane.id}`);
     }
-    const result = world.moveBox({ x: FLYOVER.x - 20, z: -4, yaw: Math.PI / 2 }, { x: 40, z: 0 }, 0, spec.width, spec.length);
+    // Drive E–W under the ITO flyover, 4 m south of its centreline on NH-9.
+    const result = world.moveBox({ x: FLYOVER.x - 20, z: FLYOVER.z - 4, yaw: Math.PI / 2 }, { x: 40, z: 0 }, 0, spec.width, spec.length);
     assert.equal(result.hit, false); assert.ok(result.pose.x > FLYOVER.x + 19);
   }
-  assert.ok(world.isClear({ x: FLYOVER.x, z: 0 }, 0.4, 0, 1.8));
-  assert.equal(world.isClear({ x: FLYOVER.x, z: 0 }, 0.4, 6.3, 1), false);
-  assert.equal(world.isClear({ x: FLYOVER.x, z: 26 }), false, 'supported span must have solid piers');
-  for (const r of roads.filter(r => ['east-0', 'southwest-0'].includes(r.id))) assert.ok(ends(r).every(p => Number.isFinite(p.x)));
+  assert.ok(world.isClear({ x: FLYOVER.x, z: FLYOVER.z }, 0.4, 0, 1.8));
+  assert.equal(world.isClear({ x: FLYOVER.x, z: FLYOVER.z }, 0.4, 6.3, 1), false);
+  assert.equal(world.isClear({ x: FLYOVER.x, z: FLYOVER.z + 26 }), false, 'supported span must have solid piers');
+  for (const r of roads.filter(r => ['nh-48:0', 'nh-44:0'].includes(r.id))) assert.ok(ends(r).every(p => Number.isFinite(p.x)));
 });
 test('visual architecture leaves routed regional jobs and returns clear for the full roster', () => {
   const world = new CollisionWorld(centralSolids), start = { x: 92, z: 0 };
@@ -78,7 +79,7 @@ test('chase camera widens gradually at speed and resets without changing vehicle
   const car = new VehicleController(), player = new PlayerController(), camera = new CameraRig(1.6), world = new CollisionWorld();
   car.setDriving(true); car.speed = 35; const snapshot = JSON.stringify(car);
   for (let i = 0; i < 240; i++) camera.update(1 / 120, player, car, world);
-  assert.ok(camera.camera.fov > 66 && camera.camera.fov <= 67); assert.equal(JSON.stringify(car), snapshot);
+  assert.ok(camera.camera.fov > 73 && camera.camera.fov <= 74); assert.equal(JSON.stringify(car), snapshot);
   camera.reset(); car.speed = 0;
   for (let i = 0; i < 240; i++) camera.update(1 / 120, player, car, world);
   assert.ok(camera.camera.fov < 62.1); assert.ok(camera.camera.position.y > 0.3);

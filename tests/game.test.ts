@@ -112,7 +112,7 @@ test('courier accepts once, requires on-foot arrival, and awards exactly ₹750'
 
 test('CP lanes, radial roads, driver door and courier drop remain free of architecture', () => {
   const layout = createDistrictLayout(), world = new CollisionWorld(layout.solids);
-  assert.equal(layout.buildings.length, 30);
+  assert.equal(layout.buildings.length, 20); // 10 of the 30 ring buildings stand on the three real-road exit legs (NH-44 N/S, NH-48) and are dropped so the highways can leave the Inner Circle.
   for (const radius of [40, 44, 48]) for (let i = 0; i < 180; i++) {
     const angle = i / 180 * Math.PI * 2;
     assert.ok(world.boxIsClear({ x: Math.cos(angle) * radius, z: Math.sin(angle) * radius, yaw: -angle }, 1.72, 3.85), `${radius} at ${i * 2}°`);

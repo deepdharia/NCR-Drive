@@ -1,8 +1,11 @@
 import { isQualityPreset } from '../rendering/QualityProfile';
 import type { QualityPreset } from '../rendering/QualityProfile';
+import { isTimeOfDayPreset } from '../rendering/DaylightRig';
+import type { TimeOfDayPreset } from '../rendering/DaylightRig';
 export interface Settings {
   performanceMode: boolean;
   graphicsQuality?: QualityPreset;
+  timeOfDay?: TimeOfDayPreset;
   steeringSensitivity: number;
   cameraSensitivity: number;
   muted?: boolean; volume?: number;
@@ -12,7 +15,7 @@ import type { NeighborhoodSave } from './Neighborhood';
 export interface Progress { version: 3; cash: number; courierCompleted: boolean; settings: Settings; neighborhood: NeighborhoodSave }
 export const PROGRESS_KEY = 'ncr-drive-career-v1'; // Stable key; schema version lives in the payload.
 export const BACKUP_KEY = `${PROGRESS_KEY}-backup`;
-export const defaultSettings = (): Settings => ({ performanceMode: false, steeringSensitivity: 1, cameraSensitivity: 1, muted:false, volume:0.35 });
+export const defaultSettings = (): Settings => ({ performanceMode: false, timeOfDay:'morning', steeringSensitivity: 1, cameraSensitivity: 1, muted:false, volume:0.35 });
 const freshProgress = (): Progress => ({ version: 3, cash: 15000, neighborhood: freshNeighborhood(), courierCompleted: false, settings: defaultSettings() });
 type Reader = Pick<Storage, 'getItem'>;
 export interface LoadedProgress { progress: Progress; writable: boolean; source: 'current' | 'legacy' | 'backup' | 'fresh' | 'unavailable' | 'invalid' | 'unsupported' }
@@ -32,6 +35,7 @@ function parse(value: string | null): Progress | null {
       muted: p.settings?.muted === true, volume: typeof p.settings?.volume === 'number' && p.settings.volume>=0 && p.settings.volume<=1 ? p.settings.volume : 0.35,
       performanceMode: p.version >= 2 && p.settings?.performanceMode === true,
       ...(p.version >= 2 && isQualityPreset(p.settings?.graphicsQuality) ? { graphicsQuality: p.settings.graphicsQuality, performanceMode: p.settings.graphicsQuality === 'low' } : {}),
+      timeOfDay: isTimeOfDayPreset(p.settings?.timeOfDay) ? p.settings.timeOfDay : 'morning',
       steeringSensitivity: sensitivity(p.version >= 2 ? p.settings?.steeringSensitivity : undefined),
       cameraSensitivity: sensitivity(p.version >= 2 ? p.settings?.cameraSensitivity : undefined),
     } };
