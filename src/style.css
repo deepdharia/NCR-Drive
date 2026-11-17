@@ -120,6 +120,25 @@ kbd { font-family: inherit; font-size: 9px; border: 1px solid #dfc79d77; border-
 .pause-screen p { font-size: 12px; color: #bdc8b1; margin-bottom: 28px; }
 .toast { position: absolute; top: 90px; left: 50%; transform: translateX(-50%); background: #234736e8; padding: 13px 18px; border: 1px solid #c9c39277; border-radius: 12px; color: #ead8b1; font-size: 11px; }
 .boot-message,.startup-error { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 25px; text-align: center; gap: 15px; }
+/* Phase 6 — boot overlay (main.ts) + welcome-screen people progress (GameUI).
+ * The overlay lives in document.body so Game's root.replaceChildren() never
+ * wipes it; it never blocks play — the Enter button enables once the Game
+ * is constructed and the overlay auto-dismisses when the residents arrive. */
+.boot-overlay { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 25px; background: #10281ff2; text-align: center; }
+.boot-panel { max-width: 420px; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.boot-panel h1 { font-family: Georgia, serif; font-weight: 400; font-size: clamp(40px, 7vw, 64px); line-height: 1.05; letter-spacing: -.04em; margin: 8px 0; }
+.boot-panel h1 em { color: var(--gold); }
+.boot-panel [data-boot-status] { font-size: 13px; line-height: 1.7; color: #d0d4c2; margin: 0; }
+.boot-progress { width: min(320px, 80vw); height: 8px; border-radius: 8px; background: #c8d4b924; overflow: hidden; }
+.boot-progress > div { height: 100%; width: 0%; background: var(--gold); border-radius: 8px; transition: width .2s linear; }
+.boot-detail { font-size: 10px; color: #b0bfaa; letter-spacing: .08em; margin: 0; }
+.people-progress { margin-top: 18px; max-width: 320px; }
+.people-progress span { display: block; font-size: 10px; color: #b0bfaa; letter-spacing: .08em; margin-bottom: 8px; }
+.people-progress-bar { height: 6px; border-radius: 6px; background: #c8d4b924; overflow: hidden; }
+.people-progress-bar > div { height: 100%; width: 0%; background: var(--gold); border-radius: 6px; transition: width .2s linear; }
+/* Indeterminate (server sent no Content-Length): a slow sweep instead of a fake percent. */
+.boot-progress > div.indeterminate, .people-progress-bar > div.indeterminate { width: 40% !important; animation: boot-sweep 1.4s ease-in-out infinite alternate; }
+@keyframes boot-sweep { from { margin-left: 0; } to { margin-left: 60%; } }
 .startup-error h1 { font-family: Georgia,serif; font-weight: 400; font-size: 32px; margin: 0; }
 .startup-error p { color: #bac5ad; font-size: 13px; max-width: 350px; line-height: 1.8; }
 @media (pointer:coarse) {

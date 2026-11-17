@@ -26,6 +26,7 @@ import { CourierMission, COURIER_TARGET } from '../systems/CourierMission';
 import { Neighborhood, MARKET, shops, seats, freshNeighborhood } from '../systems/Neighborhood';
 import { MarketView } from '../world/MarketView';
 import { StreetPeople } from '../people/StreetPeople';
+import { onPeopleProgress, onPeopleReady } from '../people/HumanoidView';
 import { StreetAudio } from '../systems/StreetAudio';
 import type { WalletSnapshot } from '../systems/Neighborhood';
 import { defaultSettings, loadProgress, writeProgress } from '../systems/ProgressStore';
@@ -207,6 +208,12 @@ export class Game {
       // Phase 5 — music volume slider (pause screen). Same guard + save path as master volume.
       musicVolume:value=>{if(Number.isFinite(value)&&value>=0&&value<=1){this.settings.musicVolume=value;this.applySettings();this.saveProgress();}},
     });
+    // Phase 6 — character GLB loads in the background (main.ts started it);
+    // the welcome screen shows real download progress, and drivers /
+    // pedestrians upgrade from placeholders when it lands. No gameplay
+    // waits on it: HumanoidView builds a placeholder until the rig arrives.
+    onPeopleProgress((progress) => this.ui.setPeopleProgress(progress));
+    onPeopleReady(() => { if (this.started) this.ui.toast('Delhi residents have arrived.'); });
     this.applySettings(); this.syncScreen(); this.updateViews(1); this.renderer.render(this.scene, this.camera.camera);
     window.addEventListener('resize', this.resize, { signal: this.abort.signal });
     window.addEventListener('blur',()=>{if(this.started){if(this.modal)this.closeShop();this.paused=true;this.phone=false;this.syncScreen();}}, {signal:this.abort.signal});

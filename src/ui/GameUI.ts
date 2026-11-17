@@ -19,6 +19,7 @@ import { nextQuality, QUALITY, resolvedQuality } from '../rendering/QualityProfi
 import { TIME_OF_DAY } from '../rendering/DaylightRig';
 import type { TimeOfDayPreset } from '../rendering/DaylightRig';
 import { CLUSTER_PLACES } from '../world/ClusterData';
+import type { PeopleLoadProgress } from '../people/HumanoidView';
 
 /** HUD glyph per time-of-day preset. */
 export const TIME_OF_DAY_GLYPHS: Record<TimeOfDayPreset, string> = { morning: '☀', evening: '◐', dusk: '◐', night: '☾' };
@@ -57,7 +58,7 @@ export class GameUI {
     root.innerHTML = `
       <section class="welcome" aria-label="Welcome to NCR Drive">
         <div class="welcome-top"><span class="brand-mark">N</span><span>NCR DRIVE <small>NEW DELHI, INDIA</small></span><span class="edition">OPEN WORLD / 01</span></div>
-        <div class="welcome-copy"><span class="eyebrow">A CITY WITH A THOUSAND STORIES</span><h1>Your evening.<br>Your <em>Delhi.</em></h1><p>Walk beneath the arcades. Take the Parvaaz for a spin.<br>Visit Market Lane. Share a chai. Help your neighbors.</p><button class="primary" data-action="start">Explore the neighborhood <span>↗</span></button><div class="welcome-note">NO DOWNLOADS. NO KEYS. JUST THE CITY.</div></div>
+        <div class="welcome-copy"><span class="eyebrow">A CITY WITH A THOUSAND STORIES</span><h1>Your evening.<br>Your <em>Delhi.</em></h1><p>Walk beneath the arcades. Take the Parvaaz for a spin.<br>Visit Market Lane. Share a chai. Help your neighbors.</p><button class="primary" data-action="start">Explore the neighborhood <span>↗</span></button><div class="welcome-note">NO DOWNLOADS. NO KEYS. JUST THE CITY.</div><div class="people-progress" data-people-progress hidden><span data-people-label>Loading Delhi residents…</span><div class="people-progress-bar"><div data-people-bar></div></div></div></div>
         <div class="welcome-bottom"><span>25° golden hour · Connaught Place</span><span>WALK / DRIVE / HUSTLE</span></div>
       </section>
       <section class="game-ui" hidden aria-label="Game controls">
@@ -268,6 +269,31 @@ export class GameUI {
   closeShop():void {this.element('.shop-modal').hidden=true;}
 
   renderStats(value:string):void {this.text('[data-render-stats]',value);}
+
+  /**
+   * Phase 6 — character-load progress on the welcome screen. The game is
+   * already playable while this shows: drivers and pedestrians stand in as
+   * simple figures until the download finishes, then swap to the real rig.
+   * Ready hides the line; failed leaves a plain-language note, never a
+   * blocker. Driven by Game's subscription to the HumanoidView loader.
+   */
+  setPeopleProgress(progress: PeopleLoadProgress): void {
+    const line = this.element('[data-people-progress]');
+    if (progress.state === 'ready') { line.hidden = true; return; }
+    line.hidden = false;
+    const bar = this.element<HTMLDivElement>('[data-people-bar]');
+    if (progress.state === 'failed') {
+      this.text('[data-people-label]', 'Residents could not load — driving still works.');
+      bar.style.width = '0%';
+      bar.classList.remove('indeterminate');
+      return;
+    }
+    bar.classList.toggle('indeterminate', progress.percent === null);
+    bar.style.width = progress.percent === null ? '100%' : `${progress.percent}%`;
+    this.text('[data-people-label]', progress.percent === null
+      ? 'Loading Delhi residents…'
+      : `Loading Delhi residents… ${progress.percent}%`);
+  }
 
   setSettings(settings: Settings): void {
     this.text('[data-action="audio"]',settings.muted?'Sound: Muted':'Sound: On');
