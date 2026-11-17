@@ -36,6 +36,9 @@ import { motorPoolBays, roadsideRetreat, nearestRoad, projection, ends } from '.
 import { RegionalView } from '../world/RegionalView';
 import { DistrictView } from '../world/DistrictView';
 import { NcrLandmarks } from '../world/NcrLandmarks';
+import { RoadDetail } from '../world/RoadDetail';
+import { StreetProps } from '../world/StreetProps';
+import { BuildingKit } from '../world/BuildingKit';
 import { CentralDelhiView } from '../world/CentralDelhiView';
 import { nextQuality, QUALITY, resolvedQuality } from '../rendering/QualityProfile';
 import { GameUI } from '../ui/GameUI';
@@ -68,6 +71,9 @@ export class Game {
   private central: CentralDelhiView;
   private regional: RegionalView;
   private landmarks: NcrLandmarks;
+  private roadDetail!: RoadDetail;
+  private streetProps!: StreetProps;
+  private buildingKit!: BuildingKit;
   private camera: CameraRig;
   private input: InputController;
   private interaction: InteractionSystem;
@@ -133,6 +139,9 @@ export class Game {
     this.central = new CentralDelhiView(this.scene, this.district.lighting);
     this.regional = new RegionalView(this.scene, this.district.lighting);
     this.landmarks = new NcrLandmarks(this.scene, this.district.lighting);
+    this.roadDetail = new RoadDetail(this.scene);
+    this.streetProps = new StreetProps(this.scene, this.district.lighting);
+    this.buildingKit = new BuildingKit(this.scene, this.district.lighting);
     this.effects = new Effects(this.scene);
     this.regional.roadMaterials.forEach(material => this.effects.registerRoadMaterial(material));
     this.postGrade = new PostGrade(this.renderer, root, GRADE_PRESET[this.district.lighting.currentTimeOfDay]);
@@ -221,6 +230,7 @@ export class Game {
     this.renderer.shadowMap.enabled = profile.shadowSize > 0;
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, mobile ? Math.min(1.25, profile.pixelRatio) : profile.pixelRatio));
     this.district.setQuality(quality); this.central.setQuality(quality); this.regional.setQuality(quality); this.landmarks.setQuality(quality);
+    this.roadDetail.setQuality(quality); this.streetProps.setQuality(quality); this.buildingKit.setQuality(quality);
     this.district.lighting.setTimeOfDay(this.settings.timeOfDay ?? 'morning');
     this.headlights.setActive(this.district.lighting.headlightsOn);
     applyVehicleLamps(this.vehicleLamps, this.district.lighting.headlightsOn);
@@ -319,6 +329,9 @@ export class Game {
       if (view) this.headlights.attachTo(view.group); else this.headlights.detach();
     }
     this.landmarks.update(this.car.driving ? this.car.position : this.player.position);
+    this.roadDetail.update(this.car.driving ? this.car.position : this.player.position);
+    this.streetProps.update(this.car.driving ? this.car.position : this.player.position);
+    this.buildingKit.update(this.car.driving ? this.car.position : this.player.position);
     this.district.update(this.car.driving ? this.car.position : this.player.position); this.camera.update(dt, this.player, this.car, this.world);
     // Phase 1 — VehicleView.update rewrites the tail-lamp material every
     // frame, so the night running-light floor is re-raised here, after it.
