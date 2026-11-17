@@ -325,7 +325,13 @@ export class Game {
     this.playerView.updatePlayer(this.player, dt);
     if(this.interaction.busy){const t=this.interaction.progress,door=this.interaction.door,seat=localToWorld({x:-0.35,z:-0.2},this.car.position,this.car.yaw),f=this.interaction.occupiedEntry?0:this.interaction.exiting?1-t:t;this.playerView.group.visible=true;this.playerView.group.position.set(door.x+(seat.x-door.x)*f,0.045*(1-f)+0.18*f,door.z+(seat.z-door.z)*f);this.playerView.group.rotation.y=this.car.yaw+(this.interaction.occupiedEntry?Math.PI/2:0);}
     const focus=this.car.driving ? this.car.position : this.player.position;
-    const quality = resolvedQuality(this.settings);
+    // Phase 7 (QA): vehicle detail must follow the *effective* tier, not
+    // the manual setting — applySettings() already applies AutoQuality's
+    // step-down to pixel ratio / shadows / scenery, but updateViews read
+    // resolvedQuality() directly, so a stepped-down tier still drew
+    // detailed bodies out to the higher tier's distance. Same expression
+    // as applySettings(); AutoQuality never persists, so nothing is saved.
+    const quality = this.autoQualityTier ?? resolvedQuality(this.settings);
     this.fleetViews.forEach((view,i)=>{view.group.visible=distance(this.fleet[i].position,focus)<450;if(view.group.visible){view.update(this.fleet[i],dt);view.setDetail(distance(this.fleet[i].position,focus),quality);}});
     this.trafficViews.forEach((view,i)=>{view.group.visible=distance(this.traffic.cars[i].position,focus)<450;if(view.group.visible){view.update(this.traffic.cars[i],dt);view.setDetail(distance(this.traffic.cars[i].position,focus),quality);const ind=this.traffic.indicatorFor(i);view.setIndicator(ind.side==='none'?'off':ind.side);}});
     this.central.update(focus);this.market.update(dt,focus);

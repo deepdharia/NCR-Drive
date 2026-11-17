@@ -1,6 +1,6 @@
-# NCR Drive — Performance After Phase 6 (Optimization Pass)
+# NCR Drive — Performance After Phases 6–7 (Optimization Pass + QA Final)
 
-**Branch:** `map/graphics-and-feel` · **Date:** 2026-11-18 · **Status: optimization record, not a verdict.** Nothing here is a measured frame rate — see §6.
+**Branch:** `map/graphics-and-feel` · **Date:** 2026-11-18 · **Status: optimization record, not a verdict.** Nothing here is a measured frame rate — see §6 and §11. Sections 1–6 are the Phase 6 record (unchanged); §§7–11 are the Phase 7 finalization (final gate, before-vs-after, verdicts, skipped list, next 10).
 
 **Reading guide:** every number below is labelled **measured** (read off disk or counted by running code in node) or **estimated** (reasoned from code, not observed in a browser). No FPS, draw-call, or triangle number in this file was observed in a running game.
 
@@ -119,3 +119,110 @@ New tests drive the evaluator through full p95 sequences (all passing):
 - **Draw calls / triangles in a live frame: still unknown.** The counts in §2.2 are construction-time counts per object, not live `renderer.info` readings. The live numbers come from the existing on-screen stats line (`Frame ms p50/p95 · N draws · N triangles`) via the phone protocol in `docs/PERF_BUDGET.md` (CP → NH-48 → Gurugram, one run per tier, p95 at the three points). The vehicle-body concentration (25–53 meshes per detailed body) is the first thing that protocol should arbitrate: if CP p95 breaks 20 ms on balanced with dense nearby traffic, that concentration is the prime suspect; if it holds, it is not.
 - **GLB download time:** unmeasured (no browser/server here). The progress bar reports real bytes; the wall-clock time depends on the player's connection.
 - **AutoQuality thresholds** remain estimates from code analysis (see `docs/PERF_BUDGET.md`); the phone protocol's 9 p95 numbers are what re-tunes them, not this phase.
+
+---
+
+## 7. Phase 7 finalization — before vs after (measured from disk, 2026-11-18)
+
+Final gate: `npm run build` **exit 0** (includes `tsc --noEmit` and
+`check-production-assets`: GLB byte-identical, SHA256
+`150b3a8c…15fab`). Full test suite: **228/228 pass, 0 fail** (222/222
+before Phase 7; +6 new in `tests/phase7-qa.test.ts`).
+
+"Before" is the Phase 0 baseline (`PERF_BASELINE.md`, HEAD `c04579a`,
+147/147 tests). "After" is this branch after Phase 7 (final gate above).
+Every number below was read off disk after the final build; nothing in
+this table was observed in a running game.
+
+| Metric (measured) | Before (Phase 0) | After (Phase 7) | Delta |
+|---|---|---|---|
+| `index` JS raw / gzip | 222,000 B* / ~74 KB* | 281,897 B / 92,155 B | +~60 KB raw |
+| `three` JS raw / gzip | 520,000 B* / ~141 KB* | 521,402 B / 141,544 B | +~1.4 KB raw |
+| `three-shaders` JS raw / gzip | 173,000 B* / ~36 KB* | 173,036 B / 36,024 B | 0 |
+| All JS raw / gzip | 914 KB / ~251 KB | 976,335 B / 269,723 B | +62 KB raw / +19 KB gzip |
+| CSS raw / gzip | 15 KB / 4 KB | 17,481 B / 4,619 B | +2.5 KB raw |
+| Character GLB | 1,632,396 B, **blocks startup** | 1,632,396 B, identical bytes, **deferred** | 0 bytes; no longer blocking |
+| Blocking first load, raw | ~2.62 MB (JS + CSS + GLB) | 993,816 B (JS + CSS only) | **−1.63 MB (−62%)** |
+| Blocking first load, gzip | ~1.86 MB (JS/CSS gzip + GLB) | 274,342 B | **−1.59 MB (−85%)** |
+| `dist/` total (incl. GLB copy) | ~2.62 MB | 2,628,159 B | +~8 KB (Phases 1–6 code) |
+| Tests passing | 147/147 | 228/228 | +81 |
+| FPS / draw calls / triangles (live) | unmeasured | **still unmeasured** | — |
+
+\* Baseline JS/CSS figures were recorded rounded to the KB in
+`PERF_BASELINE.md` §2; the after figures are exact byte counts from
+`stat`/`gzip -c` on the final build. The baseline's "4.1 MB total
+initial load" is not repeated here — it double-counted the GLB (see §1
+correction); the comparable before figure is 2.62 MB.
+
+**What the numbers say:** seven phases of graphics, vehicles, people,
+feel and optimization cost **+62 KB of JS (+6.8%)** and buy a **62%
+smaller blocking load**, because the one expensive asset (the 1.6 MB
+GLB) moved off the critical path. The game is well inside the <20 MB
+initial-load budget either way (2.63 MB total, 0.99 MB blocking).
+Nothing in this table says anything about frame rate — see §6/§11.
+
+## 8. Per-phase verdicts
+
+| Phase | Verdict | Evidence |
+|---|---|---|
+| 1 Lighting | **Done.** Toggle in-game (pause + HUD + `T`), emissive gated on preset, dusk/night fog tuned. Bloom skipped, not deferred. | `phase1-lighting` + `phase2-lighting-sky` tests; `DaylightRig` preset data. |
+| 2 Roads & environment | **Done.** `RoadDetail` / `StreetProps` / `BuildingKit`, instanced per class; low tier hides fine detail only. Metro extension skipped. | `phase2-environment` tests (291 lines). |
+| 3 Vehicles | **Done.** 10 distinct procedural bodies, indicators, damage tint + smoke; <15k-tri budget held per body (1,068–3,792 tris measured). One large-SUV body shared; dent geometry skipped. | `phase3-vehicles` tests; §2.2 counts. |
+| 4 People & traffic | **Done.** 8 pedestrian variants, mixed roster (opt-in), cap 14 held. No Mixamo, no new instancing. | `phase4-traffic` tests (364 lines). |
+| 5 Feel | **Done.** Synth music loop, analog speedo + compass on the 10 Hz HUD cadence, camera smoothing. Touch targets already ≥44 px. | `phase5-feel` tests. |
+| 6 Optimization | **Done.** Lazy GLB + real progress bar, placeholder-swap, presets + AutoQuality verified. Merging / LOD re-tune / allocation fixes explicitly not done. | `phase6-optimization` tests; §2–§5 above. |
+| 7 QA & review | **Done.** Full gate + code regression hunt, menu/settings state tests, console audit, this file finalized, after-shot protocol + phone checklist written. One real fix (see §9). | `phase7-qa` tests (6 new); `docs/graphics/after/README.md`. |
+
+## 9. What was skipped, downgraded, or found-not-fixed — and why
+
+| Item | Why |
+|---|---|
+| Bloom (Phase 1) | No EffectComposer; a bloom pass adds a render target + fullscreen pass against the 60 fps / <250-draw-call budget for a mostly-night payoff. ACES + exposure + vignette + grain carry the grade. |
+| Metro viaduct extension (Phase 2) | Viaduct already spans NH-48 CP→Gurugram; a second line has no alignment data and would be invented geography. |
+| Second large-SUV body (Phase 3) | Near-duplicate parts for no visible gain at game distance; one body serves both proportions. |
+| Dent geometry (Phase 3) | A second mesh set per kind for a detail visible only after a crash; damage is paint tint + roughness + one smoke puff. |
+| Mixed roster opt-in, legacy default (Phase 4) | Protects the phase-5-tested legacy behaviour; Game switches mixed on. |
+| Traffic cap 14 (Phase 4) | Never raised without measured headroom from the phone protocol. |
+| Mixamo, new InstancedMesh (Phase 4) | Mixamo license unverified and unnecessary (21 CC0 clips cover the moves); nothing added is static geometry. |
+| No LOD re-tune, no shadow/texture changes (Phase 6) | No measured bottleneck; re-tuning from guesses is out of scope. |
+| Vehicle-body merging, 25–53 meshes per detailed body (Phase 6) | Mostly articulated parts (spinning/steering wheels, doors) — merging would break animation; and the concentration is a measurement question for the phone protocol, not a guess to fix blind. |
+| `Game.ts` 120 Hz loop + `StreetPeople` per-frame allocations (Phase 6) | Found, not fixed — outside the boot-flow-only edit allowance for that phase; recorded for a later phase. |
+| Device-tier auto-detect (Phase 6) | Does not exist and was not invented; no measured basis. Initial tier is the saved/default `balanced` with the phone DPR cap. |
+| **Phase 7 fix — vehicle detail ignored AutoQuality (fixed, not skipped).** `Game.updateViews` read `resolvedQuality(settings)` while `applySettings` applied the step-down, so a stepped-down tier still drew detailed bodies to the higher tier's distance. Fixed to `autoQualityTier ?? resolvedQuality(settings)` (one line + comment, `src/core/Game.ts`). AutoQuality stays transient and is never saved. | Found by the Phase 7 code review; the step-down was otherwise partially ineffective for vehicle detail. |
+
+**Phase 7 regression-hunt result:** mission completion paths (courier
+₹750 end-to-end in `game.test.ts`, story completion in
+`world-map.test.ts`, goods mission in `career.test.ts`), save/load
+round-trips (v1 migration, backup restore, per-field fallbacks in
+`recovery-save.test.ts` + the new Phase 7 combined-settings test),
+quality-preset switching (Phase 6 preset/AutoQuality tests), the boot
+flow (Phase 6 placeholder/failed-load/retry tests) and the HUD
+additions (Phase 5 gauge/music tests) were all re-run green and
+re-read in code. No gameplay, physics, mission, save, traffic or
+control regression was found. The one real defect found is the
+`updateViews` fix above. Two further observations, both recorded not
+fixed: `TrafficSystem.indicatorFor().lit` (1 Hz) is computed but unused
+— the view blinks internally at ~1.6 Hz (see `DECISIONS.md` #35); and
+evening/dusk share the half-sun HUD glyph (labels differ; cosmetic,
+`DECISIONS.md` #34).
+
+## 10. Next 10 improvements (prioritized by user-visible impact)
+
+1. **Phone-measured p95 + draw calls + triangles (the 9-number protocol).** Balanced → low → high, CP / NH-48 / Gurugram. This one measurement arbitrates items 3, 4, 8 and 10 below; nothing else can.
+2. **Before/after screenshot capture** in the 4 spots (+ dusk pair), per `docs/graphics/after/README.md`. The visual proof the whole upgrade still lacks.
+3. **`Game.ts` 120 Hz loop allocations** — `[...fleet colliders, ...people colliders]` and `[...otherCars(), ...]` fresh arrays per physics step, `otherCars()` twice per step, `{...player.position}` spread per step — plus `StreetPeople.update()`'s per-frame `angles.map` allocation. The known GC churn; fix with reused scratch arrays.
+4. **Vehicle-body draw-call merge** — 25–53 meshes per detailed body; merge the static parts per material (doors/wheels stay articulated). Do it only if the phone run shows CP p95 breaking 20 ms with dense nearby traffic.
+5. **Dusk/night on-device pass** — run the balanced route at night (worst case: night + CP + dense traffic), exercise the time-of-day toggle through all 4 presets, and tune lit-window intensity on device (the faint-noon glow is fixed in code; night brightness is still unjudged by eye).
+6. **Indicator left/right visual verification** — confirm on a live screen that a left turn blinks left and a right turn blinks right; reconcile or remove the unused 1 Hz `indicatorFor().lit` while there.
+7. **`VehicleView` live construction check** — driver figure seated in cars, number plates, damage smoke puff on a hard hit; none of this is constructible in node (canvas plates), so it has only ever been type-checked.
+8. **AutoQuality threshold re-tune from the 9 measured numbers** — step-down 20 ms / step-up 13 ms / 5 s windows are estimates; if balanced p95 sits at 14–16 ms everywhere the step-up threshold is too strict, if at 21–24 ms with no visible stutter the step-down threshold is too strict.
+9. **Texture atlas / KTX2 only if the phone run shows texture pressure.** Textures are 256–512 px and few; no evidence today, and an atlas is work for a problem that may not exist.
+10. **Real CC0 music track option** — only if the synth loop feels thin on device. Needs the user to upload the track via github.com and an `ASSETS.md` entry; judged unnecessary in Phase 5 and still is until a listener says otherwise.
+
+## 11. Honest statement (final, Phase 7)
+
+- **FPS: unknown on every device, before and after.** No headless browser exists in this VM (verified 2026-11-18: no `chromium`/`google-chrome`/`firefox` binary, no Puppeteer/Playwright install). Nothing in Phases 1–7 measures a frame.
+- **Draw calls / triangles in a live frame: still unknown.** The per-object counts in §2.2 are construction-time counts, not live `renderer.info` readings. The live numbers come from the on-screen stats line via the phone protocol in `docs/PERF_BUDGET.md` and the checklist in `docs/graphics/after/README.md`.
+- **GLB download time:** unmeasured (no browser/server here). The progress bar reports real bytes; wall-clock time depends on the player's connection.
+- **After screenshots:** not captured; the protocol and checklist are in `docs/graphics/after/README.md`. The before set is in the same state.
+- **What *is* measured:** every disk number in §1 and §7, the per-object mesh/triangle counts in §2.2, and the 228/228 test gate. Everything else in this file is labelled estimated or unmeasured, and no number here should be read as a frame rate.

@@ -38,6 +38,27 @@ Decisions made during the graphics upgrade, in order. Each entry: what was decid
 20. **No Mixamo, no new InstancedMesh.** Mixamo's license was unverified and unnecessary — the Quaternius CC0 GLB's own 21 clips cover walk/idle/react/flee. Nothing Phase 4 added is static geometry, so no new instancing was warranted.
 21. **CP-ring strollers never cross** (no zebra on the ring by design); MG Road strollers cross only at the segment-midpoint zebra on a clear gap. Pedestrian counts are construction-time only — changing quality live does not respawn strollers.
 
+## Phase 5 — Game feel (2026-11-18)
+
+24. **Music is synthesized, not a licensed track** — a deterministic WebAudio loop ships in-code (no binary, no download); a real CC0 track would need the user to upload it via github.com and was judged unnecessary.
+25. **Analog speedo + compass ride the existing 10 Hz HUD cadence (transform/text only)** — no new per-frame DOM work.
+26. **Touch targets were already ≥44 px, so only small enlargements (pedals, joystick)** — no redesign.
+
+## Phase 6 — Optimization (2026-11-18)
+
+27. **GLB lazy-load uses placeholder-swap, not deferred construction** — figures stand/walk as ~444-tri placeholders and upgrade in place when the rig lands, so the game is drivable during download and a failed load no longer kills boot.
+28. **Vehicle-body merging was reported, not fixed** — only vehicles inside detail range draw detailed; the phone protocol arbitrates.
+29. **Game.ts 120 Hz loop and StreetPeople per-frame allocations were found, not fixed (out of ownership)** — recorded in PERF_AFTER.md for a later phase.
+
+## Phase 7 — QA & review (2026-11-18)
+
+30. **No screenshot, FPS, draw-call or triangle number is claimed.** This VM has no headless browser (verified: no browser binary, no Playwright/Puppeteer), so `docs/graphics/after/README.md` holds the capture protocol and the phone QA checklist instead of images, and PERF_AFTER.md marks every live number as still unmeasured. A faked render would be worse than a missing one.
+31. **Vehicle detail distance follows the effective tier, not the manual tier.** Phase 7 found `Game.updateViews` reading `resolvedQuality(settings)` while `applySettings` applied the AutoQuality step-down — a stepped-down tier still drew detailed bodies to the higher tier's distance. Fixed with the same `autoQualityTier ?? resolvedQuality(settings)` expression `applySettings` uses; AutoQuality stays transient (never saved).
+32. **Menu/settings transitions are tested at the state level in node, not by driving the DOM.** `GameUI` needs a DOM and `Game` needs DOM + WebGL, so `tests/phase7-qa.test.ts` replays the pause-menu tap sequence through the same pure functions the handlers call (`nextQuality`, `nextTimeOfDayPreset`, `resolvedQuality`) and the save they write through — the DOM half is verified by `tsc --noEmit` plus the phone checklist, and is labelled as such rather than pretended-tested.
+33. **The two `console.error` sites are legitimate, not noise.** Both live in `src/main.ts` catch paths (character-load failure, startup failure) and fire at most once per boot; there are no `console.warn`/`console.log` calls anywhere in `src/`, and no per-frame logging path exists.
+34. **Evening and dusk share the half-sun HUD glyph.** Both are low-sun presets and the pause-menu labels differ, so this is a recorded cosmetic, not a fix — changing it needs a design call, not a QA one.
+35. **`TrafficSystem.indicatorFor().lit` is dead data.** The view blinks indicators internally at ~1.6 Hz in `VehicleView.update`; Game passes only the side, so the 1 Hz `lit` value nothing reads is redundant. Left as-is (removing it is a cleanup, not a fix); left/right indicators still need a live-screen check.
+
 ## Integration notes (coordinator, 2026-11-17)
 
 22. **Push manifests must be explicit per-phase file lists.** The Phase 3 push used a three-dot `git diff A...HEAD` manifest, which resolves to the merge-base diff and pulled P4's then-uncommitted `TrafficSystem.ts`/`StreetPeople.ts` into the remote snapshot while their imports (`TrafficBehaviour.ts`, `PedestrianVariants.ts`) were not in the manifest — the remote preview build was broken until a corrective push restored the missing files. Lesson: never derive a push manifest from a three-dot diff; list the phase's files explicitly.
