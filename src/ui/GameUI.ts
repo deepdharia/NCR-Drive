@@ -12,6 +12,7 @@ import {walkingRoute} from '../systems/WalkingNavigation';
 import { roadRoute, routeLength, routeRoadNames } from '../systems/Navigation';
 import { regionAt, regionLabels } from '../world/WorldRoads';
 import { Minimap, MAP_SIZE, overviewClickToWorld } from './Minimap';
+import { COMPASS_PX_PER_DEG, compassHeadingDeg, compassStripOffsetPx, headingLabel, SPEEDO_MAX_KMH, speedoNeedleDeg } from './HudGauges';
 import type { Point } from '../core/math';
 import type { Settings } from '../systems/ProgressStore';
 import { nextQuality, QUALITY, resolvedQuality } from '../rendering/QualityProfile';
@@ -22,7 +23,21 @@ import { CLUSTER_PLACES } from '../world/ClusterData';
 /** HUD glyph per time-of-day preset. */
 export const TIME_OF_DAY_GLYPHS: Record<TimeOfDayPreset, string> = { morning: '☀', evening: '◐', dusk: '◐', night: '☾' };
 
-interface UIActions { journey:()=>void; start:()=>void; phone:()=>void; pause:()=>void; interact:()=>void; accept:()=>void; story:()=>void; cancelStory:()=>void; quality:()=>void; timeOfDay:()=>void; recover:()=>void; sensitivity:(kind:'steeringSensitivity'|'cameraSensitivity',value:number)=>void; buy:()=>void; pay:()=>void; closeShop:()=>void; supply:()=>void; cancelSupply:()=>void; receive:()=>void; receiveGoods:()=>void; cancelGoods:()=>void; exitPhoto:()=>void; audio:()=>void; volume:(value:number)=>void; waypoint:(point:Point)=>void; clearWaypoint:()=>void }
+/** Phase 5 — static speedometer dial markup (ticks + numbers). The needle
+ *  is a single <line> rotated per update; nothing here re-renders. */
+function speedoDial(): string {
+  let ticks = '';
+  for (let kmh = 0; kmh <= SPEEDO_MAX_KMH; kmh += 10) {
+    const a = speedoNeedleDeg(kmh) * Math.PI / 180, major = kmh % 20 === 0;
+    const x1 = 50 + 46 * Math.sin(a), y1 = 50 - 46 * Math.cos(a);
+    const x2 = 50 + (major ? 39 : 43) * Math.sin(a), y2 = 50 - (major ? 39 : 43) * Math.cos(a);
+    ticks += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" class="speedo-tick${major ? ' major' : ''}${kmh >= 120 ? ' red' : ''}"/>`;
+    if (major) ticks += `<text x="${(50 + 30 * Math.sin(a)).toFixed(1)}" y="${(50 - 30 * Math.cos(a) + 3).toFixed(1)}" class="speedo-num${kmh >= 120 ? ' red' : ''}">${kmh}</text>`;
+  }
+  return `<svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="48" class="speedo-face"/>${ticks}<line class="speedo-needle" x1="50" y1="50" x2="50" y2="17" transform="rotate(-120 50 50)"/><circle cx="50" cy="50" r="4" class="speedo-hub"/></svg>`;
+}
+
+interface UIActions { journey:()=>void; start:()=>void; phone:()=>void; pause:()=>void; interact:()=>void; accept:()=>void; story:()=>void; cancelStory:()=>void; quality:()=>void; timeOfDay:()=>void; recover:()=>void; sensitivity:(kind:'steeringSensitivity'|'cameraSensitivity',value:number)=>void; buy:()=>void; pay:()=>void; closeShop:()=>void; supply:()=>void; cancelSupply:()=>void; receive:()=>void; receiveGoods:()=>void; cancelGoods:()=>void; exitPhoto:()=>void; audio:()=>void; volume:(value:number)=>void; musicVolume:(value:number)=>void; waypoint:(point:Point)=>void; clearWaypoint:()=>void }
 
 const phoneIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10 18h4"/></svg>';
 
@@ -34,6 +49,10 @@ export class GameUI {
   private routeTarget: object | undefined;
   private routeTime=0;
   private toastTimer: ReturnType<typeof setTimeout> | undefined;
+  /** Phase 5 — cached gauge nodes so update() only writes transforms. */
+  private speedo: HTMLElement | null = null;
+  private needle: SVGLineElement | null = null;
+  private compassStrip: HTMLElement | null = null;
   constructor(readonly root: HTMLElement, input: InputController, actions: UIActions) {
     root.innerHTML = `
       <section class="welcome" aria-label="Welcome to NCR Drive">
@@ -44,9 +63,10 @@ export class GameUI {
       <section class="game-ui" hidden aria-label="Game controls">
         <header class="location"><span class="eyebrow">NCR DRIVE / FREE ROAM</span><h1 data-region-title>Connaught Place · नई दिल्ली</h1><p data-region-detail>Inner Circle · A Delhi evening</p></header>
         <div class="top-actions"><div class="wallet"><strong data-cash>₹15,000</strong><span>DELHI WALLET</span></div><button class="icon-button" data-action="timeOfDay" data-time-glyph aria-label="Change time of day">☀</button><button class="icon-button" data-action="phone" aria-label="Open DelhiOS phone">${phoneIcon}</button><button class="icon-button" data-action="pause" aria-label="Pause game">Ⅱ</button></div>
+        <div class="compass" aria-hidden="true"><div class="compass-window"><div class="compass-strip" data-compass-strip></div></div><div class="compass-marker">▾</div><span data-compass-heading>N · 0°</span></div>
         <div class="radar"><canvas class="radar-map" aria-label="DelhiNav local minimap" role="img"></canvas><span>DELHINAV / LIVE</span></div>
         <button class="gig-tracker" data-action="phone" aria-label="Open current job in DelhiOS"><span>◈</span><div><strong data-job-title>Shivaji Stadium Courier Run</strong><small data-distance>Parcel collected · Follow the gold marker</small></div></button>
-        <div class="mode-card"><span data-mode>ON FOOT / EXPLORER</span><strong data-speed>Take the long way.</strong><small data-mode-detail>The city moves at your pace.</small></div>
+        <div class="mode-card"><div class="speedo" data-speedo hidden>${speedoDial()}<span>KM/H</span></div><div class="mode-text"><span data-mode>ON FOOT / EXPLORER</span><strong data-speed>Take the long way.</strong><small data-mode-detail>The city moves at your pace.</small></div></div>
         <button class="interaction" data-action="interact"><kbd>F</kbd><span data-prompt>Press [F] or Tap to Drive</span><span>↗</span></button>
         <div class="desktop-help"><span><kbd>W A S D</kbd> Move</span><span><kbd>SHIFT</kbd> Sprint</span><span><kbd>SPACE</kbd> Jump / brake</span><span><kbd>T</kbd> Time of day</span><span><kbd>DRAG</kbd> Camera</span><span><kbd>TAB</kbd> DelhiOS</span></div>
         <div class="touch-controls"><div class="joystick" role="group" aria-label="Movement joystick"><div class="joystick-cross"></div><div class="joystick-knob"></div></div><div class="touch-actions">
@@ -71,7 +91,7 @@ export class GameUI {
       </aside>
       <section class="pause-screen" hidden aria-label="Paused"><div><span class="eyebrow">TAKE A BREATHER</span><h2>Delhi can wait.</h2><p>Your drive will be right here.</p><button class="graphics-button" data-action="quality">Graphics: Detailed · Tap for performance</button>
         <button class="graphics-button" data-action="timeOfDay" data-time-label>Time of day: Late morning · Tap to change</button>
-        <button class="graphics-button" data-action="audio">Sound: On</button><label>Sound volume <input aria-label="Sound volume" data-volume type="range" min="0" max="1" step="0.05" value="0.35"></label><small data-render-stats aria-label="Rolling render statistics">Drive to collect frame statistics.</small><div class="control-settings"><label for="steering-sensitivity">Steering sensitivity <output data-steering-value>1.0×</output></label><input id="steering-sensitivity" type="range" min="0.5" max="1.5" step="0.1" value="1" data-setting="steeringSensitivity"><label for="camera-sensitivity">Camera sensitivity <output data-camera-value>1.0×</output></label><input id="camera-sensitivity" type="range" min="0.5" max="1.5" step="0.1" value="1" data-setting="cameraSensitivity"></div>
+        <button class="graphics-button" data-action="audio">Sound: On</button><label>Sound volume <input aria-label="Sound volume" data-volume type="range" min="0" max="1" step="0.05" value="0.35"></label><label>Music volume <input aria-label="Music volume" data-music-volume type="range" min="0" max="1" step="0.05" value="0.5"></label><small data-render-stats aria-label="Rolling render statistics">Drive to collect frame statistics.</small><div class="control-settings"><label for="steering-sensitivity">Steering sensitivity <output data-steering-value>1.0×</output></label><input id="steering-sensitivity" type="range" min="0.5" max="1.5" step="0.1" value="1" data-setting="steeringSensitivity"><label for="camera-sensitivity">Camera sensitivity <output data-camera-value>1.0×</output></label><input id="camera-sensitivity" type="range" min="0.5" max="1.5" step="0.1" value="1" data-setting="cameraSensitivity"></div>
         <p class="recovery-note" id="recovery-policy">Stuck? Recovery is free. Your nearby car returns to a clear road.<br>Active jobs are cancelled without payout. Earned money is kept.</p><button class="graphics-button" data-action="recover" aria-describedby="recovery-policy">Recover to a clear road · Free</button><p data-recovery-status role="status"></p>
         <button class="primary" data-action="pause">Back to the city →</button></div></section>
       <section class="shop-modal" hidden role="dialog" aria-modal="true" aria-label="Neighborhood interaction"><div><span class="eyebrow">LIVING DELHI · GAME CURRENCY ONLY</span><h2 data-shop-title></h2><p data-shop-copy></p><button class="primary" data-action="buy" hidden>Order drink</button><button class="primary" data-action="pay" hidden>Confirm fictional UPI payment</button><button class="graphics-button" data-action="supply" hidden>Help with the fruit supply · ₹650</button><button class="graphics-button" data-action="closeShop">Back to the street</button></div></section>
@@ -111,6 +131,7 @@ export class GameUI {
     root.addEventListener('change', event => {
       const slider = event.target as HTMLInputElement;
       if(slider.hasAttribute('data-volume'))actions.volume(Number(slider.value));
+      if(slider.hasAttribute('data-music-volume'))actions.musicVolume(Number(slider.value));
       const kind = slider.dataset.setting;
       if (kind === 'steeringSensitivity' || kind === 'cameraSensitivity') actions.sensitivity(kind, Number(slider.value));
     }, options);
@@ -145,6 +166,15 @@ export class GameUI {
     for (const name of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) joystick.addEventListener(name, event => { if (event.pointerId === pointer) reset(); }, options);
     window.addEventListener('blur', reset, options);
     this.maps = [...root.querySelectorAll<HTMLCanvasElement>('canvas')].map((canvas, i) => new Minimap(canvas, i > 0));
+    // Phase 5 — compass strip: three copies of the 360° labels (-360°..720°)
+    // so the strip can slide to any heading without wrap math (see HudGauges).
+    const strip = this.element<HTMLDivElement>('[data-compass-strip]');
+    let labels = '';
+    for (let deg = -360; deg <= 720; deg += 45) labels += `<span style="left:${(deg + 360) * COMPASS_PX_PER_DEG}px">${headingLabel(deg)}</span>`;
+    strip.innerHTML = labels;
+    this.speedo = this.root.querySelector<HTMLElement>('[data-speedo]');
+    this.needle = this.root.querySelector<SVGLineElement>('.speedo-needle');
+    this.compassStrip = strip;
     // Clicking anywhere on the full DelhiOS map drops a waypoint pin.
     const overviewCanvas = this.element<HTMLCanvasElement>('.phone-map canvas');
     overviewCanvas.addEventListener('click', event => {
@@ -178,6 +208,15 @@ export class GameUI {
     this.text('[data-cash]',`₹${mission.cash.toLocaleString('en-IN')}`);
     this.text('[data-mode]',driving?`${car.spec.name.toUpperCase()} / CIVILIAN`:'ON FOOT / EXPLORER');
     this.text('[data-speed]',driving?`${Math.round(car.kmh)} km/h`:'Take the long way.');
+    // Phase 5 — analog speedometer + compass strip. Transform/attribute
+    // writes only (the needle has a 0.12 s CSS transition, so the 10 Hz
+    // update cadence still reads smooth). The dial hides on foot; the
+    // existing text speed above stays the source of truth.
+    const heading = compassHeadingDeg(driving ? car.yaw : player.yaw);
+    if (this.speedo) this.speedo.hidden = !driving;
+    if (driving) this.needle?.setAttribute('transform', `rotate(${speedoNeedleDeg(car.kmh)} 50 50)`);
+    if (this.compassStrip) this.compassStrip.style.transform = `translateX(${compassStripOffsetPx(heading)}px)`;
+    this.text('[data-compass-heading]', `${headingLabel(heading)} · ${heading.toFixed(0)}°`);
     this.text('[data-mode-detail]',driving?`${Math.abs(car.speed)<0.1?'IDLE':car.speed<0?'REVERSE':'DRIVE'} · HDG ${((car.yaw*180/Math.PI%360+360)%360).toFixed(0)}°`:'The city moves at your pace.');
     this.text('[data-prompt]',prompt??interaction.prompt);
     for(const button of this.root.querySelectorAll<HTMLButtonElement>('[data-action="interact"]')){button.disabled=locked||(!prompt&&!interaction.available);button.setAttribute('aria-label',driving?'Exit vehicle':'Interact nearby');}
@@ -233,6 +272,7 @@ export class GameUI {
   setSettings(settings: Settings): void {
     this.text('[data-action="audio"]',settings.muted?'Sound: Muted':'Sound: On');
     this.element<HTMLInputElement>('[data-volume]').value=String(settings.volume??0.35);
+    this.element<HTMLInputElement>('[data-music-volume]').value=String(settings.musicVolume??0.5);
     const quality = resolvedQuality(settings);
     this.text('[data-action="quality"]', `Graphics: ${QUALITY[quality].label} · Tap for ${QUALITY[nextQuality(quality)].label}`);
     const timeOfDay = settings.timeOfDay ?? 'morning';

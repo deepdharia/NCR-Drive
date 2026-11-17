@@ -2,6 +2,8 @@ import type { Settings } from './ProgressStore';
 import type { Point } from '../core/math';
 import { regionAt } from '../world/WorldRoads';
 import type { RegionId } from '../world/WorldRoads';
+import { eventsForStep, midiToFreq, MUSIC_LOOP_STEPS, stepDurationSec } from './MusicLoop';
+import type { MusicEvent } from './MusicLoop';
 
 /** Original synthetic ambience, no external recordings or network audio. Fixed voice budget. */
 interface AmbienceVoice { panner: PannerNode; filter: BiquadFilterNode; gain: GainNode; baseFreq: number; baseGain: number; offset: Point }
@@ -15,6 +17,10 @@ const REGION_AMBIENCE: Record<RegionId, { gain: number; freqMul: number }> = {
 
 export class StreetAudio {
  private context:AudioContext|undefined;private master:GainNode|undefined;private engine:OscillatorNode|undefined;private engineGain:GainNode|undefined;private engineFilter:BiquadFilterNode|undefined;private tireGain:GainNode|undefined;private skidGain:GainNode|undefined;private windGain:GainNode|undefined;private windFilter:BiquadFilterNode|undefined;private sources:AudioScheduledSourceNode[]=[];private panners:PannerNode[]=[];private enginePan:PannerNode|undefined;private ambience:AmbienceVoice[]=[];private hornUntil=0;private noise:AudioBuffer|undefined;
+ /** Phase 5 — generative music loop (see MusicLoop): its own gain bus so the
+  *  music volume rides under the master volume/mute. Scheduled from
+  *  update(), a few nodes per step — never per frame. */
+ private musicGain:GainNode|undefined;private musicVolume=0.5;private musicMuted=false;private musicNextTime=0;private musicStep=0;
  start():void {
   if(this.context){void this.context.resume();return;}
   const c=this.context=new AudioContext();this.master=c.createGain();this.master.connect(c.destination);
@@ -35,6 +41,10 @@ export class StreetAudio {
   const skid=c.createBufferSource();skid.buffer=noise;skid.loop=true;const skidFilter=c.createBiquadFilter();skidFilter.type='bandpass';skidFilter.frequency.value=950;skidFilter.Q.value=1.1;this.skidGain=c.createGain();this.skidGain.gain.value=0;skid.connect(skidFilter);skidFilter.connect(this.skidGain);this.skidGain.connect(this.enginePan);skid.start();this.sources.push(skid);
   // Wind: looped noise through a lowpass that opens with speed.
   const wind=c.createBufferSource();wind.buffer=noise;wind.loop=true;const windFilter=c.createBiquadFilter();windFilter.type='lowpass';windFilter.frequency.value=400;this.windFilter=windFilter;this.windGain=c.createGain();this.windGain.gain.value=0;wind.connect(windFilter);windFilter.connect(this.windGain);this.windGain.connect(this.master);wind.start();this.sources.push(wind);
+  // Music bus: the generative loop (MusicLoop) feeds here; volume is set
+  // from settings() so it survives mute/volume changes.
+  this.musicGain=c.createGain();this.musicGain.gain.value=this.musicMuted?0:this.musicVolume*0.6;this.musicGain.connect(this.master);
+  this.musicNextTime=0;this.musicStep=0;
  }
  /** Two-tone horn (370 + 466 Hz), ~0.45 s. Ignores re-triggers while sounding. */
  horn(duration=0.45):void {
@@ -45,11 +55,49 @@ export class StreetAudio {
   for(const freq of [370,466.25]){
    const osc=c.createOscillator();osc.type='square';osc.frequency.value=freq;
    const filter=c.createBiquadFilter();filter.type='lowpass';filter.frequency.value=1400;
-   const g=c.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(0.16,t+0.02);g.gain.setValueAtTime(0.16,t+Math.max(0.05,duration-0.08));g.gain.linearRampToValueAtTime(0,t+duration);
+   const g=c.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(0.13,t+0.02);g.gain.setValueAtTime(0.13,t+Math.max(0.05,duration-0.08));g.gain.linearRampToValueAtTime(0,t+duration);
    osc.connect(filter);filter.connect(g);g.connect(this.master);osc.start(t);osc.stop(t+duration+0.05);
   }
  }
- settings(s:Settings,paused:boolean):void {if(!this.context)return;this.master!.gain.value=s.muted?0:s.volume??0.35;if(paused){void this.context.suspend();}else{void this.context.resume();}}
+ settings(s:Settings,paused:boolean):void {if(!this.context)return;this.musicVolume=s.musicVolume??0.5;this.musicMuted=s.muted??false;
+  // Phase 5 — ramp instead of snapping the master gain, so mute/volume
+  // taps don't pop. Music rides under the same mute.
+  this.master!.gain.setTargetAtTime(s.muted?0:s.volume??0.35,this.context.currentTime,0.05);
+  this.musicGain?.gain.setTargetAtTime(s.muted?0:this.musicVolume*0.6,this.context.currentTime,0.1);
+  if(paused){void this.context.suspend();}else{void this.context.resume();}}
+ /** Phase 5 — lookahead scheduler for the generative loop. Called from
+  *  update() (10 Hz+ in practice); schedules ~0.3 s ahead and then idles,
+  *  so no nodes are allocated per frame. Skips while the context is
+  *  suspended (paused/phone) or the music volume is 0. */
+ private scheduleMusic():void {
+  const c=this.context;if(!c||!this.musicGain||c.state!=='running'||this.musicMuted||this.musicVolume<=0)return;
+  if(this.musicNextTime<c.currentTime-0.25){this.musicNextTime=c.currentTime+0.05;}
+  const stepDur=stepDurationSec();
+  while(this.musicNextTime<c.currentTime+0.3){
+   for(const event of eventsForStep(this.musicStep))this.playMusicEvent(event,this.musicNextTime,stepDur);
+   this.musicStep=(this.musicStep+1)%MUSIC_LOOP_STEPS;this.musicNextTime+=stepDur;
+  }
+ }
+ private playMusicEvent(event:MusicEvent,when:number,stepDur:number):void {
+  const c=this.context!;const out=this.musicGain!;const dur=Math.max(0.05,event.durSteps*stepDur);
+  if(event.voice==='kick'){
+   const osc=c.createOscillator();osc.type='sine';osc.frequency.setValueAtTime(130,when);osc.frequency.exponentialRampToValueAtTime(42,when+0.12);
+   const g=c.createGain();g.gain.setValueAtTime(event.gain,when);g.gain.exponentialRampToValueAtTime(0.001,when+0.16);
+   osc.connect(g);g.connect(out);osc.start(when);osc.stop(when+0.2);return;
+  }
+  if(event.voice==='hat'){
+   const src=c.createBufferSource();src.buffer=this.noise!;src.loop=true;
+   const filter=c.createBiquadFilter();filter.type='highpass';filter.frequency.value=6000;
+   const g=c.createGain();g.gain.setValueAtTime(event.gain,when);g.gain.exponentialRampToValueAtTime(0.001,when+0.04);
+   src.connect(filter);filter.connect(g);g.connect(out);src.start(when);src.stop(when+0.06);return;
+  }
+  const osc=c.createOscillator();osc.type='triangle';osc.frequency.value=midiToFreq(event.midi!);
+  const g=c.createGain();
+  if(event.voice==='pad'){g.gain.setValueAtTime(0,when);g.gain.linearRampToValueAtTime(event.gain,when+0.4);g.gain.setValueAtTime(event.gain,when+dur-0.4);g.gain.linearRampToValueAtTime(0,when+dur);}
+  else if(event.voice==='bass'){g.gain.setValueAtTime(0,when);g.gain.linearRampToValueAtTime(event.gain,when+0.02);g.gain.setValueAtTime(event.gain,when+dur-0.15);g.gain.linearRampToValueAtTime(0,when+dur);}
+  else{g.gain.setValueAtTime(event.gain,when);g.gain.exponentialRampToValueAtTime(0.001,when+dur);}
+  osc.connect(g);g.connect(out);osc.start(when);osc.stop(when+dur+0.05);
+ }
  update(focus:Point,yaw:number,car:Point,speed:number,driving:boolean,braking=false,steering=0):void {
   const c=this.context;if(!c)return;const listener=c.listener;listener.positionX.value=focus.x;listener.positionY.value=1.6;listener.positionZ.value=focus.z;listener.forwardX.value=Math.sin(yaw);listener.forwardY.value=0;listener.forwardZ.value=Math.cos(yaw);listener.upX.value=0;listener.upY.value=1;listener.upZ.value=0;
   const absSpeed=Math.abs(speed);
@@ -66,14 +114,18 @@ export class StreetAudio {
   this.enginePan!.positionX.value=car.x;this.enginePan!.positionZ.value=car.z;
   this.engine!.frequency.setTargetAtTime(40+absSpeed*4,c.currentTime,0.12);
   this.engineFilter!.frequency.setTargetAtTime(220+absSpeed*14,c.currentTime,0.2);
-  this.engineGain!.gain.setTargetAtTime(driving?0.04+Math.min(0.06,absSpeed*0.002):0,c.currentTime,0.12);
+  // Phase 5 — engine ceiling 0.10 → 0.09: the sawtooth sat on top of the
+  // mix at highway speed; the music bus now fills that space instead.
+  this.engineGain!.gain.setTargetAtTime(driving?0.04+Math.min(0.05,absSpeed*0.002):0,c.currentTime,0.12);
   this.tireGain!.gain.setTargetAtTime(driving?Math.min(0.1,absSpeed*0.003)*(braking?1:Math.abs(steering)*0.25):0,c.currentTime,0.06);
-  // Skid voice: hard braking or hard steering at speed.
+  // Skid voice: hard braking or hard steering at speed. Cap 0.16 → 0.12:
+  // the bandpassed screech was the harshest voice in the mix.
   const skidding=driving&&absSpeed>8&&(braking||Math.abs(steering)>0.5);
-  this.skidGain!.gain.setTargetAtTime(skidding?Math.min(0.16,0.05+absSpeed*0.003):0,c.currentTime,0.05);
+  this.skidGain!.gain.setTargetAtTime(skidding?Math.min(0.12,0.05+absSpeed*0.003):0,c.currentTime,0.05);
   // Wind: silent in town, a real rush on the highway.
   this.windFilter!.frequency.setTargetAtTime(300+absSpeed*22,c.currentTime,0.2);
   this.windGain!.gain.setTargetAtTime(driving?Math.min(0.12,absSpeed*absSpeed*0.00008):0,c.currentTime,0.15);
+  this.scheduleMusic();
  }
- dispose():void {for(const s of this.sources){try{s.stop();}catch{/* already stopped */}s.disconnect();}this.panners.forEach(p=>p.disconnect());this.master?.disconnect();void this.context?.close();this.context=undefined;this.ambience=[];}
+ dispose():void {for(const s of this.sources){try{s.stop();}catch{/* already stopped */}s.disconnect();}this.panners.forEach(p=>p.disconnect());this.musicGain?.disconnect();this.musicGain=undefined;this.musicNextTime=0;this.musicStep=0;this.master?.disconnect();void this.context?.close();this.context=undefined;this.ambience=[];}
 }

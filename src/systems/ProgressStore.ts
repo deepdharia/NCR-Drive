@@ -9,13 +9,15 @@ export interface Settings {
   steeringSensitivity: number;
   cameraSensitivity: number;
   muted?: boolean; volume?: number;
+  /** Phase 5 — generative music loop volume (0 = off). Master mute still wins. */
+  musicVolume?: number;
 }
 import { freshNeighborhood } from './Neighborhood';
 import type { NeighborhoodSave } from './Neighborhood';
 export interface Progress { version: 3; cash: number; courierCompleted: boolean; settings: Settings; neighborhood: NeighborhoodSave }
 export const PROGRESS_KEY = 'ncr-drive-career-v1'; // Stable key; schema version lives in the payload.
 export const BACKUP_KEY = `${PROGRESS_KEY}-backup`;
-export const defaultSettings = (): Settings => ({ performanceMode: false, timeOfDay:'morning', steeringSensitivity: 1, cameraSensitivity: 1, muted:false, volume:0.35 });
+export const defaultSettings = (): Settings => ({ performanceMode: false, timeOfDay:'morning', steeringSensitivity: 1, cameraSensitivity: 1, muted:false, volume:0.35, musicVolume:0.5 });
 const freshProgress = (): Progress => ({ version: 3, cash: 15000, neighborhood: freshNeighborhood(), courierCompleted: false, settings: defaultSettings() });
 type Reader = Pick<Storage, 'getItem'>;
 export interface LoadedProgress { progress: Progress; writable: boolean; source: 'current' | 'legacy' | 'backup' | 'fresh' | 'unavailable' | 'invalid' | 'unsupported' }
@@ -33,6 +35,7 @@ function parse(value: string | null): Progress | null {
     const goodsDone = Array.isArray(n.goodsDone) ? n.goodsDone.filter((x: unknown): x is string => typeof x === 'string') : [];
     return { version: 3, cash: p.cash, neighborhood: {chai:n.chai,juice:n.juice,relationship:n.relationship,completed:n.completed,flowers:count(n.flowers),sweets:count(n.sweets),cake:count(n.cake),parkCircuit:flag(n.parkCircuit),photoViewpoint:flag(n.photoViewpoint),goodsDone}, courierCompleted: p.courierCompleted, settings: {
       muted: p.settings?.muted === true, volume: typeof p.settings?.volume === 'number' && p.settings.volume>=0 && p.settings.volume<=1 ? p.settings.volume : 0.35,
+      musicVolume: typeof p.settings?.musicVolume === 'number' && p.settings.musicVolume>=0 && p.settings.musicVolume<=1 ? p.settings.musicVolume : 0.5,
       performanceMode: p.version >= 2 && p.settings?.performanceMode === true,
       ...(p.version >= 2 && isQualityPreset(p.settings?.graphicsQuality) ? { graphicsQuality: p.settings.graphicsQuality, performanceMode: p.settings.graphicsQuality === 'low' } : {}),
       timeOfDay: isTimeOfDayPreset(p.settings?.timeOfDay) ? p.settings.timeOfDay : 'morning',

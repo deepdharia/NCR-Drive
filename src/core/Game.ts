@@ -204,6 +204,8 @@ export class Game {
       clearWaypoint:()=>{this.waypoint=undefined;this.ui.toast('Waypoint cleared.');this.refreshUI();},
       audio:()=>{this.settings.muted=!this.settings.muted;this.applySettings();this.saveProgress();},
       volume:value=>{if(Number.isFinite(value)&&value>=0&&value<=1){this.settings.volume=value;this.applySettings();this.saveProgress();}},
+      // Phase 5 — music volume slider (pause screen). Same guard + save path as master volume.
+      musicVolume:value=>{if(Number.isFinite(value)&&value>=0&&value<=1){this.settings.musicVolume=value;this.applySettings();this.saveProgress();}},
     });
     this.applySettings(); this.syncScreen(); this.updateViews(1); this.renderer.render(this.scene, this.camera.camera);
     window.addEventListener('resize', this.resize, { signal: this.abort.signal });
