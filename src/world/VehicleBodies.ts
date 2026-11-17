@@ -142,6 +142,8 @@ export const SPEC_BODY_KIND: Record<string, VehicleBodyKind> = {
   baaz: 'compact-hatch',
   bhaari: 'truck',
   savaari: 'bus',
+  'auto-rickshaw': 'auto',
+  bike: 'bike',
 };
 
 /** Kinds Phase 4 may spawn as ambient traffic (all buildable kinds). */

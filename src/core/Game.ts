@@ -61,7 +61,7 @@ export class Game {
   private selected = 0;
   private get cars():VehicleController[] {return [...this.fleet,...this.traffic.cars];}
   private get car(): VehicleController { return this.cars[this.selected]; }
-  private traffic = new TrafficSystem();
+  private traffic = new TrafficSystem(12, { mixed: true });
   private story = new StoryMission();
   private playerView = new PlayerView();
   private fleetViews = VEHICLE_SPECS.map((spec, i) => new VehicleView(spec, `DL 1C AB ${4092 + i}`));
@@ -146,7 +146,8 @@ export class Game {
     this.regional.roadMaterials.forEach(material => this.effects.registerRoadMaterial(material));
     this.postGrade = new PostGrade(this.renderer, root, GRADE_PRESET[this.district.lighting.currentTimeOfDay]);
     this.traffic.onHonk = () => this.audio.horn();
-    this.market=new MarketView(this.scene);this.people=new StreetPeople(this.scene);
+    this.traffic.applyQuality(resolvedQuality(this.settings));
+    this.market=new MarketView(this.scene);this.people=new StreetPeople(this.scene, resolvedQuality(this.settings));
     this.clusters=new ClusterView(this.scene);this.populations=CLUSTERS.map(c=>new LocalPopulation(this.scene,c.population,c.id));
     motorPoolBays.forEach((bay,i)=>{this.fleet[i+1].position={x:bay.x,z:bay.z};this.fleet[i+1].yaw=bay.yaw;});
     const civilian=new VehicleController(VEHICLE_SPECS[0]);civilian.position={x:-182,z:12.5};civilian.yaw=Math.PI/2;civilian.occupant=`driver-${civilian.id}`;this.fleet.push(civilian);this.fleetViews.push(new VehicleView(civilian.spec,'DL 4C LM 5831'));
@@ -230,6 +231,7 @@ export class Game {
     this.renderer.shadowMap.enabled = profile.shadowSize > 0;
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, mobile ? Math.min(1.25, profile.pixelRatio) : profile.pixelRatio));
     this.district.setQuality(quality); this.central.setQuality(quality); this.regional.setQuality(quality); this.landmarks.setQuality(quality);
+    this.traffic.applyQuality(quality);
     this.roadDetail.setQuality(quality); this.streetProps.setQuality(quality); this.buildingKit.setQuality(quality);
     this.district.lighting.setTimeOfDay(this.settings.timeOfDay ?? 'morning');
     this.headlights.setActive(this.district.lighting.headlightsOn);
@@ -316,7 +318,7 @@ export class Game {
     const focus=this.car.driving ? this.car.position : this.player.position;
     const quality = resolvedQuality(this.settings);
     this.fleetViews.forEach((view,i)=>{view.group.visible=distance(this.fleet[i].position,focus)<450;if(view.group.visible){view.update(this.fleet[i],dt);view.setDetail(distance(this.fleet[i].position,focus),quality);}});
-    this.trafficViews.forEach((view,i)=>{view.group.visible=distance(this.traffic.cars[i].position,focus)<450;if(view.group.visible){view.update(this.traffic.cars[i],dt);view.setDetail(distance(this.traffic.cars[i].position,focus),quality);}});
+    this.trafficViews.forEach((view,i)=>{view.group.visible=distance(this.traffic.cars[i].position,focus)<450;if(view.group.visible){view.update(this.traffic.cars[i],dt);view.setDetail(distance(this.traffic.cars[i].position,focus),quality);const ind=this.traffic.indicatorFor(i);view.setIndicator(ind.side==='none'?'off':ind.side);}});
     this.central.update(focus);this.market.update(dt,focus);
     this.clusters.update(focus);
     const audible=this.car.driving?this.car:this.cars.filter(c=>c.owner==='ai'&&Math.abs(c.speed)>0.1&&distance(c.position,focus)<90).sort((a,b)=>distance(a.position,focus)-distance(b.position,focus))[0];
